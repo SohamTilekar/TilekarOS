@@ -1,1 +1,4 @@
 dump/*
+sysroot/*
+*/dump/*
+isodir/*
