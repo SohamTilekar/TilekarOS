@@ -1,0 +1,18 @@
+{
+  "lsp": {
+    "clangd": {
+      "args": [
+        "-I/mnt/soham/soham_code/TilekarOS/kernel/include/",
+        "-I/mnt/soham/soham_code/TilekarOS/libc/include/"
+      ]
+    }
+  },
+  "languages": {
+    "C": {
+      "language_servers": ["clangd"]
+    },
+    "C++": {
+      "language_servers": ["clangd"]
+    }
+  }
+}

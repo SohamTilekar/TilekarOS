@@ -2,3 +2,4 @@ dump/*
 sysroot/*
 */dump/*
 isodir/*
+dump_debug/*
