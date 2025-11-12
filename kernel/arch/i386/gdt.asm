@@ -18,3 +18,9 @@ GDT_Load:
     jmp 0x08:.flush ; 0x08 is a stand-in for code segment
 .flush:
     ret ; retrun cz dont forget that GDT_Load is a function
+
+global TSS_Load
+TSS_Load:
+    mov ax, 0x28 ; offset of the TSS
+    ltr ax
+    ret
