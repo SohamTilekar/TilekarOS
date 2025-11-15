@@ -6,6 +6,10 @@ C_SOURCES := $(wildcard *.c arch/$(ARCH)/*.c)
 C_OBJECTS := $(C_SOURCES:%.c=../dump/%.c.o)
 ASM_SOURCES := $(wildcard arch/$(ARCH)/*.asm)
 ASM_OBJECTS := $(ASM_SOURCES:%.asm=../dump/%.asm.o)
+LOCAL_CONFIG_SOURCE := ./arch/$(ARCH)/local_config.h
+CONFIG_SOURCE := ./include/kernel/config.h
+NASM_LOCAL_CONFIG_INC := ../dump/local_config.inc
+NASM_CONFIG_INC := ../dump/config.inc
 
 KERNEL_BIN := ../dump/myos.bin
 LIBC_OBJ := ../sysroot/usr/obj/libc.o
@@ -24,6 +28,14 @@ sysrootsetup:
 	mkdir -p ../sysroot/usr/include/
 	cp -ru ./include/* ../sysroot/usr/include/
 
+$(NASM_LOCAL_CONFIG_INC): $(LOCAL_CONFIG_SOURCE) ../helpers/h2inc.py
+	mkdir -p $(dir $@)
+	python3 ../helpers/h2inc.py $< $@
+
+$(NASM_CONFIG_INC): $(CONFIG_SOURCE) ../helpers/h2inc.py
+	mkdir -p $(dir $@)
+	python3 ../helpers/h2inc.py $< $@
+
 # Compile C files to object files
 ../dump/%.c.o: %.c | sysrootsetup
 	mkdir -p $(dir $@)
@@ -35,14 +47,14 @@ $(DUMP_DEBUG_DIR)/%.c.o: %.c | sysrootsetup
 	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -I ./include -c $< -o $@ -nostdlib -ffreestanding -O2 -Wall -Wextra -g
 
 # Assemble .asm files to object files
-../dump/%.asm.o: %.asm
+../dump/%.asm.o: %.asm $(NASM_LOCAL_CONFIG_INC) $(NASM_CONFIG_INC)
 	mkdir -p $(dir $@)
-	nasm -f$(NASM_FORMAT) $< -o $@
+	nasm -f$(NASM_FORMAT) $< -o $@ -P $(NASM_LOCAL_CONFIG_INC) -P $(NASM_CONFIG_INC)
 
 # Assemble .asm files to object files with debug info
-$(DUMP_DEBUG_DIR)/%.asm.o: %.asm
+$(DUMP_DEBUG_DIR)/%.asm.o: %.asm $(NASM_LOCAL_CONFIG_INC) $(NASM_CONFIG_INC)
 	mkdir -p $(dir $@)
-	nasm -f$(NASM_FORMAT) $< -o $@ -g -F dwarf
+	nasm -f$(NASM_FORMAT) $< -o $@ -g -F dwarf -P $(NASM_LOCAL_CONFIG_INC) -P $(NASM_CONFIG_INC)
 
 # Build libc only if needed
 $(LIBC_OBJ):
