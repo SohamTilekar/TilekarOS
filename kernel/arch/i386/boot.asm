@@ -32,8 +32,8 @@ global _start:function (_start.end - _start)
 _start:
 	; Initialize stack pointer
 	mov esp, stack_top
-	extern GDT_Init
-	call GDT_Init
+	extern init_gdt
+	call init_gdt
 
 	; TODO:
 	; - Load GDT
