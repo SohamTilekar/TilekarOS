@@ -32,9 +32,16 @@ global _start:function (_start.end - _start)
 _start:
 	; Initialize stack pointer
 	mov esp, stack_top
+
+	extern terminal_initialize
+	call terminal_initialize
+
 	extern init_gdt
 	call init_gdt
 
+	extern init_idt
+	call init_idt
+	
 	; TODO:
 	; - Load GDT
 	; - Initialize segment registers

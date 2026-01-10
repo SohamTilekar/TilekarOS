@@ -39,12 +39,12 @@ $(NASM_CONFIG_INC): $(CONFIG_SOURCE) ../helpers/h2inc.py
 # Compile C files to object files
 ../dump/%.c.o: %.c | sysrootsetup
 	mkdir -p $(dir $@)
-	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -I ./include -c $< -o $@ -nostdlib -ffreestanding -O2 -Wall -Wextra
+	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -I ./include -c $< -o $@ -nostdlib -ffreestanding -O0 -Wall -Wextra
 
 # Compile C files to object files with debug info
 $(DUMP_DEBUG_DIR)/%.c.o: %.c | sysrootsetup
 	mkdir -p $(dir $@)
-	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -I ./include -c $< -o $@ -nostdlib -ffreestanding -O2 -Wall -Wextra -g
+	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -I ./include -c $< -o $@ -nostdlib -ffreestanding -O0 -Wall -Wextra -g
 
 # Assemble .asm files to object files
 ../dump/%.asm.o: %.asm $(NASM_LOCAL_CONFIG_INC) $(NASM_CONFIG_INC)
@@ -63,12 +63,12 @@ $(LIBC_OBJ):
 # Link everything into the kernel binary
 $(KERNEL_BIN): $(ASM_OBJECTS) $(C_OBJECTS) $(LIBC_OBJ)
 	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -T arch/$(ARCH)/linker.ld \
-	-nostdlib -ffreestanding -O2 -Wall -Wextra $(ASM_OBJECTS) $(C_OBJECTS) $(LIBC_OBJ) -o $@
+	-nostdlib -ffreestanding -O0 -Wall -Wextra $(ASM_OBJECTS) $(C_OBJECTS) $(LIBC_OBJ) -o $@
 
 # Link everything into the debug kernel binary
 $(KERNEL_BIN_DEBUG): $(ASM_OBJECTS_DEBUG) $(C_OBJECTS_DEBUG) $(LIBC_OBJ)
 	clang --target=$(CLANG_TARGET) --sysroot=../sysroot -T arch/$(ARCH)/linker.ld \
-	-nostdlib -ffreestanding -O2 -Wall -Wextra $(ASM_OBJECTS_DEBUG) $(C_OBJECTS_DEBUG) $(LIBC_OBJ) -o $@ -g
+	-nostdlib -ffreestanding -O0 -Wall -Wextra $(ASM_OBJECTS_DEBUG) $(C_OBJECTS_DEBUG) $(LIBC_OBJ) -o $@ -g
 
 # ISO build
 iso: $(KERNEL_BIN)

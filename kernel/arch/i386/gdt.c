@@ -139,7 +139,7 @@ TSSEntry tss_entry = {
     // Set kernel stack segment (GDT_KERNEL_DS_OFFSET = Kernel Data) and pointer.
     // ESP0 will be set by the kernel during context switches or task creation.
     .ss0 = GDT_KERNEL_DS_OFFSET,
-    .esp0 = 0x0,
+    .esp0 = 0,
 
     // Set segment selectors for user mode (RPL=3).
     // GDT_KERNEL_CS_OFFSET = Kernel Code, GDT_KERNEL_DS_OFFSET = Kernel Data. | 0x3 sets RPL to Ring 3.
@@ -217,7 +217,6 @@ static void gdt_install_tss(void) {
     uint8_t access = GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 | GDT_TYPE_TSS_32_AVAIL;
 
     // Flags: 1-byte granularity. 32-bit flag is ignored for TSS.
-    uint8_t flags = GDT_FLAG_GRANULARITY_1B;
     GDTEntry tss_descriptor = GDT_ENTRY(base, limit, access, GDT_FLAG_GRANULARITY_1B);
     gdt[GDT_TSS_INDEX] = tss_descriptor;
 }
