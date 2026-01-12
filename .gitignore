@@ -4,3 +4,4 @@ sysroot/*
 isodir/*
 dump_debug/*
 .fuse_hidden*
+build/*

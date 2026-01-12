@@ -1,0 +1,70 @@
+cmake_minimum_required(VERSION 3.15)
+
+# ==============================================================================
+# Project: TilekarOS
+# ==============================================================================
+# Define the project name and enabled languages.
+# C: For kernel and userspace code.
+# ASM_NASM: For low-level x86 assembly (bootloader, interrupts, etc.).
+# ==============================================================================
+project(TilekarOS C ASM_NASM)
+
+# ==============================================================================
+# Architecture Configuration
+# ==============================================================================
+# Set the default architecture to i386 if not specified.
+if(NOT DEFINED OS_ARCH)
+    set(OS_ARCH "i386" CACHE STRING "Target architecture" FORCE)
+endif()
+
+message(STATUS "Building for architecture: ${OS_ARCH}")
+
+# ==============================================================================
+# Toolchain Configuration
+# ==============================================================================
+# The toolchain file should ideally be passed via -DCMAKE_TOOLCHAIN_FILE=...
+# However, if not provided, we try to guess based on OS_ARCH.
+if(NOT CMAKE_TOOLCHAIN_FILE)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/${OS_ARCH}.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/${OS_ARCH}.cmake")
+    else()
+        message(WARNING "No toolchain file found for architecture ${OS_ARCH}. Cross-compilation may fail.")
+    endif()
+endif()
+
+# ==============================================================================
+# Subdirectories
+# ==============================================================================
+# Add the 'libc' directory to the build. This will process libc/CMakeLists.txt
+# and build the C standard library.
+add_subdirectory(libc)
+
+# Add the 'kernel' directory to the build. This will process kernel/CMakeLists.txt
+# and build the kernel binary, linking it with libc.
+add_subdirectory(kernel)
+
+# ==============================================================================
+# IDE Support: .clangd Generation
+# ==============================================================================
+# We generate a .clangd configuration file to help language servers (like clangd)
+# understand our cross-compilation flags and include paths. This ensures that
+# IntelliSense/Autocomplete works correctly in editors like VS Code or Zed.
+# ==============================================================================
+
+set(CLANGD_CONTENT "CompileFlags:\n  Add:\n")
+# Tell clangd we are targeting the specific architecture
+# We try to use the target set by the toolchain, or fallback to OS_ARCH-elf
+if(CMAKE_C_COMPILER_TARGET)
+    set(CLANGD_CONTENT "${CLANGD_CONTENT}    - --target=${CMAKE_C_COMPILER_TARGET}\n")
+else()
+    set(CLANGD_CONTENT "${CLANGD_CONTENT}    - --target=${OS_ARCH}-elf\n")
+endif()
+
+# Add include paths for the kernel and libc
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Ikernel/include\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Ilibc/include\n")
+# Add include path for the sysroot (simulating where installed headers live)
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Isysroot/usr/include\n")
+
+# Write the configuration to the project root
+file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/.clangd" "${CLANGD_CONTENT}")

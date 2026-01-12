@@ -1,3 +1,11 @@
+# ==============================================================================
+# LEGACY MAKEFILE
+# ==============================================================================
+# NOTE: This Makefile is part of the old build system.
+# The project now uses CMake. This file is kept for reference or fallback purposes.
+# To build the project, use the root Makefile which wraps CMake.
+# ==============================================================================
+
 CLANG_TARGET = i386-elf
 NASM_FORMAT = elf32
 ARCH = i386

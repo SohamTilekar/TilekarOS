@@ -1,28 +1,47 @@
-# Root Makefile
-# Delegates all commands to the kernel/Makefile
+# ==============================================================================
+# Wrapper Makefile for TilekarOS
+# ==============================================================================
+# This Makefile acts as a convenient frontend for the CMake build system.
+# Instead of typing long `cmake` commands, you can just type `make`, `make iso`, etc.
+# ==============================================================================
 
-.PHONY: all iso run run_iso debug rund clean
+# The directory where build artifacts will be generated.
+BUILD_DIR = build
 
-all:
-	$(MAKE) -C kernel all
+# Default Architecture
+ARCH ?= i386
 
-iso:
-	$(MAKE) -C kernel iso
+# Arguments passed to CMake configuration step.
+# We pass the architecture variable and select the appropriate toolchain file.
+CMAKE_ARGS = -DOS_ARCH=$(ARCH) -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/$(ARCH).cmake
 
-run:
-	$(MAKE) -C kernel run
+.PHONY: all iso run run_iso clean configure
 
-run_iso:
-	$(MAKE) -C kernel run_iso
+# ------------------------------------------------------------------------------
+# Targets
+# ------------------------------------------------------------------------------
 
-debug:
-	$(MAKE) -C kernel debug
+# 'make': Configures (if needed) and builds the project (default target).
+all: configure
+	cmake --build $(BUILD_DIR)
 
-rund:
-	$(MAKE) -C kernel rund
+# 'make configure': Runs the CMake generation step.
+# Creates the build directory and generates Makefiles/Ninja files inside it.
+configure:
+	cmake -B $(BUILD_DIR) $(CMAKE_ARGS)
 
-run_isod:
-	$(MAKE) -C kernel run_isod
+# 'make iso': Builds the 'iso' target defined in kernel/CMakeLists.txt.
+iso: configure
+	cmake --build $(BUILD_DIR) --target iso
 
+# 'make run': Builds the 'run' target (QEMU direct kernel boot).
+run: configure
+	cmake --build $(BUILD_DIR) --target run
+
+# 'make run_iso': Builds the 'run_iso' target (QEMU ISO boot).
+run_iso: configure
+	cmake --build $(BUILD_DIR) --target run_iso
+
+# 'make clean': Removes the build directory, effectively cleaning everything.
 clean:
-	$(MAKE) -C kernel clean
+	rm -rf $(BUILD_DIR)

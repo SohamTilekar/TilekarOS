@@ -12,15 +12,26 @@ Detailed documentation is available in the [`docs/`](./docs/) directory:
 
 ## 🚀 Quick Start
 
-To build and run the OS (requires QEMU, Clang, NASM, and GRUB):
+To build and run the OS, you need the following tools installed:
+
+*   **CMake** (Build system generator)
+*   **Clang** (Compiler)
+*   **NASM** (Assembler)
+*   **QEMU** (Emulator)
+*   **GRUB** (Bootloader utilities, specifically `grub-mkrescue`)
+*   **Xorriso** (Required by GRUB)
+
+### Build & Run
+
+We use a `Makefile` wrapper around **CMake** for convenience.
 
 ```bash
-# Build and run the ISO
+# Configure and build the ISO, then run it in QEMU
 make run_iso
 
 # Build only the kernel binary
 make
 
-# Debug mode (wait for GDB)
-make rund
+# Clean build artifacts
+make clean
 ```
