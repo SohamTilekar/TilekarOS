@@ -41,7 +41,10 @@ _start:
 
 	extern init_idt
 	call init_idt
-	
+
+	extern init_timer
+	call init_timer
+
 	; TODO:
 	; - Load GDT
 	; - Initialize segment registers

@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "stdbool.h"
 #include <string.h>
+#include "idt.h"
 
 /*
  * IDT Entry Structure
@@ -44,21 +45,6 @@ typedef struct
     uint32_t base;  // Linear address where the IDT array starts
 } __attribute__((packed)) IDTR;
 
-/*
- * Interrupt Registers
- * A snapshot of the CPU state pushed onto the stack by the assembly stubs
- * before calling the C handler. Used to analyze crashes or handle inputs.
- */
-typedef struct
-{
-    uint32_t cr2;
-    uint32_t ds;                                     // Data segment selector
-    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha
-    uint32_t intr_num, err_cod;                      // Interrupt number and error code (if applicable)
-    uint32_t eip, csm, eflags, useresp, ss;          // Pushed by the processor automatically
-
-} InteruptReg;
-
 // The actual Interrupt Descriptor Table array (256 entries).
 // Aligned to 0x10 for potential performance optimization on some CPUs.
 __attribute__((aligned(0x10))) static IDTEntry idt[256];
@@ -70,8 +56,7 @@ static IDTR idtr = {
 
 // Assembly helper to load the IDT pointer (lidt instruction)
 extern void idt_flush(uint32_t);
-// Assembly helper to write to IO ports (for PIC reconfiguration)
-extern void out_port_b(uint16_t port, uint8_t value);
+
 
 /*
  * External Assembly Interrupt Service Routines (ISRs)
@@ -254,7 +239,7 @@ void init_idt()
 }
 
 // Human-readable strings describing the first 32 exceptions
-unsigned char *exception_messages[] = {
+const char *exception_messages[] = {
     [0] = "Division By Zero",
     [1] = "Debug",
     [2] = "Non Maskable Interrupt",

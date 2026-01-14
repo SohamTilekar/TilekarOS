@@ -42,7 +42,10 @@ target_compile_options(libc PRIVATE
 # ------------------------------------------------------------------------------
 # Include Directories
 # ------------------------------------------------------------------------------
-target_include_directories(libc PRIVATE include)
+target_include_directories(libc PRIVATE 
+    include
+    ${CMAKE_SOURCE_DIR}/kernel/include
+)
 target_include_directories(libc INTERFACE include)
 
 # ==============================================================================
