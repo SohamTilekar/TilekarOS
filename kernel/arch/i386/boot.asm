@@ -33,8 +33,8 @@ _start:
 	; Initialize stack pointer
 	mov esp, stack_top
 
-	extern terminal_initialize
-	call terminal_initialize
+	extern init_terminal
+	call init_terminal
 
 	extern init_gdt
 	call init_gdt
@@ -45,8 +45,10 @@ _start:
 	extern init_timer
 	call init_timer
 
+	extern init_keyboard
+	call init_keyboard
+
 	; TODO:
-	; - Load GDT
 	; - Initialize segment registers
 	; - Enable paging if needed
 	; - Setup hardware and runtime state before calling C entry point

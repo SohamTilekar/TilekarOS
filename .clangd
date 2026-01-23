@@ -1,6 +1,11 @@
 CompileFlags:
   Add:
     - --target=i386-elf
+    - -ffreestanding
+    - -nostdlib
+    - -fno-builtin
+    - -fno-pic
+    - -fno-pie
     - -Ikernel/include
     - -Ilibc/include
     - -Isysroot/usr/include

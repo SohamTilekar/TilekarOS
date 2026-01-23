@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "idt.h"
+#include "utils.h"
 
 void init_timer();
 void onIrq0(InteruptReg *regs);

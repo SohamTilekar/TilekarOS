@@ -17,6 +17,9 @@ if(NOT DEFINED OS_ARCH)
     set(OS_ARCH "i386" CACHE STRING "Target architecture" FORCE)
 endif()
 
+# Generate compile_commands.json for clangd and other tools
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 message(STATUS "Building for architecture: ${OS_ARCH}")
 
 # ==============================================================================
@@ -59,6 +62,13 @@ if(CMAKE_C_COMPILER_TARGET)
 else()
     set(CLANGD_CONTENT "${CLANGD_CONTENT}    - --target=${OS_ARCH}-elf\n")
 endif()
+
+# Add critical flags for kernel development
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -ffreestanding\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -nostdlib\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-builtin\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-pic\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-pie\n")
 
 # Add include paths for the kernel and libc
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Ikernel/include\n")

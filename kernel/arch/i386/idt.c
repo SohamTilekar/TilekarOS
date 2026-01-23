@@ -1,9 +1,9 @@
 #include "local_config.h"
 #include <kernel/tty.h>
 #include <stdint.h>
-#include "stdbool.h"
 #include <string.h>
 #include "idt.h"
+#include "utils.h"
 
 /*
  * IDT Entry Structure

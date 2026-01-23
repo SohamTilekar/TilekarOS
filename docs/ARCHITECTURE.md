@@ -36,7 +36,7 @@ flowchart TD
     %% --- Modules (Flattened where simple) ---
     
     %% TTY: Single step, represented as node
-    InitHub -- 1 --> TTY[**tty.c**<br>terminal_initialize]:::c_module
+    InitHub -- 1 --> TTY[**tty.c**<br>init_terminal]:::c_module
 
     %% GDT: Group represents the file/function
     subgraph GDT_Scope [gdt.c - init_gdt]

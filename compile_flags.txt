@@ -1,0 +1,10 @@
+--target=i386-elf
+-ffreestanding
+-nostdlib
+-fno-builtin
+-fno-pic
+-fno-pie
+-isystem
+sysroot/usr/include
+-Ikernel/include
+-Ilibc/include

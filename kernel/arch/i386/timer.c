@@ -1,4 +1,6 @@
 #include "timer.h"
+#include "utils.h"
+#include "idt.h"
 
 uint64_t ticks;
 const uint32_t freq = 100;
