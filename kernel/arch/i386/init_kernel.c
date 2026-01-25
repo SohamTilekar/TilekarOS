@@ -8,7 +8,7 @@
 
 void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
     init_terminal();
-	init_memory(boot_info);
+	// init_memory(boot_info);
 	init_gdt();
 	init_idt();
 	init_timer();
