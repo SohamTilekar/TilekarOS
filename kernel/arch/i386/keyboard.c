@@ -15,7 +15,7 @@ static bool caps_lock = false;
 static bool num_lock = true; // Enabled by default on most systems
 
 // Debug Mode: Set to true to enable logging, false to disable.
-static bool debug_mode = true;
+static bool debug_mode = false;
 
 static keyboard_callback_t active_callback = NULL;
 

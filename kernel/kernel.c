@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void kernel_main(void) {
+void kernel_main() {
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
   for (;;);
 }
