@@ -6,3 +6,4 @@ dump_debug/*
 .fuse_hidden*
 build/*
 .cache/*
+bx_enh_dbg.ini

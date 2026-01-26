@@ -15,7 +15,7 @@ ARCH ?= i386
 # We pass the architecture variable and select the appropriate toolchain file.
 CMAKE_ARGS = -DOS_ARCH=$(ARCH) -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/$(ARCH).cmake
 
-.PHONY: all iso run run_iso clean configure
+.PHONY: all iso run run_iso run_bochs debug_run debug_iso clean configure help
 
 # ------------------------------------------------------------------------------
 # Targets
@@ -42,6 +42,34 @@ run: configure
 run_iso: configure
 	cmake --build $(BUILD_DIR) --target run_iso
 
+# 'make run_bochs': Builds the 'run_bochs' target (Bochs ISO boot).
+run_bochs: configure
+	cmake --build $(BUILD_DIR) --target run_bochs
+
+# 'make debug_run': Builds the 'debug_run' target (QEMU direct debug).
+debug_run: configure
+	cmake --build $(BUILD_DIR) --target debug_run
+
+# 'make debug_iso': Builds the 'debug_iso' target (QEMU ISO debug).
+debug_iso: configure
+	cmake --build $(BUILD_DIR) --target debug_iso
+
 # 'make clean': Removes the build directory, effectively cleaning everything.
 clean:
 	rm -rf $(BUILD_DIR)
+
+# 'make help': Displays the list of available commands.
+help:
+	@echo "TilekarOS Makefile Help"
+	@echo "======================="
+	@echo "Available commands:"
+	@echo "  make             - Build the kernel and libc (default)"
+	@echo "  make iso         - Build the bootable ISO image"
+	@echo "  make run         - Run kernel directly in QEMU"
+	@echo "  make run_iso     - Run ISO in QEMU"
+	@echo "  make run_bochs   - Run ISO in Bochs"
+	@echo "  make debug_run   - Debug kernel in QEMU with GDB"
+	@echo "  make debug_iso   - Debug ISO in QEMU with GDB"
+	@echo "  make clean       - Remove build artifacts"
+	@echo "  make configure   - Re-run CMake configuration"
+	@echo "  make help        - Show this help message"
