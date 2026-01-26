@@ -14,9 +14,9 @@ file(GLOB KERNEL_C_SOURCES "*.c")
 file(GLOB ARCH_C_SOURCES "arch/${OS_ARCH}/*.c")
 file(GLOB ARCH_ASM_SOURCES "arch/${OS_ARCH}/*.asm")
 
-set(ALL_SOURCES 
-    ${KERNEL_C_SOURCES} 
-    ${ARCH_C_SOURCES} 
+set(ALL_SOURCES
+    ${KERNEL_C_SOURCES}
+    ${ARCH_C_SOURCES}
     ${ARCH_ASM_SOURCES}
 )
 
@@ -97,7 +97,7 @@ target_compile_options(myos.kernel PRIVATE
 # ------------------------------------------------------------------------------
 # Include Directories
 # ------------------------------------------------------------------------------
-target_include_directories(myos.kernel PRIVATE 
+target_include_directories(myos.kernel PRIVATE
     include                         # Kernel internal headers
     ${CMAKE_SOURCE_DIR}/libc/include # Standard library headers
 )
@@ -163,4 +163,32 @@ add_custom_target(run_iso
     COMMAND qemu-system-${OS_ARCH} -cdrom ${ISO_IMAGE}
     DEPENDS iso
     COMMENT "Running ISO in QEMU (CD-ROM Boot) for ${OS_ARCH}"
+)
+
+# 'make debug_run' - Runs the kernel binary directly with debug flags and connects GDB
+add_custom_target(debug_run
+    COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -s -S -kernel $<TARGET_FILE:myos.kernel> & gdb -ex 'target remote localhost:1234' -ex 'symbol-file $<TARGET_FILE:myos.kernel>'"
+    DEPENDS myos.kernel
+    COMMENT "Debugging kernel in QEMU (Direct Boot) for ${OS_ARCH} with GDB"
+    USES_TERMINAL
+    VERBATIM
+)
+
+# 'make debug_iso' - Boots the ISO image with debug flags and connects GDB
+add_custom_target(debug_iso
+    COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -s -S -cdrom ${ISO_IMAGE} & gdb -ex 'target remote localhost:1234' -ex 'symbol-file $<TARGET_FILE:myos.kernel>'"
+    DEPENDS iso
+    COMMENT "Debugging ISO in QEMU (CD-ROM Boot) for ${OS_ARCH} with GDB"
+    USES_TERMINAL
+    VERBATIM
+)
+
+# 'make run_bochs' - Runs the ISO in Bochs
+add_custom_target(run_bochs
+    COMMAND bochs -f bochs/bochsrc
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS iso
+    COMMENT "Running ISO in Bochs"
+    USES_TERMINAL
+    VERBATIM
 )
