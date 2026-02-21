@@ -33,4 +33,6 @@ void out_port_b(uint16_t port, uint8_t value);
  */
 uint8_t in_port_b(uint16_t port);
 
+#define CEIL_DIV(a,b) (((a + b) - 1)/b)
+
 #endif // ARCH_I386_UTILS_H

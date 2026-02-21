@@ -2,6 +2,7 @@
 #define ARCH_I386_VGA_H
 
 #include <stdint.h>
+#include "memory.h"
 
 /* Hardware text mode color constants. */
 enum vga_color {
@@ -35,6 +36,6 @@ static inline uint16_t vga_entry(unsigned char uc, uint8_t color)
 
 #define VGA_WIDTH   80
 #define VGA_HEIGHT  25
-#define VGA_MEMORY  0xB8000
+#define VGA_MEMORY  (KERNEL_START | 0xB8000)
 
 #endif
