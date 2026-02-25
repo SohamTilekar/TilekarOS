@@ -70,7 +70,7 @@ flowchart TD
 
 1.  **Bootloader Handoff**: GRUB ensures the CPU is in Protected Mode (A20 line enabled, Paging disabled). It places the **[Multiboot Information Structure](https://wiki.osdev.org/Multiboot)** in memory and puts the "Magic Number" in `EAX`.
 2.  **Stack Setup**: Since C functions require a stack, `boot.asm` points the Stack Pointer (`ESP`) to the top of a reserved 16KiB block in the `.bss` section.
-3.  **Global Descriptor Table (GDT)**: We replace the GDT provided by GRUB with our own to ensure we have full control over the memory segments and to set up the TSS (Task State Segment) for future user-mode switching. See [Global Descriptor Table](https://wiki.osdev.org/Global_Descriptor_Table).
+3.  **Global Descriptor Table (GDT)**: We replace the GDT provided by GRUB with our own to ensure we have full control over the memory segments and to set up the TSS (Task State Segment) for future ktask-mode switching. See [Global Descriptor Table](https://wiki.osdev.org/Global_Descriptor_Table).
 4.  **Interrupt Descriptor Table (IDT)**: We configure the IDT to handle exceptions (like Divide-by-Zero) and hardware interrupts. The 8259 PIC is remapped to avoid IDT collisions. See [Interrupt Descriptor Table](https://wiki.osdev.org/Interrupt_Descriptor_Table).
 
 ---

@@ -7,7 +7,7 @@ void abort(void) {
 	// TODO: Add proper kernel panic.
 	printf("kernel: panic: abort()\n");
 #else
-	// TODO: Abnormally terminate the process as if by SIGABRT.
+	// TODO: Abnormally terminate the ktask as if by SIGABRT.
 	printf("abort()\n");
 #endif
 	while (1) { }

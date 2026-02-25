@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "arch/i386/kmalloc.h"
+#include "arch/i386/ktask.h"
 #include "string.h"
 
 void test_kmalloc() {
@@ -78,10 +79,43 @@ void test_kmalloc() {
     printf("kmalloc test completed.\n");
 }
 
+void task1() {
+    int count = 0;
+    while (count < 5) {
+        printf("Task 1 (KTID 1) iteration: %d\n", count++);
+        ktask_yield();
+    }
+    printf("Task 1 exiting.\n");
+}
+
+void task2() {
+    int count = 0;
+    while (count < 5) {
+        printf("Task 2 (KTID 2) iteration: %d\n", count++);
+        ktask_yield();
+    }
+    printf("Task 2 exiting.\n");
+}
+
 void kernel_main() {
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
-  test_kmalloc();
+  // test_kmalloc();
 
-  for (;;);
+  printf("\nInitializing Multitasking...\n");
+  ktask_init_scheduler();
+
+  ktask_create(task1);
+  ktask_create(task2);
+
+  printf("Starting task switching from main task (KTID 0)...\n");
+  for (int i = 0; i < 3; i++) {
+      printf("Main Task: yielding %d\n", i);
+      ktask_yield();
+  }
+
+  printf("Main task (KTID 0) finished its work. Entering infinite yield loop.\n");
+  while (true) {
+      ktask_yield();
+  }
 }
