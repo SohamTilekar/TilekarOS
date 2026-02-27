@@ -58,7 +58,7 @@ static void init_pmm(uint32_t mem_low, uint32_t mem_high) {
  * @vaddr: Virtual address to invalidate
  */
 void flush_tlb_entry(uint32_t vaddr) {
-    asm volatile("invlpg %0" :: "m"(vaddr));
+    asm volatile("invlpg (%0)" :: "r"(vaddr) : "memory");
 }
 
 uint32_t* memory_get_current_pagedir(void) {
@@ -66,7 +66,7 @@ uint32_t* memory_get_current_pagedir(void) {
     asm volatile("mov %%cr3, %0": "=r"(pd_phys));
     
     // Convert physical address to virtual address
-    // This assumes the page directory is mapped at KERNEL_START + phys_addr
+    // This assumes the kernel is mapped at KERNEL_START
     return (uint32_t*)(pd_phys + KERNEL_START);
 }
 
@@ -77,23 +77,18 @@ void memory_set_pagedir(uint32_t* pd) {
 }
 
 static void memory_sync_pagedirs(void) {
-    for (int i = 0; i < NUM_PAGE_DIRS; i++) {
-        if (page_tables_used[i]) {
-            uint32_t* page_table = page_tables[i];
-            
-            // Sync kernel mappings (768-1023)
-            // 768 * 4MB = 3GB (KERNEL_START)
-            for (int j = 768; j < 1023; j++) {
-                page_table[j] = initial_page_dir[j] & ~PAGE_FLAG_OWNER;
-            }
-        }
-    }
+    // This function is intended to sync kernel PDEs across multiple page directories.
+    // Currently, we only use initial_page_dir, so this is a placeholder.
+    // In a future multi-address space implementation, this would iterate through
+    // all active page directories.
 }
 
 uint32_t pmm_alloc_page_frame(void) {
+    uint32_t flags = interrupt_save();
+
     // Calculate start/end bytes in the bitmap
     uint32_t start_byte = page_frame_min / 8;
-    uint32_t end_byte = page_frame_max / 8;
+    uint32_t end_byte = (page_frame_max + 7) / 8;
 
     for (uint32_t b = start_byte; b < end_byte; b++) {
         uint8_t byte = physical_memory_bitmap[b];
@@ -108,35 +103,28 @@ uint32_t pmm_alloc_page_frame(void) {
             bool used = (byte >> i) & 1;
 
             if (!used) {
+                uint32_t frame_index = b * 8 + i;
+                
+                // Ensure we don't go past the max or below the min
+                if (frame_index < page_frame_min) continue;
+                if (frame_index >= page_frame_max) break;
+
                 // Mark as used
-                byte |= (1 << i);
-                physical_memory_bitmap[b] = byte;
+                physical_memory_bitmap[b] |= (1 << i);
                 total_allocated++;
 
-                // Calculate physical address
-                // frame_index = byte_index * 8 + bit_index
-                uint32_t frame_index = b * 8 + i;
-                uint32_t addr = frame_index * PAGE_SIZE;
-                
-                return addr;
+                interrupt_restore(flags);
+                return frame_index * PAGE_SIZE;
             }
         }
     }
 
+    interrupt_restore(flags);
     return 0; // Out of memory
 }
 
 void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags) {
-    uint32_t* prev_pagedir = NULL;
-
-    // If mapping kernel space, ensure we are using the initial page directory
-    // to keep global kernel mappings consistent.
-    if (virtual_addr >= KERNEL_START) {
-        prev_pagedir = memory_get_current_pagedir();
-        if (prev_pagedir != initial_page_dir) {
-            memory_set_pagedir(initial_page_dir);
-        }
-    }
+    uint32_t intr_flags = interrupt_save();
 
     uint32_t pd_index = virtual_addr >> 22;
     uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
@@ -144,20 +132,38 @@ void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags) 
     uint32_t* page_dir = RECURSIVE_PAGE_DIR;
     uint32_t* pt = RECURSIVE_PAGE_TABLE(pd_index);
 
+    // If mapping kernel space, ensure we are using the initial page directory
+    // to keep global kernel mappings consistent.
+    uint32_t* prev_pagedir = NULL;
+    if (virtual_addr >= KERNEL_START) {
+        prev_pagedir = memory_get_current_pagedir();
+        if (prev_pagedir != initial_page_dir) {
+            memory_set_pagedir(initial_page_dir);
+        }
+    }
+
     // Check if the page table is present in the directory
     if (!(page_dir[pd_index] & PAGE_FLAG_PRESENT)) {
         // Allocate a new page table
         uint32_t pt_phys = pmm_alloc_page_frame();
-        
+        if (!pt_phys) {
+            interrupt_restore(intr_flags);
+            return; // OOM
+        }
+
         // Map the new page table into the directory
-        page_dir[pd_index] = pt_phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | PAGE_FLAG_OWNER | flags;
+        page_dir[pd_index] = pt_phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | (flags & PAGE_FLAG_OWNER);
         
-        // Flush TLB for the new page table mapping
-        // This is crucial because we modified the PDE, which controls access to 'pt'
         flush_tlb_entry((uint32_t)pt);
 
         // Clear the new page table
         memset(pt, 0, PAGE_SIZE);
+    } else if (page_dir[pd_index] & (1 << 7)) {
+        if (prev_pagedir != NULL && prev_pagedir != initial_page_dir) {
+            memory_set_pagedir(prev_pagedir);
+        }
+        interrupt_restore(intr_flags);
+        return;
     }
 
     // Map the page
@@ -170,38 +176,33 @@ void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags) 
         memory_sync_pagedirs();
         memory_set_pagedir(prev_pagedir);
     }
+
+    interrupt_restore(intr_flags);
 }
+
 
 /*
  * init_memory - Initialize the memory system (Paging + PMM)
- * @mem_upper_kb: Size of upper memory in KB (from Multiboot)
+ * @mem_total_kb: Total available RAM in KB
  * @physical_alloc_start: Physical address where free allocation starts
  */
-void init_memory(uint32_t mem_upper_kb, uint32_t physical_alloc_start) {
+void init_memory(uint32_t mem_total_kb, uint32_t physical_alloc_start) {
     // 1. Unmap the identity mapping of the first 4MB (0-4MB).
-    // The bootloader/assembly code identity maps the first 4MB so the kernel can run
-    // before paging is fully set up. We remove this to catch NULL pointer dereferences.
     total_mapped_pages = 0;
     initial_page_dir[0] = 0;
     flush_tlb_entry(0);
 
     // 2. Set up recursive page directory mapping.
-    // The last entry (1023) points to the page directory itself.
-    // This allows accessing page tables via virtual addresses at the end of memory.
-    // KERNEL_START is 0xC0000000 (3GB).
     uint32_t pd_phys_addr = ((uint32_t)initial_page_dir - KERNEL_START);
     initial_page_dir[1023] = pd_phys_addr | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE;
-
-    // Invalidate the TLB for the recursive mapping address.
-    // The recursive mapping is at virtual address 0xFFFFF000.
     flush_tlb_entry(0xFFFFF000);
 
     // 3. Initialize Physical Memory Manager.
-    // mem_upper_kb is in KB. Total memory is roughly mem_upper + 1MB.
-    // We pass the upper memory size directly as the high mark for now.
-    init_pmm(physical_alloc_start, mem_upper_kb);
+    // mem_total_kb is total memory including first 1MB.
+    init_pmm(physical_alloc_start, mem_total_kb * 1024);
 
     // 4. Clear the pre-allocated page table pool.
     memset(page_tables, 0, sizeof(page_tables));
     memset(page_tables_used, 0, sizeof(page_tables_used));
 }
+
