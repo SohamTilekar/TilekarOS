@@ -15,7 +15,7 @@ void test_kmalloc() {
     void* p1 = kmalloc(128);
     if (p1) {
         printf("PASSED (addr: %x)\n", (uint32_t)p1);
-        // kfree(p1);
+        kfree(p1);
     } else {
         printf("FAILED\n");
     }
@@ -28,7 +28,7 @@ void test_kmalloc() {
     } else {
         printf("INFO (different address: %x, expected %x)\n", (uint32_t)p2, (uint32_t)p1);
     }
-    // kfree(p2);
+    kfree(p2);
 
     // Test 3: Multiple allocations
     printf("3. Multiple allocations: ");
@@ -54,7 +54,7 @@ void test_kmalloc() {
     if (multi_ok) printf("PASSED\n");
     else printf("FAILED\n");
 
-    // for (int i = 0; i < 5; i++) kfree(arr[i]);
+    for (int i = 0; i < 5; i++) kfree(arr[i]);
 
     // Test 4: Heap Expansion
     // Our initial heap is 1MB. Let's try to allocate 2MB total.
@@ -71,7 +71,7 @@ void test_kmalloc() {
         if (large_ok) printf("PASSED\n");
         else printf("FAILED\n");
 
-        // kfree(large);
+        kfree(large);
     } else {
         printf("FAILED (could not extend heap)\n");
     }
@@ -90,9 +90,8 @@ void task1() {
 
 void task2() {
     int count = 0;
-    while (count < 5) {
+    while (count < 10) {
         printf("Task 2 (KTID 2) iteration: %d\n", count++);
-        ktask_yield();
     }
     printf("Task 2 exiting.\n");
 }
@@ -100,10 +99,7 @@ void task2() {
 void kernel_main() {
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
-  // test_kmalloc();
-
-  printf("\nInitializing Multitasking...\n");
-  ktask_init_scheduler();
+  test_kmalloc();
 
   ktask_create(task1);
   ktask_create(task2);

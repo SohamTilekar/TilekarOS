@@ -1,4 +1,5 @@
 #include "ktask.h"
+#include "timer.h"
 #include "kmalloc.h"
 #include <stdio.h>
 
@@ -40,6 +41,7 @@ void ktask_init_scheduler() {
     main_ktcb->stack_limit = NULL; // Main kernel stack is already allocated
     main_ktcb->next = main_ktcb;
     current_ktask = main_ktcb;
+    insert_triger(10, &ktask_yield);
 
     printf("Scheduler initialized. Main task KTID: %d\n", main_ktcb->ktid);
 }

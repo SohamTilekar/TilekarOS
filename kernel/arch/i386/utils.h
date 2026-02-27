@@ -35,4 +35,22 @@ uint8_t in_port_b(uint16_t port);
 
 #define CEIL_DIV(a,b) (((a + b) - 1)/b)
 
+/**
+ * interrupt_save - Saves the current EFLAGS and disables interrupts.
+ * Return: The saved EFLAGS value.
+ */
+static inline uint32_t interrupt_save(void) {
+    uint32_t flags;
+    asm volatile("pushfl\n\tpopl %0\n\tcli" : "=r"(flags));
+    return flags;
+}
+
+/**
+ * interrupt_restore - Restores the EFLAGS (and thus interrupt state).
+ * @flags: The EFLAGS value to restore.
+ */
+static inline void interrupt_restore(uint32_t flags) {
+    asm volatile("pushl %0\n\tpopfl" : : "r"(flags) : "cc", "memory");
+}
+
 #endif // ARCH_I386_UTILS_H

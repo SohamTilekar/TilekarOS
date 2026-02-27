@@ -1,5 +1,4 @@
 #include <stdint.h>
-#include "utils.h"
 
 void init_timer();
-void onIrq0(InteruptReg *regs);
+void insert_triger(uint32_t tick_mod, void (*func)());
