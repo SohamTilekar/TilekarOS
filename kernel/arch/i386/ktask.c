@@ -8,6 +8,7 @@ extern void context_switch(uint32_t* current_esp, uint32_t next_esp);
 static ktcb_t* current_ktask = NULL;
 static ktcb_t* zombie_list = NULL;
 static uint32_t next_ktid = 0;
+static int32_t scheduler_trigger_index = -1;
 
 /**
  * cleanup_zombies - Frees memory of tasks that have exited.
@@ -41,7 +42,7 @@ void ktask_init_scheduler() {
     main_ktcb->stack_limit = NULL; // Main kernel stack is already allocated
     main_ktcb->next = main_ktcb;
     current_ktask = main_ktcb;
-    insert_triger(10, &ktask_yield, TIMER_TRIGGER_USE_GLOBAL);
+    scheduler_trigger_index = insert_triger(10, &ktask_yield, 0); // Use local ticks
 
     printf("Scheduler initialized. Main task KTID: %d\n", main_ktcb->ktid);
 }
@@ -102,6 +103,10 @@ void ktask_yield() {
 
     if (last == current_ktask) {
         return; // Only one task, nothing to switch to
+    }
+
+    if (scheduler_trigger_index != -1) {
+        set_triger_ticks(scheduler_trigger_index, 0);
     }
 
     context_switch(&last->esp, current_ktask->esp);
