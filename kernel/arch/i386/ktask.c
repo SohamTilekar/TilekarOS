@@ -1,12 +1,12 @@
 #include "ktask.h"
+#include "idt.h"
 #include "local_config.h"
 #include "timer.h"
 #include "kmalloc.h"
 #include "utils.h"
-#include "idt.h"
 #include <stdio.h>
 
-extern void context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t next_cr3);
+extern void context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t next_cr3, uint32_t intr_num);
 
 static inline uint32_t get_cr3(void) {
     uint32_t cr3;
@@ -134,51 +134,41 @@ task_t* ktask_create(void (*entry)(void)) {
 }
 
 void ktask_yield(InteruptReg *regs) {
-  // 1. Save current EFLAGS and disable interrupts.
-  // This EFLAGS value (with IF=1, assuming they were on) is stored in 'flags'.
-  uint32_t flags = interrupt_save();
-  cleanup_zombies(); // Opportunity to clean up
+    uint32_t flags = interrupt_save();
+    cleanup_zombies();
 
-  task_t *last = current_ktask;
-  current_ktask = current_ktask->next;
+    task_t* last = current_ktask;
+    current_ktask = current_ktask->next;
 
-  if (last == current_ktask) {
+    if (last == current_ktask) {
+        if (regs && regs->intr_num >= 32) {
+            pic_send_eoi(regs->intr_num);
+            regs->intr_num = 0;
+        }
+        interrupt_restore(flags);
+        return;
+    }
+
+    if (scheduler_trigger_index != -1) {
+        set_triger_ticks(scheduler_trigger_index, 0);
+    }
+
+    last->state = TASK_READY;
+    current_ktask->state = TASK_RUNNING;
+
+    uint32_t intr_num = 0;
+    if (regs && regs->intr_num >= 32) {
+        intr_num = regs->intr_num;
+        // Prevent calling handler from sending EOI again
+        regs->intr_num = 0; 
+    }
+
+    context_switch(&last->kernel_stack, current_ktask->kernel_stack, current_ktask->page_directory, intr_num);
+
     interrupt_restore(flags);
-    return; // Only one task, nothing to switch to
-  }
-
-  if (scheduler_trigger_index != -1) {
-    set_triger_ticks(scheduler_trigger_index, 0);
-  }
-
-  last->state = TASK_READY;
-  current_ktask->state = TASK_RUNNING;
-
-  // Send EOI if yielding from inside an interrupt handler
-  if (regs) {
-    pic_send_eoi(regs->intr_num);
-  }
-
-  // 2. The context_switch will:
-  //    - Push the current CPU state (including EFLAGS where IF=0) onto 'last's
-  //    stack.
-  //    - Load 'current_ktask's stack pointer.
-  //    - Use 'iret' to pop 'current_ktask's previously saved state.
-  //    - This 'iret' replaces the CPU's EFLAGS with the one saved by
-  //    'current_ktask'
-  //      when IT called ktask_yield. (At that time, IF was 0 on the stack
-  //      frame).
-  context_switch(&last->kernel_stack, current_ktask->kernel_stack,
-                 current_ktask->page_directory);
-
-  // 3. We reach here when THIS task is eventually resumed by another task.
-  // We restore 'flags' (which has IF=1 from step 1), turning interrupts back
-  // on!
-  interrupt_restore(flags);
 }
+
 void ktask_exit() {
-    // 1. Disable interrupts and save state. We don't want to be interrupted
-    // while dismantling our own task structure.
     uint32_t flags = interrupt_save();
     printf("Task %d exiting...\n", current_ktask->id);
 
@@ -208,11 +198,7 @@ void ktask_exit() {
 
     uint32_t* dummy_esp = 0;
 
-    // 2. Switch to the next task.
-    // We pass a dummy_esp because this task is dead; we don't care about saving its ESP.
-    // The next task will resume, and IT will call interrupt_restore() (because it
-    // was suspended in ktask_yield), turning interrupts back on for the system.
-    context_switch(&dummy_esp, current_ktask->kernel_stack, current_ktask->page_directory);
+    context_switch(&dummy_esp, current_ktask->kernel_stack, current_ktask->page_directory, 0);
 
     // We should never reach here, but in case we do somehow
     interrupt_restore(flags);

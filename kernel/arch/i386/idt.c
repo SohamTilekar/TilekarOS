@@ -330,13 +330,11 @@ void irq_handler(InteruptReg *regs)
     // Function pointer for the specific handler
     void (*handler)(InteruptReg *regs) = irq_routines[regs->intr_num - 32];
 
-    // Send End of Interrupt (EOI) command to the PICs first
-    // This allows the PIC to send more interrupts. 
-    // This is safe because CPU clears IF (interrupts disabled) automatically when entering the ISR.
-    pic_send_eoi(regs->intr_num);
-
-    // If a custom handler exists, execute it
+    // If a custom handler exists, execute it.
+    // The handler is responsible for sending EOI (either manually or via context switch).
     if (handler) {
         handler(regs);
     }
+
+    pic_send_eoi(regs->intr_num);
 }

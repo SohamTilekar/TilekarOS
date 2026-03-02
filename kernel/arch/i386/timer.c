@@ -103,8 +103,6 @@ void set_triger_ticks(int32_t index, uint32_t current_ticks) {
 }
 
 void onIrq0(InteruptReg *regs){
-    (void)regs;
-
     ticks += 1;
 
     if (trigers == NULL) return;
@@ -114,7 +112,7 @@ void onIrq0(InteruptReg *regs){
         if (!(t->flags & TIMER_TRIGGER_ACTIVE)) continue;
 
         if (t->flags & TIMER_TRIGGER_USE_GLOBAL) {
-            if ((ticks % t->tick_mod) == 0) {
+            if (ticks >= t->tick_mod) {
                 t->func(regs);
             }
         } else {

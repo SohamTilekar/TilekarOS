@@ -84,7 +84,7 @@ void task_A() {
     while (true) {
         printf("A");
         // Delay to make output readable
-        for (volatile int i = 0; i < 5000000; i++);
+        for (volatile int i = 0; i < 50000; i++);
     }
 }
 
@@ -92,7 +92,7 @@ void task_A() {
 void task_B() {
     while (true) {
         printf("B");
-        for (volatile int i = 0; i < 5000000; i++);
+        for (volatile int i = 0; i < 50000; i++);
     }
 }
 
@@ -109,7 +109,7 @@ void task_C() {
 void task_D() {
     for (int i = 0; i < 3; i++) {
         printf("D(%d)", i);
-        for (volatile int j = 0; j < 10000000; j++); 
+        for (volatile int j = 0; j < 100000; j++);
     }
     printf("[D exits]");
 }
