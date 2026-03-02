@@ -79,21 +79,50 @@ void test_kmalloc() {
     printf("kmalloc test completed.\n");
 }
 
-void task1() {
-    int count = 0;
-    while (count < 5) {
-        printf("Task 1 (KTID 1) iteration: %d\n", count++);
-        ktask_yield();
+// Task A: Infinite loop, relies on preemption
+void task_A() {
+    while (true) {
+        printf("A");
+        // Delay to make output readable
+        for (volatile int i = 0; i < 5000000; i++);
     }
-    printf("Task 1 exiting.\n");
 }
 
-void task2() {
-    int count = 0;
-    while (count < 10) {
-        printf("Task 2 (KTID 2) iteration: %d\n", count++);
+// Task B: Infinite loop, relies on preemption
+void task_B() {
+    while (true) {
+        printf("B");
+        for (volatile int i = 0; i < 5000000; i++);
     }
-    printf("Task 2 exiting.\n");
+}
+
+// Task C: Finite loop, explicitly yields
+void task_C() {
+    for (int i = 0; i < 5; i++) {
+        printf("C(%d)", i);
+        ktask_yield(NULL);
+    }
+    printf("[C exits]");
+}
+
+// Task D: Finite loop, relies on preemption, then exits
+void task_D() {
+    for (int i = 0; i < 3; i++) {
+        printf("D(%d)", i);
+        for (volatile int j = 0; j < 10000000; j++); 
+    }
+    printf("[D exits]");
+}
+
+// Task E: Creates another task and then exits
+void task_E_child() {
+    printf("[E_child runs & exits]");
+}
+
+void task_E() {
+    printf("[E creates child]");
+    ktask_create(task_E_child);
+    printf("[E exits]");
 }
 
 void kernel_main() {
@@ -101,17 +130,16 @@ void kernel_main() {
 
   test_kmalloc();
 
-  ktask_create(task1);
-  ktask_create(task2);
+  printf("\n--- Multitasking Stress Test ---\n");
 
-  printf("Starting task switching from main task (KTID 0)...\n");
-  for (int i = 0; i < 3; i++) {
-      printf("Main Task: yielding %d\n", i);
-      ktask_yield();
-  }
+  ktask_create(task_A);
+  ktask_create(task_B);
+  ktask_create(task_C);
+  ktask_create(task_D);
+  ktask_create(task_E);
 
-  printf("Main task (KTID 0) finished its work. Entering infinite yield loop.\n");
+  printf("Main task (KTID 0) entering infinite yield loop.\n");
   while (true) {
-      ktask_yield();
+      ktask_yield(NULL);
   }
 }

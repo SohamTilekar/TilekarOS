@@ -10,5 +10,6 @@ void init_idt();
 // IRQ Handling
 void irq_install_handler(int irq, void (*handler)(InteruptReg *r));
 void irq_uninstall_handler(int irq);
+void pic_send_eoi(uint32_t intr_num);
 
 #endif

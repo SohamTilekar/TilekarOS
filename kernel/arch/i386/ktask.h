@@ -4,12 +4,32 @@
 #include <stdint.h>
 #include <stddef.h>
 
-typedef struct ktcb {
-    uint32_t esp;           // Saved stack pointer
-    uint32_t ktid;          // Kernel Task ID
-    struct ktcb* next;      // Next task in the ready queue
+typedef enum {
+    TASK_READY,
+    TASK_RUNNING,
+    TASK_BLOCKED,
+    TASK_SLEEPING
+} task_state_t;
+
+typedef struct {
+    uint32_t gs, fs, es, ds;
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+    uint32_t eip, cs, eflags;
+} registers_t;
+
+typedef struct task {
+    uint32_t id;
+    uint32_t *kernel_stack;
+    registers_t *regs;      // saved context
+    task_state_t state;
+    uint32_t page_directory; // physical address of CR3
+
+    // Internal scheduler fields
+    struct task* next;      // Next task in the ready queue
     void* stack_limit;      // Base of the stack (for freeing)
-} ktcb_t;
+} task_t;
+
+#include "utils.h"
 
 /**
  * ktask_init_scheduler - Initializes the multitasking system.
@@ -21,14 +41,14 @@ void ktask_init_scheduler();
  * ktask_create - Creates a new kernel task.
  * @entry: The entry point function for the task.
  *
- * Return: The created KTCB, or NULL on failure.
+ * Return: The created task, or NULL on failure.
  */
-ktcb_t* ktask_create(void (*entry)(void));
+task_t* ktask_create(void (*entry)(void));
 
 /**
  * ktask_yield - Yields the CPU to the next ready task.
  */
-void ktask_yield();
+void ktask_yield(InteruptReg *regs);
 
 /**
  * ktask_exit - Terminates the current task.

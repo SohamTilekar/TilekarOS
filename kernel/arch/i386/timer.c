@@ -26,7 +26,7 @@ void set_ticks(uint32_t new_ticks) {
 typedef struct {
     uint32_t tick_mod;
     uint32_t current_ticks;
-    void (*func)();
+    void (*func)(InteruptReg *regs); // send EOI if going to change context
     uint8_t flags;
 } Triger;
 
@@ -36,7 +36,7 @@ typedef struct {
 } Trigers;
 Trigers* trigers = NULL;
 
-int32_t insert_triger(uint32_t tick_mod, void (*func)(), uint8_t flags) {
+int32_t insert_triger(uint32_t tick_mod, void (*func)(InteruptReg *regs), uint8_t flags) {
     if (tick_mod == 0) return -1;
 
     uint32_t int_flags = interrupt_save();
@@ -104,6 +104,7 @@ void set_triger_ticks(int32_t index, uint32_t current_ticks) {
 
 void onIrq0(InteruptReg *regs){
     (void)regs;
+
     ticks += 1;
 
     if (trigers == NULL) return;
@@ -114,13 +115,13 @@ void onIrq0(InteruptReg *regs){
 
         if (t->flags & TIMER_TRIGGER_USE_GLOBAL) {
             if ((ticks % t->tick_mod) == 0) {
-                t->func();
+                t->func(regs);
             }
         } else {
             t->current_ticks++;
             if (t->current_ticks >= t->tick_mod) {
                 t->current_ticks = 0;
-                t->func();
+                t->func(regs);
             }
         }
     }

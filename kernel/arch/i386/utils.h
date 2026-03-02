@@ -10,12 +10,10 @@
  */
 typedef struct
 {
-    uint32_t cr2;
-    uint32_t ds;                                     // Data segment selector
-    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha
+    uint32_t gs, fs, es, ds;                         // Pushed by segment registers
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pushad
     uint32_t intr_num, err_cod;                      // Interrupt number and error code (if applicable)
     uint32_t eip, csm, eflags, useresp, ss;          // Pushed by the processor automatically
-
 } InteruptReg;
 
 /**
@@ -44,6 +42,8 @@ static inline uint32_t interrupt_save(void) {
     asm volatile("pushfl\n\tpopl %0\n\tcli" : "=r"(flags));
     return flags;
 }
+
+#include <stdbool.h>
 
 /**
  * interrupt_restore - Restores the EFLAGS (and thus interrupt state).

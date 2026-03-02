@@ -313,6 +313,13 @@ void irq_uninstall_handler(int irq)
     irq_routines[irq] = NULL;
 }
 
+void pic_send_eoi(uint32_t intr_num) {
+    if (intr_num >= 40) {
+        out_port_b(0xA0, 0x20); // EOI to Slave PIC
+    }
+    out_port_b(0x20, 0x20); // Always send EOI to Master PIC
+}
+
 /*
  * IRQ Handler
  * This is the main handler for Hardware Interrupts (32-47).
@@ -321,25 +328,15 @@ void irq_uninstall_handler(int irq)
 void irq_handler(InteruptReg *regs)
 {
     // Function pointer for the specific handler
-    void (*handler)(InteruptReg *regs);
+    void (*handler)(InteruptReg *regs) = irq_routines[regs->intr_num - 32];
 
-    // Map interrupt number back to IRQ number (0-15)
-    // Example: Interrupt 33 is IRQ 1 (Keyboard)
-    handler = irq_routines[regs->intr_num - 32];
+    // Send End of Interrupt (EOI) command to the PICs first
+    // This allows the PIC to send more interrupts. 
+    // This is safe because CPU clears IF (interrupts disabled) automatically when entering the ISR.
+    pic_send_eoi(regs->intr_num);
 
     // If a custom handler exists, execute it
-    if (handler)
-    {
+    if (handler) {
         handler(regs);
     }
-
-    // Send End of Interrupt (EOI) command to the PICs.
-    // If the IRQ came from the Slave PIC (IRQ 8-15), we must send EOI to both.
-    if (regs->intr_num >= 40)
-    {
-        out_port_b(0xA0, 0x20); // EOI to Slave PIC
-    }
-
-    // Always send EOI to Master PIC
-    out_port_b(0x20, 0x20);
 }

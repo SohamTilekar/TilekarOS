@@ -132,30 +132,30 @@ IRQ  15, 47 ; Secondary HDD
 ; and restores the state.
 ; 
 ; Stack Layout when calling C handler (InteruptReg struct):
-; [ESP]    -> CR2
-; [ESP+4]  -> DS
-; [ESP+8]  -> EDI, ESI, EBP, ESP, EBX, EDX, ECX, EAX (pushed by pusha)
-; [ESP+40] -> Interrupt Number
-; [ESP+44] -> Error Code
-; [ESP+48] -> EIP (Return Address) - Pushed by CPU
-; [ESP+52] -> CS  (Code Segment)   - Pushed by CPU
-; [ESP+56] -> EFLAGS               - Pushed by CPU
+; [ESP]    -> GS
+; [ESP+4]  -> FS
+; [ESP+8]  -> ES
+; [ESP+12] -> DS
+; [ESP+16] -> EDI, ESI, EBP, ESP, EBX, EDX, ECX, EAX (pushed by pushad)
+; [ESP+48] -> Interrupt Number
+; [ESP+52] -> Error Code
+; [ESP+56] -> EIP (Return Address) - Pushed by CPU
+; [ESP+60] -> CS  (Code Segment)   - Pushed by CPU
+; [ESP+64] -> EFLAGS               - Pushed by CPU
 ; -----------------------------------------------------------------------------
 %macro COMMON_INT_STUB 2
     global %1
 %1:
     ; 1. Save General Purpose Registers
-    pusha                   ; Pushes edi, esi, ebp, esp, ebx, edx, ecx, eax
+    pushad                  ; Pushes eax, ecx, edx, ebx, esp, ebp, esi, edi
 
     ; 2. Save Segment Registers
-    mov eax, ds             ; Lower 16-bits of eax = ds
-    push eax                ; Save DS on stack
+    push ds
+    push es
+    push fs
+    push gs
 
-    ; 3. Save Control Register 2 (Used for Page Faults)
-    mov eax, cr2
-    push eax                ; Save CR2 on stack
-
-    ; 4. Load Kernel Data Segment
+    ; 3. Load Kernel Data Segment
     ; We must ensure we are in a known state before calling C code.
     mov ax, 0x10            ; 0x10 is usually the Kernel Data Segment Offset
     mov ds, ax
@@ -163,26 +163,23 @@ IRQ  15, 47 ; Secondary HDD
     mov fs, ax
     mov gs, ax
 
-    ; 5. Call C Handler
+    ; 4. Call C Handler
     push esp                ; Pass pointer to stack (InteruptReg*) as argument
     call %2                 ; Call the C function (isr_handler or irq_handler)
     add esp, 4              ; Clean up the argument (pointer) pushed above
 
-    ; 6. Restore State
-    pop eax                 ; Pop CR2 (we don't need to restore it to CPU, just remove from stack)
-    
-    pop eax                 ; Pop saved DS
-    mov ds, ax              ; Restore DS
-    mov es, ax              ; Restore ES
-    mov fs, ax              ; Restore FS
-    mov gs, ax              ; Restore GS
+    ; 5. Restore State
+    pop gs
+    pop fs
+    pop es
+    pop ds
 
-    popa                    ; Restore general purpose registers
+    popad                   ; Restore general purpose registers
 
-    ; 7. Clean up Error Code and ISR Number
+    ; 6. Clean up Error Code and ISR Number
     add esp, 8              ; Pop the 2 integers pushed by the stub macros
 
-    ; 8. Return from Interrupt
+    ; 7. Return from Interrupt
     sti                     ; Re-enable interrupts
     iret                    ; Pops CS, EIP, EFLAGS, (and SS, ESP if privilege change)
 %endmacro
