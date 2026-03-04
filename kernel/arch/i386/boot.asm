@@ -85,11 +85,11 @@ section .data
 align 4096
 global initial_page_dir
 initial_page_dir:
-    DD 10000011b
+    DD 10000111b
     TIMES 768-1 DD 0
 
-    DD (0 << 22) | 10000011b
-    DD (1 << 22) | 10000011b
-    DD (2 << 22) | 10000011b
-    DD (3 << 22) | 10000011b
+    DD (0 << 22) | 10000111b
+    DD (1 << 22) | 10000111b
+    DD (2 << 22) | 10000111b
+    DD (3 << 22) | 10000111b
     TIMES 256-4 DD 0

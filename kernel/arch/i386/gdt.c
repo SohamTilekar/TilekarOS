@@ -229,3 +229,7 @@ void init_gdt() {
   gdt_install_tss();
   tss_load_register();
 }
+
+void tss_set_kernel_stack(uint32_t stack_base) {
+    tss_entry.esp0 = stack_base;
+}

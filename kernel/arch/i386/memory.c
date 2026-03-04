@@ -152,7 +152,7 @@ void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags) 
         }
 
         // Map the new page table into the directory
-        page_dir[pd_index] = pt_phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | (flags & PAGE_FLAG_OWNER);
+        page_dir[pd_index] = pt_phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE | (flags & PAGE_FLAG_OWNER) | (flags & PAGE_FLAG_USER);
         
         flush_tlb_entry((uint32_t)pt);
 

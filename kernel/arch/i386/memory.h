@@ -25,7 +25,8 @@
 // Page Table/Directory Entry Flags
 #define PAGE_FLAG_PRESENT (1 << 0) // Page is present in memory
 #define PAGE_FLAG_WRITE   (1 << 1) // Page is writable
-#define PAGE_FLAG_OWNER   (1 << 9) // Software flag: Page owned by current ktask/kernel
+#define PAGE_FLAG_USER    (1 << 2) // Page is accessible in user mode
+#define PAGE_FLAG_OWNER   (1 << 9) // Software flag: Page owned by current task/kernel
 
 /*
  * External Variables

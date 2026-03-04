@@ -55,7 +55,7 @@ static void* heap_sbrk(intptr_t increment) {
                 interrupt_restore(flags);
                 return (void*)-1; // Out of memory
             }
-            memory_map_page(addr, phys, PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT | PAGE_FLAG_OWNER);
+            memory_map_page(addr, phys, PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT | PAGE_FLAG_OWNER | PAGE_FLAG_USER);
         }
         heap_mapped_top = new_mapped_top;
     }
