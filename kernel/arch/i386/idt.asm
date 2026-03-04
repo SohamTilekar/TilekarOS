@@ -1,7 +1,7 @@
 ; -----------------------------------------------------------------------------
 ; IDT.ASM
 ; This file contains the low-level assembly wrappers for interrupt handling.
-; It sets up the stack to match the 'InteruptReg' struct in C, switches 
+; It sets up the stack to match the 'InteruptReg' struct in C, switches
 ; to kernel segments, and calls the C functions.
 ; -----------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ isr_no_err_stub 9   ; Coprocessor Segment Overrun
 isr_err_stub    10  ; Invalid TSS (Has Error Code)
 isr_err_stub    11  ; Segment Not Present (Has Error Code)
 isr_err_stub    12  ; Stack-Segment Fault (Has Error Code)
-isr_err_stub    13  ; General Protection Fault (Has Error Code)
+; isr_err_stub    13  ; General Protection Fault (Has Error Code) Now using protection_fault
 isr_err_stub    14  ; Page Fault (Has Error Code)
 isr_no_err_stub 15  ; Reserved
 isr_no_err_stub 16  ; x87 FPU Exception
@@ -105,7 +105,7 @@ isr_err_stub    30  ; Security Exception (Has Error Code)
 isr_no_err_stub 31  ; Reserved
 
 ; --- System Calls ---
-isr_no_err_stub 128 ; 0x80 (Linux syscall compatibility)
+; isr_no_err_stub 128 ; 0x80 (Linux syscall compatibility) - now using custom syscall_stub
 isr_no_err_stub 177 ; Custom syscall
 
 ; --- Hardware Interrupts (IRQs) ---
@@ -130,7 +130,7 @@ IRQ  15, 47 ; Secondary HDD
 ; MACRO: COMMON_INT_STUB
 ; Description: The shared code that saves the full CPU state, calls the C function,
 ; and restores the state.
-; 
+;
 ; Stack Layout when calling C handler (InteruptReg struct):
 ; [ESP]    -> GS
 ; [ESP+4]  -> FS

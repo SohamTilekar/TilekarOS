@@ -78,7 +78,7 @@ extern void isr9();  // Coprocessor Segment Overrun
 extern void isr10(); // Invalid TSS
 extern void isr11(); // Segment Not Present
 extern void isr12(); // Stack-Segment Fault
-extern void isr13(); // General Protection Fault
+extern void protection_fault(); // General Protection Fault
 extern void isr14(); // Page Fault
 extern void isr15(); // Reserved
 extern void isr16(); // x87 Floating Point Exception
@@ -99,7 +99,7 @@ extern void isr30(); // Security Exception
 extern void isr31(); // Reserved
 
 // --- Software Interrupts / System Calls ---
-extern void isr128(); // Often used for Syscalls (0x80)
+extern void syscall_stub(); // Often used for Syscalls (0x80)
 extern void isr177(); // Alternative Syscall entry
 
 // --- Hardware Interrupts (IRQs) ---
@@ -192,7 +192,7 @@ void init_idt()
     set_idt_gate(10, (uint32_t)isr10, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
     set_idt_gate(11, (uint32_t)isr11, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
     set_idt_gate(12, (uint32_t)isr12, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(13, (uint32_t)isr13, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
+    set_idt_gate(13, (uint32_t)protection_fault, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
     set_idt_gate(14, (uint32_t)isr14, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
     set_idt_gate(15, (uint32_t)isr15, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
     set_idt_gate(16, (uint32_t)isr16, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
@@ -231,7 +231,7 @@ void init_idt()
     set_idt_gate(47, (uint32_t)irq15, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
 
     // --- System Call Gates ---
-    set_idt_gate(128, (uint32_t)isr128, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
+    set_idt_gate(128, (uint32_t)syscall_stub, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
     set_idt_gate(177, (uint32_t)isr177, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
 
     // 5. Finally, load the IDT using the ASM command 'lidt'

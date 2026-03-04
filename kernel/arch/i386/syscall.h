@@ -1,0 +1,23 @@
+#ifndef SYSCALL_H
+#define SYSCALL_H
+
+#include <stdint.h>
+#include "utils.h"
+
+enum  {
+    SYS_EXIT = 0,
+    SYS_WRITE,
+    SYS_GET_PID,
+    SYS_MAX
+};
+
+uint32_t syscall(uint32_t num, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e);
+
+uint32_t sys_exit(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e);
+uint32_t sys_write(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, uint32_t b);
+uint32_t sys_getpid(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e);
+
+uint32_t syscall_dispatch(uint32_t intr_num, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e);
+void syscall_handler(InteruptReg* r);
+
+#endif
