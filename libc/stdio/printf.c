@@ -6,8 +6,16 @@
 #include <string.h>
 #include <stdint.h>
 
+#if !defined(__is_libk)
+#include <sys/syscall.h>
+#endif
+
 static bool print(const char* data, size_t length) {
+#if defined(__is_libk)
 	terminal_write(data, length);
+#else
+	__syscall(SYS_WRITE, 0, (uint32_t)data, length, 0, 0);
+#endif
 	return true;
 }
 
