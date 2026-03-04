@@ -1,8 +1,10 @@
-#ifndef ARCH_I386_KTASK_H
-#define ARCH_I386_KTASK_H
+#ifndef ARCH_I386_TASK_H
+#define ARCH_I386_TASK_H
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
+#include "utils.h"
 
 typedef enum {
     TASK_READY,
@@ -23,36 +25,39 @@ typedef struct task {
     registers_t *regs;      // saved context
     task_state_t state;
     uint32_t page_directory; // physical address of CR3
+    uint8_t privilege_level; // 0 or 3
 
     // Internal scheduler fields
     struct task* next;      // Next task in the ready queue
     void* stack_limit;      // Base of the stack (for freeing)
 } task_t;
 
-#include "utils.h"
+extern task_t* current_task;
+
 
 /**
- * ktask_init_scheduler - Initializes the multitasking system.
+ * task_init_scheduler - Initializes the multitasking system.
  * This should be called once the main kernel execution is ready to be a task.
  */
-void ktask_init_scheduler();
+void task_init_scheduler();
 
 /**
- * ktask_create - Creates a new kernel task.
+ * task_create - Creates a new task.
  * @entry: The entry point function for the task.
+ * @privilege_level: The privilege level of the task (0 for kernel, 3 for user).
  *
  * Return: The created task, or NULL on failure.
  */
-task_t* ktask_create(void (*entry)(void));
+task_t* task_create(void (*entry)(void), uint8_t privilege_level);
 
 /**
- * ktask_yield - Yields the CPU to the next ready task.
+ * task_yield - Yields the CPU to the next ready task.
  */
-void ktask_yield(InteruptReg *regs);
+void task_yield(InteruptReg *regs);
 
 /**
- * ktask_exit - Terminates the current task.
+ * task_exit - Terminates the current task.
  */
-void ktask_exit();
+void task_exit();
 
-#endif // ARCH_I386_KTASK_H
+#endif // ARCH_I386_TASK_H

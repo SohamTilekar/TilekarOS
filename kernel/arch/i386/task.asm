@@ -21,6 +21,12 @@ endstruc
 section .text
 
 global context_switch
+global get_cr3
+
+; get_cr3() -> returns the value of CR3 register
+get_cr3:
+    mov eax, cr3
+    ret
 
 ; context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t next_cr3, uint32_t intr_num)
 context_switch:

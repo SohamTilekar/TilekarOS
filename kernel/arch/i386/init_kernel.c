@@ -1,7 +1,7 @@
 #include "kernel/tty.h"
 #include "gdt.h"
 #include "idt.h"
-#include "ktask.h"
+#include "task.h"
 #include "timer.h"
 #include "keyboard.h"
 #include <stdint.h>
@@ -69,7 +69,7 @@ void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
 
     // 5. init Kernel Task Scheduler
     printf("\nInitializing Multitasking...\n");
-    ktask_init_scheduler();
+    task_init_scheduler();
 
     printf("Memory allocation initialized.\n");
 }
