@@ -39,6 +39,15 @@ void terminal_update_cursor(void)
 
 void init_terminal(void)
 {
+    // Initialize COM1 serial port for logging
+    out_port_b(0x3F8 + 1, 0x00);    // Disable all interrupts
+    out_port_b(0x3F8 + 3, 0x80);    // Enable DLAB (set baud rate divisor)
+    out_port_b(0x3F8 + 0, 0x03);    // Set divisor to 3 (lo byte) 38400 baud
+    out_port_b(0x3F8 + 1, 0x00);    //                  (hi byte)
+    out_port_b(0x3F8 + 3, 0x03);    // 8 bits, no parity, one stop bit
+    out_port_b(0x3F8 + 2, 0xC7);    // Enable FIFO, clear them, with 14-byte threshold
+    out_port_b(0x3F8 + 4, 0x0B);    // IRQs enabled, RTS/DSR set
+
 	terminal_row = 0;
 	terminal_column = 0;
 	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
@@ -76,6 +85,9 @@ void terminal_scroll(void)
 
 void terminal_putchar(char c)
 {
+    // Write to serial port COM1 for headless logging
+    out_port_b(0x3F8, c);
+
     if (c == '\n') {
         terminal_column = 0;
         terminal_row++;

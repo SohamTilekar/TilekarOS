@@ -84,6 +84,11 @@ void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags);
 uint32_t* memory_get_current_pagedir(void);
 
 /**
+ * memory_create_user_pagedir - Create a new page directory for a user process.
+ */
+uint32_t* memory_create_user_pagedir(void);
+
+/**
  * memory_set_pagedir - Switch to a new page directory.
  * @pd: The physical address of the new page directory.
  */

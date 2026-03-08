@@ -1,11 +1,13 @@
+#include "arch/i386/syscall.h"
 #include "stdio.h"
 #include <kernel/tty.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include "arch/i386/kmalloc.h"
-#include "arch/i386/ktask.h"
+#include "arch/i386/task.h"
 #include "string.h"
+#include "sys/syscall.h"
 
 void test_kmalloc() {
     printf("Testing kmalloc...\n");
@@ -79,14 +81,9 @@ void test_kmalloc() {
     printf("kmalloc test completed.\n");
 }
 
-// Task A: Infinite loop, relies on preemption
-void task_A() {
-    while (true) {
-        printf("A");
-        // Delay to make output readable
-        for (volatile int i = 0; i < 50000; i++);
-    }
-}
+extern char _start_user_task;
+extern char _end_user_task;
+extern void user_task_function(void);
 
 // Task B: Infinite loop, relies on preemption
 void task_B() {
@@ -100,9 +97,10 @@ void task_B() {
 void task_C() {
     for (int i = 0; i < 5; i++) {
         printf("C(%d)", i);
-        ktask_yield(NULL);
+        task_yield(NULL);
     }
     printf("[C exits]");
+    task_exit();
 }
 
 // Task D: Finite loop, relies on preemption, then exits
@@ -112,17 +110,20 @@ void task_D() {
         for (volatile int j = 0; j < 100000; j++);
     }
     printf("[D exits]");
+    task_exit();
 }
 
 // Task E: Creates another task and then exits
 void task_E_child() {
     printf("[E_child runs & exits]");
+    task_exit();
 }
 
 void task_E() {
     printf("[E creates child]");
-    ktask_create(task_E_child);
+    task_create(task_E_child, 0);
     printf("[E exits]");
+    task_exit();
 }
 
 void kernel_main() {
@@ -132,14 +133,14 @@ void kernel_main() {
 
   printf("\n--- Multitasking Stress Test ---\n");
 
-  ktask_create(task_A);
-  ktask_create(task_B);
-  ktask_create(task_C);
-  ktask_create(task_D);
-  ktask_create(task_E);
+  // task_create(task_B, 0);
+  task_create(task_C, 0);
+  task_create(task_D, 0);
+  task_create(task_E, 0);
+  task_create_user(&_start_user_task, &_end_user_task);
 
-  printf("Main task (KTID 0) entering infinite yield loop.\n");
+  printf("Main task (TID 0) entering infinite yield loop.\n");
   while (true) {
-      ktask_yield(NULL);
+      task_yield(NULL);
   }
 }

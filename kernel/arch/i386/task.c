@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "gdt.h"
 #include <stdio.h>
+#include <string.h>
 
 extern void context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t next_cr3, uint32_t intr_num);
 
@@ -42,8 +43,8 @@ static void cleanup_zombies() {
 static void task_wrapper(void (*entry)(void)) {
     if (current_task && current_task->privilege_level == 3) {
         // Switch to user mode via iret
-        // We push a fake interrupt frame onto the stack to iret into ring 3
-        uint32_t user_esp = (uint32_t)kmalloc(4096) + 4096; // Basic user stack allocation (needs proper paging in future)
+        // User stack is mapped at 0xB0000000
+        uint32_t user_esp = 0xB0000000 + 4096;
         asm volatile(
             "cli \n\t"
             "mov $0x23, %%ax \n\t" // User data segment
@@ -81,6 +82,8 @@ void task_init_scheduler() {
     printf("Scheduler initialized. Main task TID: %d\n", main_task->id);
 }
 
+#include "memory.h"
+
 task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     // Disable interrupts to prevent scheduler from ticking while we modify the ready queue
     uint32_t flags = interrupt_save();
@@ -104,8 +107,8 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     task->stack_limit = stack;
     task->id = next_tid++;
     task->state = TASK_READY;
-    task->page_directory = get_cr3(); // Inherit current page directory
     task->privilege_level = privilege_level;
+    task->page_directory = get_cr3(); // Inherit current page directory
 
     // Set up the initial stack frame
     // The stack grows downwards, so start at the top
@@ -149,6 +152,90 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     printf("Task created. TID: %d, Privilege: %d, ESP: %x\n", task->id, task->privilege_level, (uint32_t)task->kernel_stack);
 
     // We restore interrupts for THIS currently running task that just created a new one
+    interrupt_restore(flags);
+    return task;
+}
+
+task_t* task_create_user(void* start_addr, void* end_addr) {
+    uint32_t size = (uint32_t)end_addr - (uint32_t)start_addr;
+
+    uint32_t flags = interrupt_save();
+    cleanup_zombies();
+
+    task_t* task = kmalloc(sizeof(task_t));
+    if (!task) {
+        interrupt_restore(flags);
+        return NULL;
+    }
+
+    uint32_t stack_size = 4096;
+    void* stack = kmalloc(stack_size);
+    if (!stack) {
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
+
+    task->stack_limit = stack;
+    task->id = next_tid++;
+    task->state = TASK_READY;
+    task->privilege_level = 3;
+
+    uint32_t* pd_virt = memory_create_user_pagedir();
+    uint32_t pd_phys = (uint32_t)pd_virt - KERNEL_START;
+    task->page_directory = pd_phys;
+
+    uint32_t current_pd = get_cr3();
+    memory_set_pagedir(pd_virt);
+
+    uint32_t num_code_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
+    if (num_code_pages == 0) num_code_pages = 1;
+
+    for (uint32_t i = 0; i < num_code_pages; i++) {
+        uint32_t code_phys = pmm_alloc_page_frame();
+        memory_map_page(0x08048000 + i * PAGE_SIZE, code_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+    }
+
+    uint32_t ustack_phys = pmm_alloc_page_frame();
+    memory_map_page(0xB0000000, ustack_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+
+    memcpy((void*)0x08048000, start_addr, size);
+
+    memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
+
+    uint32_t* stack_ptr = (uint32_t*)((uint32_t)stack + stack_size);
+
+    *(--stack_ptr) = 0x08048000;      // Argument to task_wrapper
+    *(--stack_ptr) = 0;               // Dummy return address for task_wrapper
+
+    *(--stack_ptr) = 0x202; // EFLAGS
+    *(--stack_ptr) = GDT_KERNEL_CS_OFFSET;  // CS
+    *(--stack_ptr) = (uint32_t)task_wrapper; // EIP
+
+    // pushad registers
+    *(--stack_ptr) = 0; // EAX
+    *(--stack_ptr) = 0; // ECX
+    *(--stack_ptr) = 0; // EDX
+    *(--stack_ptr) = 0; // EBX
+    *(--stack_ptr) = 0; // ESP
+    *(--stack_ptr) = 0; // EBP
+    *(--stack_ptr) = 0; // ESI
+    *(--stack_ptr) = 0; // EDI
+
+    // Segment registers
+    *(--stack_ptr) = 0x10; // DS
+    *(--stack_ptr) = 0x10; // ES
+    *(--stack_ptr) = 0x10; // FS
+    *(--stack_ptr) = 0x10; // GS
+
+    task->kernel_stack = stack_ptr;
+    task->regs = (registers_t*)stack_ptr;
+
+    task->next = current_task->next;
+    current_task->next = task;
+
+    printf("User Task created. TID: %d, Size: %d, ESP: %x\n", task->id, size, (uint32_t)task->kernel_stack);
+
     interrupt_restore(flags);
     return task;
 }

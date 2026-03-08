@@ -286,6 +286,21 @@ void isr_handler(InteruptReg *regs)
         terminal_writestring(exception_messages[regs->intr_num]);
         terminal_writestring("\nException! System Halted\n");
 
+        if (regs->intr_num == 14) { // Page Fault
+            uint32_t cr2;
+            asm volatile("mov %%cr2, %0" : "=r"(cr2));
+            char buf[32];
+            terminal_writestring("Faulting Address: 0x");
+            
+            // Simple hex to string
+            for (int i = 28; i >= 0; i -= 4) {
+                int nibble = (cr2 >> i) & 0xF;
+                char c = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
+                terminal_putchar(c);
+            }
+            terminal_putchar('\n');
+        }
+
         // Hang the system to prevent further damage
         for (;;);
     }

@@ -51,6 +51,15 @@ void task_init_scheduler();
 task_t* task_create(void (*entry)(void), uint8_t privilege_level);
 
 /**
+ * task_create_user - Creates a new user task by copying a code block.
+ * @start_addr: The start address of the code to copy.
+ * @end_addr: The end address of the code to copy.
+ *
+ * Return: The created task, or NULL on failure.
+ */
+task_t* task_create_user(void* start_addr, void* end_addr);
+
+/**
  * task_yield - Yields the CPU to the next ready task.
  */
 void task_yield(InteruptReg *regs);

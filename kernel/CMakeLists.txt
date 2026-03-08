@@ -11,11 +11,13 @@ find_package(Python3 REQUIRED)
 # ==============================================================================
 # Gather all C and Assembly source files.
 file(GLOB KERNEL_C_SOURCES "*.c")
+file(GLOB KERNEL_ASM_SOURCES "*.asm")
 file(GLOB ARCH_C_SOURCES "arch/${OS_ARCH}/*.c")
 file(GLOB ARCH_ASM_SOURCES "arch/${OS_ARCH}/*.asm")
 
 set(ALL_SOURCES
     ${KERNEL_C_SOURCES}
+    ${KERNEL_ASM_SOURCES}
     ${ARCH_C_SOURCES}
     ${ARCH_ASM_SOURCES}
 )
@@ -163,6 +165,13 @@ add_custom_target(run_iso
     COMMAND qemu-system-${OS_ARCH} -cdrom ${ISO_IMAGE}
     DEPENDS iso
     COMMENT "Running ISO in QEMU (CD-ROM Boot) for ${OS_ARCH}"
+)
+
+# 'make run_headless' - Runs the kernel binary directly headless
+add_custom_target(run_headless
+    COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -kernel $<TARGET_FILE:myos.kernel> -display none -serial file:qemu.log & sleep 2 && killall qemu-system-${OS_ARCH} || true"
+    DEPENDS myos.kernel
+    COMMENT "Running kernel headless"
 )
 
 # 'make debug_run' - Runs the kernel binary directly with debug flags and connects GDB

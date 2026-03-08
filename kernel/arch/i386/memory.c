@@ -76,11 +76,70 @@ void memory_set_pagedir(uint32_t* pd) {
     asm volatile("mov %0, %%cr3" :: "r"(pd_phys));
 }
 
+#define MAX_ACTIVE_PAGEDIRS 256
+static uint32_t active_pagedirs[MAX_ACTIVE_PAGEDIRS];
+static int active_pagedir_count = 0;
+
+uint32_t* memory_create_user_pagedir(void) {
+    uint32_t pd_phys = pmm_alloc_page_frame();
+    if (!pd_phys) return NULL;
+
+    // We temporarily map the new page directory to 0xE0000000 so we can initialize it.
+    memory_map_page(0xE0000000, pd_phys, PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+    uint32_t* pd = (uint32_t*)0xE0000000;
+
+    // Clear the lower 3GB (user space PDEs)
+    memset(pd, 0, 768 * sizeof(uint32_t));
+
+    // Copy the upper 1GB (kernel space PDEs) from initial_page_dir
+    for (int i = 768; i < 1024; i++) {
+        pd[i] = initial_page_dir[i];
+    }
+
+    // Set up recursive mapping for the new directory
+    pd[1023] = pd_phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE;
+
+    // Unmap the temporary mapping
+    uint32_t pd_index = 0xE0000000 >> 22;
+    uint32_t pt_index = (0xE0000000 >> 12) & 0x3FF;
+    uint32_t* pt = RECURSIVE_PAGE_TABLE(pd_index);
+    pt[pt_index] = 0;
+    flush_tlb_entry(0xE0000000);
+
+    if (active_pagedir_count < MAX_ACTIVE_PAGEDIRS) {
+        active_pagedirs[active_pagedir_count++] = pd_phys;
+    }
+
+    return (uint32_t*)(pd_phys + KERNEL_START);
+}
+
 static void memory_sync_pagedirs(void) {
-    // This function is intended to sync kernel PDEs across multiple page directories.
-    // Currently, we only use initial_page_dir, so this is a placeholder.
-    // In a future multi-address space implementation, this would iterate through
-    // all active page directories.
+    uint32_t flags = interrupt_save();
+    
+    // We use PDE 1022 of initial_page_dir to temporarily map other page directories
+    // PDE 1022 corresponds to virtual address 0xFF800000.
+    // When used as a Page Table via recursive mapping, its contents are visible at 0xFFFFE000.
+    for (int i = 0; i < active_pagedir_count; i++) {
+        uint32_t pd_phys = active_pagedirs[i];
+        
+        initial_page_dir[1022] = pd_phys | PAGE_FLAG_PRESENT | PAGE_FLAG_WRITE;
+        flush_tlb_entry(0xFFFFE000); 
+        
+        uint32_t* target_pd = (uint32_t*)0xFFFFE000;
+        
+        // Copy kernel PDEs (768 to 1021).
+        // 1022 is our temporary mapping, skip it.
+        // 1023 is the recursive mapping, keep it untouched.
+        for (int j = 768; j < 1022; j++) {
+            target_pd[j] = initial_page_dir[j];
+        }
+    }
+    
+    // Clear the temporary mapping
+    initial_page_dir[1022] = 0;
+    flush_tlb_entry(0xFFFFE000);
+    
+    interrupt_restore(flags);
 }
 
 uint32_t pmm_alloc_page_frame(void) {

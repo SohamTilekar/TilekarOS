@@ -1,5 +1,5 @@
-#include "arch/i386/syscall.h"
-#include "arch/i386/task.h"
+#include "syscall.h"
+#include "task.h"
 #include <kernel/tty.h>
 #include <stdint.h>
 
