@@ -7,3 +7,4 @@ dump_debug/*
 build/*
 .cache/*
 bx_enh_dbg.ini
+site/*

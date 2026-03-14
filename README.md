@@ -6,9 +6,10 @@ TilekarOS is a hobby 32-bit operating system written in C and Assembly for the x
 
 Detailed documentation is available in the [`docs/`](./docs/) directory:
 
-*   **[Introduction & Roadmap](./docs/README.md)**
-*   **[Architecture & Internals](./docs/ARCHITECTURE.md)**
-*   **[Build System](./docs/BUILD_SYSTEM.md)**
+*   **[Full Documentation Index](./docs/README.md)**
+*   **[Architecture Overview](./docs/kernel/architecture.md)**
+*   **[Build System](./docs/getting-started/build-system.md)**
+*   **[Installation Guide](./docs/getting-started/installation.md)**
 
 ## 🚀 Quick Start
 

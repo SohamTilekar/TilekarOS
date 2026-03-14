@@ -1,55 +1,42 @@
-# TilekarOS Development Documentation
+# TilekarOS Documentation
 
-Welcome to the official development documentation for **TilekarOS**. This document provides an overview of the operating system's architecture, code flow, build system, and internal mechanisms.
+Welcome to the TilekarOS documentation. This project is a 32-bit hobby operating system designed for educational purposes.
 
-## Project Overview
+## Documentation Map
 
-TilekarOS is a 32-bit (i386) hobby operating system written in C and Assembly. It follows the **Multiboot** specification, allowing it to be booted by compliant bootloaders like GRUB.
+### 1. Getting Started
+- [Build System](./getting-started/build-system.md): How to compile and run the OS.
+- [Installation Guide](./getting-started/installation.md): Setting up the development environment.
+- [Experimenting & Messing Around](./getting-started/experimenting.md): How to create tasks and intentionally trigger failures.
 
-**Key Features:**
-*   **Architecture**: x86 (i386)
-*   **Boot Protocol**: Multiboot 1
-*   **Kernel Mode**: Protected Mode (Ring 0)
-*   **User Mode**: Ring 3 support (GDT/TSS setup)
-*   **Interrupts**: Full IDT setup with PIC remapping and exception handling
-*   **Standard Library**: Custom minimal `libc` implementation including:
-    *   `stdio.h` (`printf`, `puts`, `putchar`)
-    *   `string.h` (`memcpy`, `memset`, `strlen`, etc.)
-    *   `stdlib.h` (`abort`)
-*   **Tests**: Kernel currently runs a "Divide by Zero" test on boot to verify IDT exception handling.
+### 2. Kernel Internals (for OS Developers)
+- [Architecture Overview](./kernel/architecture.md): Boot sequence and memory layout.
+- [Kernel Initialization](./kernel/kernel-init.md): Detailed startup sequence from GRUB to `kernel_main`.
+- [GDT & TSS](./kernel/gdt.md): Global Descriptor Table and segment management.
+- [Memory Management](./kernel/memory-management.md): Physical Memory (PMM), Virtual Memory (VMM), and Heap (`kmalloc`).
+- [Interrupts & Exceptions](./kernel/interrupts.md): IDT, PIC, and IRQ handling.
+- [Multitasking](./kernel/multitasking.md): Context switching assembly and scheduler logic.
+- [Task Management Guide](./kernel/tasks-guide.md): Creating and managing kernel and user tasks.
+- [System Call Dispatcher](./kernel/syscalls.md): How the kernel handles `int 0x80`.
+- [Kernel Utilities](./kernel/kernel-utilities.md): Low-level helpers (I/O ports, interrupt control, `InteruptReg`).
 
-## Documentation Index
+### 3. Drivers
+- [VGA/TTY](./drivers/vga-tty.md): Text mode output and terminal logic.
+- [Keyboard](./drivers/keyboard.md): PS/2 Keyboard and scancode handling.
+- [Timer](./drivers/timer.md): PIT (Programmable Interval Timer).
 
-*   [Architecture & Internals](./ARCHITECTURE.md) - Details on Boot Flow, GDT, IDT, and Memory.
-*   [Build System](./BUILD_SYSTEM.md) - How to build, run, and debug the project.
+### 4. API Reference (for Users/Programmers)
+- [System Call Reference](./api/syscall-reference.md): How to use the kernel services.
+- [LibC Reference](./api/libc-reference.md): Available C standard library functions.
 
-## Directory Structure
+### 5. Development & Contributions
+- [Coding Style](./development/coding-style.md): Best practices for writing kernel code.
+- [Documentation Guide](./development/documentation-guide.md): How to contribute to this documentation.
 
-The codebase is organized as follows:
+---
 
-*   **`kernel/`**: The core kernel source code.
-    *   `arch/i386/`: Architecture-specific code (Bootloader, GDT, IDT, VGA).
-    *   `include/`: Kernel-specific headers.
-    *   `kernel.c`: Main kernel entry point.
-*   **`libc/`**: Implementation of the standard C library (string, stdio, stdlib).
-*   **`sysroot/`**: The virtual root filesystem where headers and compiled libraries are staged.
-*   **`helpers/`**: Python scripts for build assistance (e.g., converting C defines to NASM).
-*   **`isodir/`**: Staging area for generating the bootable ISO.
-*   **`dump/`**: Temporary build artifacts (object files, binaries).
-
-## How to Contribute
-
-1.  **Modify Kernel**: Edit files in `kernel/`.
-2.  **Modify LibC**: Edit files in `libc/`. If you add new files, ensure they are picked up by the `libc/Makefile`.
-3.  **Build**: Run `make run_iso` to test your changes in QEMU.
-4.  **Debug**: Use `make rund` to start QEMU in suspended mode waiting for a GDB connection.
-
-## Future Roadmap
-*   Physical Memory Manager (PMM)
-*   Virtual Memory Manager (Paging)
-*   Filesystem Support
-*   Multitasking/Scheduling
-
-## References & Resources
-
-*   [OSDev.org Wiki](https://wiki.osdev.org/Main_Page) - The ultimate resource for OS development.
+## Technical Specs
+- **Architecture**: i386 (32-bit x86)
+- **Bootloader**: Multiboot-compliant (e.g., GRUB)
+- **Memory Model**: Flat / Paged
+- **Kernel Space**: Higher-half (starts at 0xC0000000)

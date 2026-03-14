@@ -17,13 +17,13 @@ The build process transforms raw C and Assembly source code into a bootable ISO 
 
 ```mermaid
 graph TD
-    subgraph "Phase 1: Configuration"
-        CMake[CMake] -->|Reads| Toolchain[cmake/toolchains/ARCH.cmake]
-        CMake -->|Reads| CM_Root[CMakeLists.txt]
-        CMake -->|Generates| BuildEnv[Build Directory (Makefiles)]
+    subgraph Phase1 ["Phase 1: Configuration"]
+        CMake[CMake] -->|Reads| Toolchain["cmake/toolchains/ARCH.cmake"]
+        CMake -->|Reads| CM_Root["CMakeLists.txt"]
+        CMake -->|Generates| BuildEnv["Build Directory (Makefiles)"]
     end
 
-    subgraph "Phase 2: Pre-Processing"
+    subgraph Phase2 ["Phase 2: Pre-Processing"]
         Config_H[include/kernel/config.h]
         Helper[helpers/h2inc.py]
         
@@ -31,24 +31,24 @@ graph TD
         Helper -->|Generates| Config_Inc[build/config.inc]
     end
 
-    subgraph "Phase 3: Compilation"
+    subgraph Phase3 ["Phase 3: Compilation"]
         direction LR
-        Config_Inc -.->|Included| ASM_Src[Assembly Sources]
+        Config_Inc -.->|Included| ASM_Src["Assembly Sources"]
         
-        ASM_Src -->|nasm| ASM_Obj[ASM Objects]
-        C_Src[C Sources] -->|clang| C_Obj[C Objects]
-        LibC_Src[LibC Sources] -->|clang| LibC_Lib[liblibc.a]
+        ASM_Src -->|nasm| ASM_Obj["ASM Objects"]
+        C_Src["C Sources"] -->|clang| C_Obj["C Objects"]
+        LibC_Src["LibC Sources"] -->|clang| LibC_Lib["liblibc.a"]
     end
 
-    subgraph "Phase 4: Linking"
+    subgraph Phase4 ["Phase 4: Linking"]
         ASM_Obj & C_Obj & LibC_Lib --> Linker[ld.lld]
-        Linker -->|arch/ARCH/linker.ld| Kernel[myos.kernel]
+        Linker -->|arch/ARCH/linker.ld| Kernel["myos.kernel"]
     end
 
-    subgraph "Phase 5: Packaging"
+    subgraph Phase5 ["Phase 5: Packaging"]
         Kernel -->|cp| ISO_Dir[isodir]
         GRUB[grub.cfg] -->|cp| ISO_Dir
-        ISO_Dir -->|grub-mkrescue| ISO[myos.iso]
+        ISO_Dir -->|grub-mkrescue| ISO["myos.iso"]
     end
 ```
 
@@ -122,6 +122,7 @@ To port TilekarOS to a new architecture (e.g., `riscv64`):
 **Problem**: We define constants like `GDT_OFFSET_KERNEL_CODE = 0x08` in C header files (`config.h`). The assembly code (`boot.asm`) needs these exact values to set up segments. Hardcoding them in two places leads to "Magic Number" bugs.
 
 **Solution**:
+
 1.  CMake invokes `h2inc.py` during the build.
 2.  The script reads C `#define` macros.
 3.  It outputs a NASM-compatible `%define` file (`build/config.inc`).

@@ -10,59 +10,51 @@ The transition from a powered-off machine to the executing kernel involves sever
 
 ```mermaid
 flowchart TD
-    %% Styles
-    classDef hardware fill:#cfd8dc,stroke:#455a64,stroke-width:2px;
-    classDef asm fill:#e1f5fe,stroke:#0277bd,stroke-width:2px;
-    classDef c_module fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
-    classDef c_func fill:#fff3e0,stroke:#e65100,stroke-width:1px,stroke-dasharray: 5 5;
-    classDef kernel fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-
     %% --- Hardware / Bootloader ---
-    subgraph SystemStart [System Start]
+    subgraph SystemStart ["System Start"]
         direction TB
-        BIOS[BIOS / UEFI]:::hardware --> GRUB[GRUB Bootloader]:::hardware
-        GRUB -- Multiboot Magic --> ProtMode[32-bit Protected Mode]:::hardware
+        BIOS["BIOS / UEFI"]:::hardware --> GRUB[GRUB Bootloader]:::hardware
+        GRUB -- Multiboot Magic --> ProtMode["32-bit Protected Mode"]:::hardware
     end
 
     %% --- Low Level Entry ---
-    subgraph BootASM [boot.asm _start]
+    subgraph BootASM ["boot.asm _start"]
         direction TB
-        Stack[Setup Stack<br>esp = stack_top]:::asm
+        Stack["Setup Stack (esp = stack_top)"]:::asm
         Stack --> InitHub{Init Sequence}:::asm
     end
 
     SystemStart --> BootASM
 
-    %% --- Modules (Flattened where simple) ---
+    %% --- Modules ---
     
-    %% TTY: Single step, represented as node
-    InitHub -- 1 --> TTY[**tty.c**<br>init_terminal]:::c_module
+    %% TTY
+    InitHub -- 1 --> TTY["tty.c: init_terminal"]:::c_module
 
-    %% GDT: Group represents the file/function
-    subgraph GDT_Scope [gdt.c - init_gdt]
+    %% GDT
+    subgraph GDT_Scope ["gdt.c: init_gdt"]
         direction LR
         G_Ld[Load GDTR]:::c_func --> G_TSS[Install TSS]:::c_func
         G_TSS --> G_TR[Load TR]:::c_func
     end
     InitHub -- 2 --> GDT_Scope
 
-    %% IDT: Group represents the file/function
-    subgraph IDT_Scope [idt.c - init_idt]
+    %% IDT
+    subgraph IDT_Scope ["idt.c: init_idt"]
         direction LR
-        I_PIC[Remap PIC<br>0x20 / 0x28]:::c_func --> I_Fill[Fill Gates]:::c_func
+        I_PIC["Remap PIC (0x20 / 0x28)"]:::c_func --> I_Fill[Fill Gates]:::c_func
         I_Fill --> I_Ld[Load IDTR]:::c_func
     end
     InitHub -- 3 --> IDT_Scope
 
-    %% Kernel Main: Group represents the file/function
-    subgraph Kernel_Scope [kernel_main]
+    %% Kernel Main
+    subgraph Kernel_Scope ["kernel.c: kernel_main"]
         direction TB
-        AppLogic["Print Banner<br>Run Tests"]:::kernel --> Halt((Infinite Loop)):::hardware
+        AppLogic["Print Banner & Run Tests"]:::kernel --> Halt((Infinite Loop)):::hardware
     end
     InitHub -- 4 --> Kernel_Scope
 
     %% FORCE LEFT-TO-RIGHT ORDERING
-    %% This invisible chain tells the renderer: TTY is left of GDT, GDT left of IDT, etc.
     TTY ~~~ G_Ld ~~~ I_PIC ~~~ AppLogic
 ```
 
@@ -105,14 +97,6 @@ block-beta
         vga["VGA Video Memory<br>(0xB8000 - 0xBFFFF)"]
         bios["BIOS Data Area & EBDA<br>(Reserved)"]
     end
-
-    class high_mem available
-    class kernel_space kernel
-    class reserved hardware
-
-    classDef available fill:#cfc,stroke:#333;
-    classDef kernel fill:#f99,stroke:#333;
-    classDef hardware fill:#ccc,stroke:#333;
 ```
 
 ### GDT Entry Structure

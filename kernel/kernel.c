@@ -83,7 +83,6 @@ void test_kmalloc() {
 
 extern char _start_user_task;
 extern char _end_user_task;
-extern void user_task_function(void);
 
 // Task B: Infinite loop, relies on preemption
 void task_B() {
