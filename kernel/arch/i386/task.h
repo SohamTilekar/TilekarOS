@@ -60,6 +60,14 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level);
 task_t* task_create_user(void* start_addr, void* end_addr);
 
 /**
+ * task_create_elf - Creates a new task from an ELF image.
+ * @elf_data: Pointer to the ELF image in memory.
+ *
+ * Return: The created task, or NULL on failure.
+ */
+task_t* task_create_elf(void* elf_data);
+
+/**
  * task_yield - Yields the CPU to the next ready task.
  */
 void task_yield(InteruptReg *regs);

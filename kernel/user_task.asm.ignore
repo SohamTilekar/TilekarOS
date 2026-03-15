@@ -1,0 +1,22 @@
+[bits 32]
+section .text
+global _start
+
+_start:
+    ; sys_write(fd=1, buf=user_msg, len=24)
+    mov eax, 4          ; SYS_WRITE (check if your kernel uses 1 or 4 for write, based on previous kernel.asm it used 1)
+    mov eax, 1          ; Previous kernel.asm used 1 for SYS_WRITE
+    mov ebx, 1          ; fd
+    mov ecx, user_msg   ; buf
+    mov edx, 25         ; len
+    int 0x80
+    ; mov eax, [0xC0000000]
+    ; out dx, al
+
+    ; sys_exit
+    mov eax, 0          ; SYS_EXIT
+    int 0x80
+
+section .data
+user_msg:
+    db "Hello from ELF User Task", 10, 0

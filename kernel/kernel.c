@@ -1,4 +1,3 @@
-#include "arch/i386/syscall.h"
 #include "stdio.h"
 #include <kernel/tty.h>
 #include <stdbool.h>
@@ -7,7 +6,6 @@
 #include "arch/i386/kmalloc.h"
 #include "arch/i386/task.h"
 #include "string.h"
-#include "sys/syscall.h"
 
 void test_kmalloc() {
     printf("Testing kmalloc...\n");
@@ -84,6 +82,9 @@ void test_kmalloc() {
 extern char _start_user_task;
 extern char _end_user_task;
 
+extern char _start_elf_user_task;
+extern char _end_elf_user_task;
+
 // Task B: Infinite loop, relies on preemption
 void task_B() {
     while (true) {
@@ -125,7 +126,8 @@ void task_E() {
     task_exit();
 }
 
-void kernel_main() {
+void kernel_main(uint32_t magic, void* boot_info) {
+  (void)magic; (void)boot_info;
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
   test_kmalloc();
@@ -133,10 +135,15 @@ void kernel_main() {
   printf("\n--- Multitasking Stress Test ---\n");
 
   // task_create(task_B, 0);
-  task_create(task_C, 0);
-  task_create(task_D, 0);
-  task_create(task_E, 0);
-  task_create_user(&_start_user_task, &_end_user_task);
+  // task_create(task_C, 0);
+  // task_create(task_D, 0);
+  // task_create(task_E, 0);
+  // task_create_user(&_start_user_task, &_end_user_task);
+
+  // ELF Task Creation
+  uint32_t elf_size = (uint32_t)(&_end_elf_user_task - &_start_elf_user_task);
+  printf("Creating ELF task from user_task.elf (size: %u bytes)...\n", elf_size);
+  task_create_elf(&_start_elf_user_task);
 
   printf("Main task (TID 0) entering infinite yield loop.\n");
   while (true) {

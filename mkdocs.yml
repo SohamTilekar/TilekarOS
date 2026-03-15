@@ -70,6 +70,7 @@ nav:
       - Interrupts & Exceptions: kernel/interrupts.md
       - Multitasking: kernel/multitasking.md
       - Task Management Guide: kernel/tasks-guide.md
+      - ELF Executables Guide: kernel/elf-guide.md
       - System Call Dispatcher: kernel/syscalls.md
       - Kernel Utilities: kernel/kernel-utilities.md
   - Drivers:

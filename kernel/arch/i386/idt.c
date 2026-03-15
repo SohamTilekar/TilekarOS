@@ -289,9 +289,8 @@ void isr_handler(InteruptReg *regs)
         if (regs->intr_num == 14) { // Page Fault
             uint32_t cr2;
             asm volatile("mov %%cr2, %0" : "=r"(cr2));
-            char buf[32];
             terminal_writestring("Faulting Address: 0x");
-            
+
             // Simple hex to string
             for (int i = 28; i >= 0; i -= 4) {
                 int nibble = (cr2 >> i) & 0xF;

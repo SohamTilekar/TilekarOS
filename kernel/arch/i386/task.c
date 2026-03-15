@@ -5,6 +5,7 @@
 #include "kmalloc.h"
 #include "utils.h"
 #include "gdt.h"
+#include "elf.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -235,6 +236,96 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
     current_task->next = task;
 
     printf("User Task created. TID: %d, Size: %d, ESP: %x\n", task->id, size, (uint32_t)task->kernel_stack);
+
+    interrupt_restore(flags);
+    return task;
+}
+
+task_t* task_create_elf(void* elf_data) {
+    Elf32_Ehdr *hdr = (Elf32_Ehdr *)elf_data;
+    if (!elf_check_supported(hdr)) {
+        printf("ELF: Unsupported or invalid ELF file\n");
+        return NULL;
+    }
+
+    uint32_t flags = interrupt_save();
+    cleanup_zombies();
+
+    task_t* task = kmalloc(sizeof(task_t));
+    if (!task) {
+        interrupt_restore(flags);
+        return NULL;
+    }
+
+    uint32_t stack_size = 4096;
+    void* stack = kmalloc(stack_size);
+    if (!stack) {
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
+
+    task->stack_limit = stack;
+    task->id = next_tid++;
+    task->state = TASK_READY;
+    task->privilege_level = 3;
+
+    uint32_t* pd_virt = memory_create_user_pagedir();
+    uint32_t pd_phys = (uint32_t)pd_virt - KERNEL_START;
+    task->page_directory = pd_phys;
+
+    uint32_t current_pd = get_cr3();
+    memory_set_pagedir(pd_virt);
+
+    // Map a 4KB page for the user stack at 0xB0000000
+    uint32_t ustack_phys = pmm_alloc_page_frame();
+    memory_map_page(0xB0000000, ustack_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+
+    // Load ELF segments
+    void* entry = elf_load_segments(hdr, elf_data);
+    if (!entry) {
+        // Switch back before failing
+        memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
+        kfree(stack);
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
+
+    memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
+
+    uint32_t* stack_ptr = (uint32_t*)((uint32_t)stack + stack_size);
+
+    *(--stack_ptr) = (uint32_t)entry;      // Argument to task_wrapper
+    *(--stack_ptr) = 0;               // Dummy return address for task_wrapper
+
+    *(--stack_ptr) = 0x202; // EFLAGS
+    *(--stack_ptr) = GDT_KERNEL_CS_OFFSET;  // CS
+    *(--stack_ptr) = (uint32_t)task_wrapper; // EIP
+
+    // pushad registers
+    *(--stack_ptr) = 0; // EAX
+    *(--stack_ptr) = 0; // ECX
+    *(--stack_ptr) = 0; // EDX
+    *(--stack_ptr) = 0; // EBX
+    *(--stack_ptr) = 0; // ESP
+    *(--stack_ptr) = 0; // EBP
+    *(--stack_ptr) = 0; // ESI
+    *(--stack_ptr) = 0; // EDI
+
+    // Segment registers
+    *(--stack_ptr) = 0x10; // DS
+    *(--stack_ptr) = 0x10; // ES
+    *(--stack_ptr) = 0x10; // FS
+    *(--stack_ptr) = 0x10; // GS
+
+    task->kernel_stack = stack_ptr;
+    task->regs = (registers_t*)stack_ptr;
+
+    task->next = current_task->next;
+    current_task->next = task;
+
+    printf("ELF Task created. TID: %d, Entry: %p, ESP: %x\n", task->id, entry, (uint32_t)task->kernel_stack);
 
     interrupt_restore(flags);
     return task;

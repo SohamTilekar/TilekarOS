@@ -8,3 +8,5 @@ build/*
 .cache/*
 bx_enh_dbg.ini
 site/*
+**.o
+**.elf
