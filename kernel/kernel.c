@@ -130,7 +130,7 @@ void kernel_main(uint32_t magic, void* boot_info) {
   (void)magic; (void)boot_info;
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
-  test_kmalloc();
+  // test_kmalloc();
 
   printf("\n--- Multitasking Stress Test ---\n");
 

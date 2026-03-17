@@ -149,6 +149,7 @@ TSSEntry tss_entry = {
     .es = GDT_KERNEL_DS_OFFSET | 0x3,
     .fs = GDT_KERNEL_DS_OFFSET | 0x3,
     .gs = GDT_KERNEL_DS_OFFSET | 0x3,
+    .iomap_base = sizeof(TSSEntry),
 };
 
 GDTEntry gdt[] = {
@@ -180,7 +181,7 @@ GDTEntry gdt[] = {
               GDT_FLAG_32BIT | GDT_FLAG_GRANULARITY_4K),
 
     // Task State Segment
-    [GDT_TSS_INDEX] = {/* Set by `writeTSS` in `init_gdt` */},
+    [GDT_TSS_INDEX] = {/* Set by `gdt_install_tss` in `init_gdt` */},
 };
 
 GDTDescriptor gdt_discriptor = {sizeof(gdt) - 1, gdt};
@@ -212,7 +213,7 @@ static void gdt_install_tss(void) {
     uint32_t base = (uint32_t)&tss_entry;
     uint32_t limit = sizeof(tss_entry) - 1;
 
-    // Access byte: Present, Ring 3 (for user tasks), System, 32-bit TSS
+    // Access byte: Present, Ring 3, System, 32-bit TSS
     // P=1, DPL=3, S=0, Type=9 (32-bit TSS)
     uint8_t access = GDT_ACCESS_PRESENT | GDT_ACCESS_RING3 | GDT_TYPE_TSS_32_AVAIL;
 
