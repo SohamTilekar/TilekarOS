@@ -409,12 +409,3 @@ void task_exit() {
     // We should never reach here, but in case we do somehow
     interrupt_restore(flags);
 }
-
-// ============================================================================
-// Faults
-// ============================================================================
-
-void protection_fault() {
-    printf("Task %d Did Inlegal things as a user process Terminating it\n", current_task->id);
-    task_exit();
-}

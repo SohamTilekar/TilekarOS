@@ -84,7 +84,7 @@ isr_no_err_stub 9   ; Coprocessor Segment Overrun
 isr_err_stub    10  ; Invalid TSS (Has Error Code)
 isr_err_stub    11  ; Segment Not Present (Has Error Code)
 isr_err_stub    12  ; Stack-Segment Fault (Has Error Code)
-; isr_err_stub    13  ; General Protection Fault (Has Error Code) Now using protection_fault
+isr_err_stub    13  ; General Protection Fault (Has Error Code)
 isr_err_stub    14  ; Page Fault (Has Error Code)
 isr_no_err_stub 15  ; Reserved
 isr_no_err_stub 16  ; x87 FPU Exception

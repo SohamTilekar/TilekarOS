@@ -138,12 +138,12 @@ void kernel_main(uint32_t magic, void* boot_info) {
   // task_create(task_C, 0);
   // task_create(task_D, 0);
   // task_create(task_E, 0);
-  // task_create_user(&_start_user_task, &_end_user_task);
+  task_create_user(&_start_user_task, &_end_user_task);
 
   // ELF Task Creation
-  uint32_t elf_size = (uint32_t)(&_end_elf_user_task - &_start_elf_user_task);
-  printf("Creating ELF task from user_task.elf (size: %u bytes)...\n", elf_size);
-  task_create_elf(&_start_elf_user_task);
+  // uint32_t elf_size = (uint32_t)(&_end_elf_user_task - &_start_elf_user_task);
+  // printf("Creating ELF task from user_task.elf (size: %u bytes)...\n", elf_size);
+  // task_create_elf(&_start_elf_user_task);
 
   printf("Main task (TID 0) entering infinite yield loop.\n");
   while (true) {

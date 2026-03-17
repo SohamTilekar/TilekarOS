@@ -1,36 +1,43 @@
 [bits 32]
 
+section .data
+msg db "IOPL = ", 0
+outbuf db "00", 10, 0   ; two digits + newline
+
 section .text
+global _start
 
-global _start_user_task
-global _end_user_task
-global user_task_function
+_start:
 
-_start_user_task:
-user_task_function:
-    jmp .start_user_task_code
+    ; --- Read EFLAGS ---
+    pushfd
+    pop eax
 
-.user_msg:
-    db "User task copied & running in Ring 3!", 10, 0
+    ; --- Extract IOPL (bits 12-13) ---
+    mov ebx, eax
+    shr ebx, 12
+    and ebx, 3          ; EBX = IOPL (0..3)
 
-.start_user_task_code:
-    ; Attempt to access kernel memory (should cause Page Fault)
-    ; mov eax, [0xC0000000]
+    ; --- Convert to ASCII "00".."03" ---
+    mov byte [outbuf], '0'
+    add bl, '0'
+    mov [outbuf + 1], bl
 
-    ; sys_write(fd=1, buf=.user_msg, len=38)
-    mov eax, 1          ; SYS_WRITE
-    mov ebx, 1          ; fd
-    call .get_eip
-.get_eip:
-    pop ecx
-    sub ecx, (.get_eip - .user_msg) ; ecx now points to .user_msg position independent
-    mov edx, 38         ; len
+    ; --- sys_write(stdout, msg, 7) ---
+    mov eax, 4          ; SYS_write
+    mov ebx, 1          ; fd = stdout
+    mov ecx, msg
+    mov edx, 7
     int 0x80
 
-    ; sys_exit
-    mov eax, 0          ; SYS_EXIT
+    ; --- sys_write(stdout, outbuf, 3) ---
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, outbuf
+    mov edx, 3
     int 0x80
-.loop:
-    jmp .loop
 
-_end_user_task:
+    ; --- exit ---
+    mov eax, 1
+    xor ebx, ebx
+    int 0x80

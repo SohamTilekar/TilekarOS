@@ -1,9 +1,11 @@
 #include "local_config.h"
 #include <kernel/tty.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 #include "idt.h"
 #include "utils.h"
+#include "task.h"
 
 /*
  * IDT Entry Structure
@@ -78,7 +80,7 @@ extern void isr9();  // Coprocessor Segment Overrun
 extern void isr10(); // Invalid TSS
 extern void isr11(); // Segment Not Present
 extern void isr12(); // Stack-Segment Fault
-extern void protection_fault(); // General Protection Fault
+extern void isr13(); // General Protection Fault
 extern void isr14(); // Page Fault
 extern void isr15(); // Reserved
 extern void isr16(); // x87 Floating Point Exception
@@ -179,60 +181,60 @@ void init_idt()
      */
 
     // --- Exception Gates (0-31) ---
-    set_idt_gate( 0, (uint32_t)isr0 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 1, (uint32_t)isr1 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 2, (uint32_t)isr2 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 3, (uint32_t)isr3 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 4, (uint32_t)isr4 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 5, (uint32_t)isr5 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 6, (uint32_t)isr6 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 7, (uint32_t)isr7 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 8, (uint32_t)isr8 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate( 9, (uint32_t)isr9 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(10, (uint32_t)isr10, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(11, (uint32_t)isr11, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(12, (uint32_t)isr12, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(13, (uint32_t)protection_fault, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(14, (uint32_t)isr14, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(15, (uint32_t)isr15, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(16, (uint32_t)isr16, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(17, (uint32_t)isr17, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(18, (uint32_t)isr18, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(19, (uint32_t)isr19, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(20, (uint32_t)isr20, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(21, (uint32_t)isr21, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(22, (uint32_t)isr22, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(23, (uint32_t)isr23, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(24, (uint32_t)isr24, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(25, (uint32_t)isr25, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(26, (uint32_t)isr26, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(27, (uint32_t)isr27, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(28, (uint32_t)isr28, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(29, (uint32_t)isr29, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(30, (uint32_t)isr30, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(31, (uint32_t)isr31, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
+    set_idt_gate( 0, (uint32_t)isr0 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 1, (uint32_t)isr1 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 2, (uint32_t)isr2 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 3, (uint32_t)isr3 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 4, (uint32_t)isr4 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 5, (uint32_t)isr5 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 6, (uint32_t)isr6 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 7, (uint32_t)isr7 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 8, (uint32_t)isr8 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate( 9, (uint32_t)isr9 , GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(10, (uint32_t)isr10, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(11, (uint32_t)isr11, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(12, (uint32_t)isr12, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(13, (uint32_t)isr13, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(14, (uint32_t)isr14, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(15, (uint32_t)isr15, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(16, (uint32_t)isr16, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(17, (uint32_t)isr17, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(18, (uint32_t)isr18, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(19, (uint32_t)isr19, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(20, (uint32_t)isr20, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(21, (uint32_t)isr21, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(22, (uint32_t)isr22, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(23, (uint32_t)isr23, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(24, (uint32_t)isr24, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(25, (uint32_t)isr25, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(26, (uint32_t)isr26, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(27, (uint32_t)isr27, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(28, (uint32_t)isr28, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(29, (uint32_t)isr29, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(30, (uint32_t)isr30, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(31, (uint32_t)isr31, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_TRAP_GATE);
 
     // --- Hardware Interrupt Gates (IRQs 32-47) ---
-    set_idt_gate(32, (uint32_t)irq0, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(33, (uint32_t)irq1, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(34, (uint32_t)irq2, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(35, (uint32_t)irq3, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(36, (uint32_t)irq4, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(37, (uint32_t)irq5, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(38, (uint32_t)irq6, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(39, (uint32_t)irq7, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(40, (uint32_t)irq8, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(41, (uint32_t)irq9, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(42, (uint32_t)irq10, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(43, (uint32_t)irq11, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(44, (uint32_t)irq12, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(45, (uint32_t)irq13, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(46, (uint32_t)irq14, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(47, (uint32_t)irq15, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
+    set_idt_gate(32, (uint32_t)irq0, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(33, (uint32_t)irq1, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(34, (uint32_t)irq2, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(35, (uint32_t)irq3, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(36, (uint32_t)irq4, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(37, (uint32_t)irq5, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(38, (uint32_t)irq6, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(39, (uint32_t)irq7, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(40, (uint32_t)irq8, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(41, (uint32_t)irq9, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(42, (uint32_t)irq10, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(43, (uint32_t)irq11, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(44, (uint32_t)irq12, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(45, (uint32_t)irq13, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(46, (uint32_t)irq14, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
+    set_idt_gate(47, (uint32_t)irq15, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING0 | IDT_FLAG_INT_GATE);
 
     // --- System Call Gates ---
-    set_idt_gate(128, (uint32_t)syscall_stub, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
-    set_idt_gate(177, (uint32_t)isr177, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_INT_GATE);
+    set_idt_gate(128, (uint32_t)syscall_stub, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_TRAP_GATE);
+    set_idt_gate(177, (uint32_t)isr177, GDT_KERNEL_CS_OFFSET, IDT_FLAG_PRESENT | IDT_FLAG_RING3 | IDT_FLAG_TRAP_GATE);
 
     // 5. Finally, load the IDT using the ASM command 'lidt'
     idt_flush((uint32_t)&idtr);
@@ -283,25 +285,29 @@ void isr_handler(InteruptReg *regs)
     // If it is a known CPU exception
     if (regs->intr_num < 32)
     {
-        terminal_writestring(exception_messages[regs->intr_num]);
-        terminal_writestring("\nException! System Halted\n");
+        uint32_t pid = current_task ? current_task->id : 0;
+        printf("\nEXCEPTION: %s (ID: %d)\n", exception_messages[regs->intr_num], regs->intr_num);
+        printf("FAULTING TASK PID: %d\n", pid);
 
         if (regs->intr_num == 14) { // Page Fault
             uint32_t cr2;
             asm volatile("mov %%cr2, %0" : "=r"(cr2));
-            terminal_writestring("Faulting Address: 0x");
-
-            // Simple hex to string
-            for (int i = 28; i >= 0; i -= 4) {
-                int nibble = (cr2 >> i) & 0xF;
-                char c = nibble < 10 ? '0' + nibble : 'A' + nibble - 10;
-                terminal_putchar(c);
-            }
-            terminal_putchar('\n');
+            printf("FAULTING VIRTUAL ADDRESS: 0x%x\n", cr2);
         }
 
-        // Hang the system to prevent further damage
-        for (;;);
+        // Check if exception occurred in user land (Ring 3)
+        // or if it's a kernel task other than PID 0
+        if ((regs->csm & 0x3) == 3) {
+            printf("TERMINATING USER PROCESS (PID %d) due to exception.\n", pid);
+            task_exit();
+        } else if (pid != 0) {
+            printf("TERMINATING KERNEL TASK (PID %d) due to exception.\n", pid);
+            task_exit();
+        } else {
+            printf("CRITICAL EXCEPTION IN KERNEL MAIN (PID 0). SYSTEM HALTED.\n");
+            // Hang the system to prevent further damage
+            for (;;);
+        }
     }
 }
 
