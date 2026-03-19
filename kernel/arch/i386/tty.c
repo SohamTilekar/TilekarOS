@@ -37,6 +37,27 @@ void terminal_update_cursor(void)
 	out_port_b(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
+#include "devices.h"
+#include "kmalloc.h"
+
+static int tty_device_write(device_t* dev, const void* buffer, uint32_t size) {
+    (void)dev;
+    const char* data = (const char*)buffer;
+    for (uint32_t i = 0; i < size; i++) {
+        terminal_putchar(data[i]);
+    }
+    return size;
+}
+
+void tty_register(void) {
+    device_t* dev = kmalloc(sizeof(device_t));
+    memset(dev, 0, sizeof(device_t));
+    strcpy(dev->name, "tty0");
+    dev->type = DEVICE_TYPE_CHAR;
+    dev->write = tty_device_write;
+    device_register(dev);
+}
+
 void init_terminal(void)
 {
     // Initialize COM1 serial port for logging

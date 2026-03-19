@@ -1,18 +1,13 @@
-#ifndef KEYBOARD_H
-#define KEYBOARD_H
+#ifndef ARCH_I386_KEYBOARD_H
+#define ARCH_I386_KEYBOARD_H
 
 #include <stdint.h>
 #include <stdbool.h>
 #include "utils.h"
 
-// Key Status
-#define KEY_RELEASED 0
-#define KEY_PRESSED  1
-
-// Explicit KeyCode Values
 enum KeyCode {
     KEY_UNKNOWN      = 0x00,
-    
+
     // Printable Characters
     KEY_A            = 0x01,
     KEY_B            = 0x02,
@@ -40,18 +35,18 @@ enum KeyCode {
     KEY_X            = 0x18,
     KEY_Y            = 0x19,
     KEY_Z            = 0x1A,
-    
+
     KEY_0            = 0x1B,
     KEY_1            = 0x1C,
     KEY_2            = 0x1D,
     KEY_3            = 0x1E,
-    KEY_4            = 0x1F, 
+    KEY_4            = 0x1F,
     KEY_5            = 0x20,
     KEY_6            = 0x21,
     KEY_7            = 0x22,
     KEY_8            = 0x23,
     KEY_9            = 0x24,
-    
+
     KEY_GRAVE        = 0x25,
     KEY_MINUS        = 0x26,
     KEY_EQUAL        = 0x27,
@@ -64,21 +59,21 @@ enum KeyCode {
     KEY_DOT          = 0x2E,
     KEY_SLASH        = 0x2F,
     KEY_SPACE        = 0x30,
-    
+
     // Function Keys
     KEY_F1           = 0x40,
     KEY_F2           = 0x41,
     KEY_F3           = 0x42,
     KEY_F4           = 0x43,
     KEY_F5           = 0x44,
-    KEY_F6           = 0x45, 
+    KEY_F6           = 0x45,
     KEY_F7           = 0x46,
     KEY_F8           = 0x47,
     KEY_F9           = 0x48,
     KEY_F10          = 0x49,
     KEY_F11          = 0x4A,
     KEY_F12          = 0x4B,
-    
+
     // Control Keys
     KEY_ESC          = 0x50,
     KEY_ENTER        = 0x51,
@@ -91,7 +86,7 @@ enum KeyCode {
     KEY_RCTRL        = 0x58,
     KEY_LALT         = 0x59,
     KEY_RALT         = 0x5A,
-    
+
     // Navigation / Editing
     KEY_INS          = 0x60,
     KEY_DEL          = 0x61,
@@ -103,11 +98,11 @@ enum KeyCode {
     KEY_DOWN         = 0x67,
     KEY_LEFT         = 0x68,
     KEY_RIGHT        = 0x69,
-    
+
     // Lock Keys
     KEY_NUMLOCK      = 0x70,
     KEY_SCROLLLOCK   = 0x71,
-    
+
     // Keypad
     KEY_KP_0         = 0x80,
     KEY_KP_1         = 0x81,
@@ -137,21 +132,25 @@ enum KeyCode {
 typedef struct {
     enum KeyCode key_code;
     uint8_t scancode;
-    char character;     
-    bool pressed;       
+    bool pressed;
     bool shift_active;
     bool ctrl_active;
     bool alt_active;
     bool caps_lock;
     bool num_lock;
+    char character;
 } KeyEvent;
 
 typedef void (*keyboard_callback_t)(KeyEvent event);
 
 void init_keyboard();
+void keyboard_register(void);
 void keyboard_set_callback(keyboard_callback_t callback);
+const char* keycode_to_string(enum KeyCode code);
 char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock);
 
-void keyboard_handler(InteruptReg* r);
+// New Buffer API
+char keyboard_getchar();
+int keyboard_read(void* buffer, uint32_t size);
 
 #endif

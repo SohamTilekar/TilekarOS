@@ -1,6 +1,7 @@
 #include "keyboard.h"
 #include "idt.h"
 #include "stdio.h"
+#include <string.h>
 #include <kernel/tty.h>
 
 // State Variables
@@ -12,11 +13,46 @@ static bool ctrl_r = false;
 static bool alt_l = false;
 static bool alt_r = false;
 static bool caps_lock = false;
-static bool num_lock = true; // Enabled by default on most systems
+static bool num_lock = true;
 
-// Debug Mode: Set to true to enable logging, false to disable.
+// Keyboard Buffer
+#define KBD_BUF_SIZE 256
+static char kbd_buffer[KBD_BUF_SIZE];
+static uint32_t kbd_head = 0;
+static uint32_t kbd_tail = 0;
+
+static void kbd_push(char c) {
+    uint32_t next = (kbd_head + 1) % KBD_BUF_SIZE;
+    if (next != kbd_tail) {
+        kbd_buffer[kbd_head] = c;
+        kbd_head = next;
+    }
+}
+
+char keyboard_getchar() {
+    while (kbd_head == kbd_tail) {
+        // Halt or yield until interrupt? For now just busy wait
+        __asm__ volatile("hlt");
+    }
+    char c = kbd_buffer[kbd_tail];
+    kbd_tail = (kbd_tail + 1) % KBD_BUF_SIZE;
+    return c;
+}
+
+int keyboard_read(void* buffer, uint32_t size) {
+    char* ptr = (char*)buffer;
+    uint32_t count = 0;
+    while (count < size) {
+        char c = keyboard_getchar();
+        if (c == 0) continue;
+        ptr[count++] = c;
+        if (c == '\n') break;
+    }
+    return count;
+}
+
+// Debug Mode
 static bool debug_mode = false;
-
 static keyboard_callback_t active_callback = NULL;
 
 const char* keycode_to_string(enum KeyCode code) {
@@ -67,7 +103,6 @@ const char* keycode_to_string(enum KeyCode code) {
     }
 }
 
-// Scan Code Set 1 Map (0x00 - 0x58)
 static enum KeyCode scan_code_map[128] = {
     KEY_UNKNOWN, KEY_ESC, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, // 0x00 - 0x09
     KEY_9, KEY_0, KEY_MINUS, KEY_EQUAL, KEY_BACKSPACE, KEY_TAB, KEY_Q, KEY_W, KEY_E, KEY_R, // 0x0A - 0x13
@@ -116,19 +151,11 @@ static enum KeyCode resolve_keycode(uint8_t scancode, bool extended) {
 char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock) {
     bool shift_state = shift ^ caps;
     bool num_shift = shift;
-
-    if (code >= KEY_A && code <= KEY_Z) {
-        return shift_state ? ('A' + (code - KEY_A)) : ('a' + (code - KEY_A));
-    }
-
-    // Keypad Logic
+    if (code >= KEY_A && code <= KEY_Z) return shift_state ? ('A' + (code - KEY_A)) : ('a' + (code - KEY_A));
     if (code >= KEY_KP_0 && code <= KEY_KP_9) {
-        if (numlock && !shift) { // Usually Shift + Keypad digits acts as navigation
-            return '0' + (code - KEY_KP_0);
-        }
-        return 0; // Navigation (handled elsewhere via key_code)
+        if (numlock && !shift) return '0' + (code - KEY_KP_0);
+        return 0;
     }
-
     switch (code) {
         case KEY_GRAVE: return num_shift ? '~' : '`';
         case KEY_MINUS: return num_shift ? '_' : '-';
@@ -142,7 +169,8 @@ char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock) {
         case KEY_DOT: return num_shift ? '>' : '.';
         case KEY_SLASH: return num_shift ? '?' : '/';
         case KEY_SPACE: return ' ';
-
+        case KEY_ENTER:
+        case KEY_KP_ENTER: return '\n';
         case KEY_1: return num_shift ? '!' : '1';
         case KEY_2: return num_shift ? '@' : '2';
         case KEY_3: return num_shift ? '#' : '3';
@@ -153,13 +181,11 @@ char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock) {
         case KEY_8: return num_shift ? '*' : '8';
         case KEY_9: return num_shift ? '(' : '9';
         case KEY_0: return num_shift ? ')' : '0';
-
         case KEY_KP_DECIMAL: return (numlock && !shift) ? '.' : 0;
         case KEY_KP_DIV: return '/';
         case KEY_KP_MUL: return '*';
         case KEY_KP_SUB: return '-';
         case KEY_KP_ADD: return '+';
-
         default: return 0;
     }
 }
@@ -167,114 +193,53 @@ char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock) {
 void keyboard_handler(InteruptReg *r) {
     (void)r;
     uint8_t scancode = in_port_b(0x60);
-
-    if (scancode == 0xE0) {
-        is_extended = true;
-        return;
-    }
-
+    if (scancode == 0xE0) { is_extended = true; return; }
     bool released = scancode & 0x80;
     uint8_t make_code = scancode & 0x7F;
-
     enum KeyCode key = resolve_keycode(make_code, is_extended);
-
-    // Update Modifiers
     if (key == KEY_LSHIFT) shift_l = !released;
     if (key == KEY_RSHIFT) shift_r = !released;
-    if (key == KEY_LCTRL)  ctrl_l  = !released;
-    if (key == KEY_RCTRL)  ctrl_r  = !released;
-    if (key == KEY_LALT)   alt_l   = !released;
-    if (key == KEY_RALT)   alt_r   = !released;
     if (key == KEY_CAPSLOCK && !released) caps_lock = !caps_lock;
     if (key == KEY_NUMLOCK && !released) num_lock = !num_lock;
 
-    // Toggle Debug Mode and Cursor with F1 (Fn1)
-    if (key == KEY_F1 && !released) {
-        debug_mode = !debug_mode;
-        if (debug_mode) {
-            terminal_enable_cursor(0, 15);
-        } else {
-            terminal_disable_cursor(); // This uses 0x20
-        }
-    }
-
     KeyEvent event;
-    event.key_code = key;
-    event.scancode = scancode;
-    event.pressed = !released;
-    event.shift_active = shift_l | shift_r;
-    event.ctrl_active = ctrl_l | ctrl_r;
-    event.alt_active = alt_l | alt_r;
-    event.caps_lock = caps_lock;
-    event.num_lock = num_lock;
+    event.key_code = key; event.scancode = scancode; event.pressed = !released;
+    event.shift_active = shift_l | shift_r; event.caps_lock = caps_lock; event.num_lock = num_lock;
     event.character = keycode_to_char(key, event.shift_active, caps_lock, num_lock);
-
     is_extended = false;
 
-    if (debug_mode) {
-        if (key == KEY_UNKNOWN) {
-            printf("Unknown Scancode: 0x%x (%s)\n", scancode, released ? "Released" : "Pressed");
-        } else if (event.character == 0 && event.pressed) {
-            // Log special keys (those without an ASCII char) only when pressed
-            // Exclude arrow keys, shift, capslock, and numlock from debug logging as requested
-            if (key != KEY_UP && key != KEY_DOWN && key != KEY_LEFT && key != KEY_RIGHT &&
-                key != KEY_LSHIFT && key != KEY_RSHIFT && key != KEY_CAPSLOCK && key != KEY_NUMLOCK && key != KEY_DEL && key != KEY_BACKSPACE) {
-                printf("Special Key: %s\n", keycode_to_string(key));
-            }
-        }
+    if (event.pressed && event.character) {
+        kbd_push(event.character);
+        printf("%c", event.character); // Echo
+    } else if (event.pressed && key == KEY_BACKSPACE) {
+        kbd_push('\b');
+        printf("\b");
     }
 
-    if (active_callback) {
-        active_callback(event);
-    } else {
-        if (event.pressed) {
-            if (event.character) {
-                printf("%c", event.character);
-            } else {
-                // Determine if keypad should act as navigation
-                enum KeyCode effective_key = event.key_code;
+    if (active_callback) active_callback(event);
+}
 
-                // Keypad navigation fallback when NumLock is off or Shift is held
-                if (event.key_code >= KEY_KP_0 && event.key_code <= KEY_KP_9) {
-                    switch (event.key_code) {
-                        case KEY_KP_8: effective_key = KEY_UP; break;
-                        case KEY_KP_2: effective_key = KEY_DOWN; break;
-                        case KEY_KP_4: effective_key = KEY_LEFT; break;
-                        case KEY_KP_6: effective_key = KEY_RIGHT; break;
-                        case KEY_KP_7: effective_key = KEY_HOME; break;
-                        case KEY_KP_1: effective_key = KEY_END; break;
-                        case KEY_KP_9: effective_key = KEY_PGUP; break;
-                        case KEY_KP_3: effective_key = KEY_PGDN; break;
-                        case KEY_KP_0: effective_key = KEY_INS; break;
-                        case KEY_KP_DECIMAL: effective_key = KEY_DEL; break;
-                        default: break;
-                    }
-                }
+#include "devices.h"
+#include "kmalloc.h"
 
-                switch (effective_key) {
-                    case KEY_UP: if (debug_mode) terminal_cursor_up(); break;
-                    case KEY_DOWN: if (debug_mode) terminal_cursor_down(); break;
-                    case KEY_LEFT: if (debug_mode) terminal_cursor_left(); break;
-                    case KEY_RIGHT: if (debug_mode) terminal_cursor_right(); break;
-                    case KEY_ENTER:
-                    case KEY_KP_ENTER: printf("\n"); break;
-                    case KEY_BACKSPACE: printf("\b"); break;
-                    case KEY_DEL: terminal_delete_char(); break;
-                    default: break;
-                }
-            }
-        }
-    }
+static int keyboard_device_read(device_t* dev, void* buffer, uint32_t size) {
+    (void)dev;
+    return keyboard_read(buffer, size);
+}
+
+void keyboard_register(void) {
+    // Register as system device
+    device_t* dev = kmalloc(sizeof(device_t));
+    memset(dev, 0, sizeof(device_t));
+    strcpy(dev->name, "kbd0");
+    dev->type = DEVICE_TYPE_CHAR;
+    dev->read = keyboard_device_read;
+    device_register(dev);
 }
 
 void init_keyboard() {
-    shift_l = false; shift_r = false;
-    ctrl_l = false; ctrl_r = false;
-    alt_l = false; alt_r = false;
-    caps_lock = false;
-    num_lock = true;
-    is_extended = false;
+    shift_l = false; shift_r = false; caps_lock = false; num_lock = true; is_extended = false;
+    kbd_head = 0; kbd_tail = 0;
     active_callback = NULL;
-
     irq_install_handler(1, &keyboard_handler);
 }
