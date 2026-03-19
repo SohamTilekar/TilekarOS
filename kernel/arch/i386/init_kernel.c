@@ -4,6 +4,7 @@
 #include "task.h"
 #include "timer.h"
 #include "keyboard.h"
+#include "vfs.h"
 #include <stdint.h>
 #include <stdio.h>
 #include "memory.h"
@@ -66,6 +67,10 @@ void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
     // 4. Initialize the kernel heap (1MB initial size).
     kmalloc_init(1024 * 1024);
 
+    // Register devices and VFS now that heap is ready
+    tty_register();
+    keyboard_register();
+    vfs_init();
 
     // 5. init Kernel Task Scheduler
     printf("\nInitializing Multitasking...\n");
