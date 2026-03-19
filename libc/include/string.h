@@ -15,7 +15,10 @@ void* memmove(void*, const void*, size_t);
 void* memset(void*, int, size_t);
 size_t strlen(const char*);
 char* strcpy(char* __restrict, const char* __restrict);
+char* strncpy(char* __restrict, const char* __restrict, size_t);
 int strcmp(const char*, const char*);
+char* strchr(const char*, int);
+char* strrchr(const char*, int);
 
 #ifdef __cplusplus
 }
