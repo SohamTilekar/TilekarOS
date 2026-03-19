@@ -14,7 +14,7 @@ static bool print(const char* data, size_t length) {
 #if defined(__is_libk)
 	terminal_write(data, length);
 #else
-	__syscall(SYS_WRITE, 0, (uint32_t)data, length, 0, 0);
+	__syscall(SYS_WRITE, 1, (uint32_t)data, length, 0, 0);
 #endif
 	return true;
 }
@@ -29,9 +29,9 @@ static char* itoa(unsigned long long value, char* str, int base) {
         return str;
     }
     rc = ptr = str;
-    // Set '-' for negative decimals is handled in printf wrappers, 
+    // Set '-' for negative decimals is handled in printf wrappers,
     // we treat value as unsigned long long here for generic base conversion.
-    
+
     // Remember where the numbers start.
     low = ptr;
     // The actual conversion.
@@ -141,7 +141,7 @@ int printf(const char* restrict format, ...) {
 			itoa(x, buffer, 16);
 			// Convert to uppercase
 			for(int k=0; buffer[k]; k++) {
-				if (buffer[k] >= 'a' && buffer[k] <= 'z') 
+				if (buffer[k] >= 'a' && buffer[k] <= 'z')
 					buffer[k] -= 32;
 			}
 			size_t len = strlen(buffer);

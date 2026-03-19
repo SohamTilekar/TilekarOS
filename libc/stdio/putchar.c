@@ -12,7 +12,7 @@ int putchar(int ic) {
 	terminal_write(&c, sizeof(c));
 #else
 	char c = (char) ic;
-	__syscall(SYS_WRITE, 0, (uint32_t)&c, 1, 0, 0);
+	__syscall(SYS_WRITE, 1, (uint32_t)&c, 1, 0, 0);
 #endif
 	return ic;
 }
