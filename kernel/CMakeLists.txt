@@ -12,8 +12,8 @@ find_package(Python3 REQUIRED)
 # Gather all C and Assembly source files.
 file(GLOB KERNEL_C_SOURCES "*.c")
 file(GLOB KERNEL_ASM_SOURCES "*.asm")
-file(GLOB ARCH_C_SOURCES "arch/${OS_ARCH}/*.c")
-file(GLOB ARCH_ASM_SOURCES "arch/${OS_ARCH}/*.asm")
+file(GLOB_RECURSE ARCH_C_SOURCES "arch/${OS_ARCH}/*.c")
+file(GLOB_RECURSE ARCH_ASM_SOURCES "arch/${OS_ARCH}/*.asm")
 
 set(ALL_SOURCES
     ${KERNEL_C_SOURCES}
@@ -30,7 +30,7 @@ set(ALL_SOURCES
 # 'h2inc.py' reads the C header and generates a NASM-compatible .inc file.
 
 set(CONFIG_H "${CMAKE_CURRENT_SOURCE_DIR}/include/kernel/config.h")
-set(LOCAL_CONFIG_H "${CMAKE_CURRENT_SOURCE_DIR}/arch/${OS_ARCH}/local_config.h")
+set(LOCAL_CONFIG_H "${CMAKE_CURRENT_SOURCE_DIR}/arch/${OS_ARCH}/cpu/local_config.h")
 
 # The generated files are placed in the build directory (BINARY_DIR), not source.
 set(CONFIG_INC "${CMAKE_CURRENT_BINARY_DIR}/config.inc")
@@ -102,12 +102,20 @@ target_compile_options(myos.kernel PRIVATE
 target_include_directories(myos.kernel PRIVATE
     include                         # Kernel internal headers
     ${CMAKE_SOURCE_DIR}/libc/include # Standard library headers
+    arch/${OS_ARCH}
+    arch/${OS_ARCH}/cpu
+    arch/${OS_ARCH}/drivers
+    arch/${OS_ARCH}/fs
+    arch/${OS_ARCH}/mm
+    arch/${OS_ARCH}/task
+    arch/${OS_ARCH}/syscalls
+    arch/${OS_ARCH}/utils
 )
 
 # ------------------------------------------------------------------------------
 # Linker Options
 # ------------------------------------------------------------------------------
-set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/arch/${OS_ARCH}/linker.ld")
+set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/arch/${OS_ARCH}/boot/linker.ld")
 
 target_link_options(myos.kernel PRIVATE
     -T ${LINKER_SCRIPT}     # Use our custom linker script

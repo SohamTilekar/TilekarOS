@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "utils.h"
+#include "../utils/utils.h"
 
 typedef enum {
     TASK_READY,

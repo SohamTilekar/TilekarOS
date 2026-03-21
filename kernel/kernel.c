@@ -3,12 +3,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "arch/i386/kmalloc.h"
-#include "arch/i386/task.h"
-#include "arch/i386/devices.h"
-#include "arch/i386/ramdisk.h"
-#include "arch/i386/fat.h"
-#include "arch/i386/vfs.h"
+#include "kmalloc.h"
+#include "task.h"
+#include "devices.h"
+#include "ramdisk.h"
+#include "fat.h"
+#include "vfs.h"
 #include "string.h"
 
 // Global to persist across tasks
