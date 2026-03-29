@@ -1,57 +1,160 @@
-# Memory Management Internals
+# Memory Management Deep Dive
 
-TilekarOS uses a tiered memory management system, transitioning from raw physical memory allocation to virtual memory with recursive paging.
+This guide explains TilekarOS's three-layered memory management stack, spanning from physical hardware frames to user-space heap allocation.
 
 ## 1. Physical Memory Manager (PMM)
+**Source File**: [memory.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/mm/memory.c){: target="_blank" }
 
-The PMM tracks 4KB page frames in physical RAM using a **bitmap**.
+The PMM is the lowest layer of memory management. It treats the entire 4GB RAM as a series of 4KB "frames."
 
-- **Allocation**: `pmm_alloc_page_frame()` finds the first free bit and returns the physical address.
-- **Deallocation**: `pmm_free_page_frame(phys_addr)` clears the bit.
+### Bitmap-Based Allocation
+TilekarOS uses a **Bitmap** (`physical_memory_bitmap`) to track free frames. Each bit represents one 4KB frame:
+- **0**: Free
+- **1**: Allocated
+
+??? example "Code Preview: `memory.c` (PMM Implementation)"
+    ```c
+    --8<-- "kernel/arch/i386/mm/memory.c"
+    ```
+
+!!! tip "Why we use a bitmap"
+    A bitmap is memory-efficient and easy to implement. For 4GB of RAM, the bitmap only takes **128 KB** of space.
 
 ---
 
 ## 2. Virtual Memory Manager (VMM) & Paging
+**Source File**: [memory.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/mm/memory.c){: target="_blank" }
 
-TilekarOS implements **32-bit Paging** with a **Flat Memory Model**.
+The VMM manages **32-bit Paging**, allowing the kernel to map virtual addresses to physical ones.
 
-### Memory Map
-- **0x00000000 - 0xBFFFFFFF**: User Space (3GB)
-- **0xC0000000 - 0xFFFFFFFF**: Kernel Space (1GB, Higher-Half)
+### Higher-Half Memory Layout
+
+```mermaid
+block-beta
+    columns 1
+    
+    block:recursive["Recursive Mapping (0xFFC00000 - 0xFFFFFFFF)"]
+        columns 1
+        pd["Page Directory (0xFFFFF000)"]
+        pt["Page Tables (0xFFC00000)"]
+    end
+
+    block:kernel_space["Kernel Space (0xC0000000 - 0xFFBFFFFF)"]
+        columns 1
+        heap["Kernel Heap (0xD0000000+)"]
+        kcode["Kernel Code & Data (0xC0100000+)"]
+    end
+
+    block:user_space["User Space (0x00000000 - 0xBFFFFFFF)"]
+        columns 1
+        ustack["User Stack"]
+        ucode["User Code & Data"]
+    end
+```
+
+### Memory Layout Details
+
+```mermaid
+block-beta
+    columns 1
+    
+    block:high_mem
+        space
+        text["High Memory (Available for Allocation)"]
+        space
+    end
+
+    block:kernel_space_inner
+        block:sections
+            columns 3
+            stack["Kernel Stack<br>(16 KB)"]
+            bss[".bss Section<br>(Uninitialized)"]
+            data[".data Section<br>(Initialized)"]
+        end
+        code[".text Section<br>(Kernel Code)"]
+    end
+
+    block:reserved
+        vga["VGA Video Memory<br>(0xB8000 - 0xBFFFF)"]
+        bios["BIOS Data Area & EBDA<br>(Reserved)"]
+    end
+```
 
 ### Recursive Paging
-To modify page directories/tables while paging is enabled, we map the Page Directory into itself at the last entry (1023).
+TilekarOS implements **Recursive Mapping** for its Page Directory. The very last entry in the Page Directory (index 1023) points back to the Page Directory itself. See [memory.h](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/mm/memory.h){: target="_blank" } for the relevant constants.
 
-- **PD access**: 0xFFFFF000
-- **PT access**: 0xFFC00000 - 0xFFFFEFFF
+This trick allows the kernel to access and modify page tables using special virtual addresses without needing to constantly map and unmap them.
+
+- **`RECURSIVE_PAGE_DIR`**: `0xFFFFF000`
+- **`RECURSIVE_PAGE_TABLE(i)`**: `0xFFC00000 + (i << 12)`
+
+```mermaid
+graph TD
+    VA[Virtual Address] --> VMM{VMM}
+    VMM -->|Lookup PD| PD[Page Directory]
+    PD -->|Lookup PT| PT[Page Table]
+    PT -->|Frame Address| PA[Physical Memory]
+    PA -->|Return Data| VA
+```
+
+!!! info "OSDev Reference"
+    For details on recursive mapping, see [OSDev: Recursive Paging](https://wiki.osdev.org/Recursive_Paging).
 
 ---
 
-## 3. Kernel Heap (kmalloc)
+## 3. Kernel Heap (`kmalloc`)
+**Source File**: [kmalloc.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/mm/kmalloc.c){: target="_blank" }
 
-TilekarOS provides a standard allocation interface using a **doubly linked list** of blocks.
+The heap provides dynamic allocation for kernel objects using a **First-Fit Linked List** strategy.
 
-### Initialization (`kmalloc_init`)
-The heap is initialized during kernel startup with a call to `kmalloc_init(initial_size)`. It sets the base of the heap at the `KERNEL_MALLOC` virtual address (defined in `local_config.h`).
+### Allocation Process (`kmalloc`):
+1.  **First-Fit Search**: Scans the `block_header_t` list for a free block that is large enough.
+2.  **Splitting**: If a block is much larger than requested, it is split into two, leaving the remainder free.
+3.  **Heap Extension (`heap_sbrk`)**: If no suitable block is found, `kmalloc` requests more physical frames from the PMM and maps them into the virtual heap space (`0xD0000000`).
 
-### Allocation Strategy
-- **First-Fit**: The allocator searches from the `head` for the first free block large enough for the request.
-- **8-Byte Alignment**: All allocations are automatically aligned to 8-byte boundaries to satisfy CPU requirements and improve performance.
-- **Block Splitting**: If a block is significantly larger than requested, it is split into two to reduce internal fragmentation.
-- **Heap Extension (`heap_sbrk`)**: If no suitable block is found, `heap_sbrk` is called. This function:
-    1. Calculates how many new 4KB physical pages are needed.
-    2. Allocates them via the PMM.
-    3. Maps them into the virtual address space using the VMM.
-    4. Extends the linked list of blocks.
+??? example "Code Preview: `kmalloc.c`"
+    ```c
+    --8<-- "kernel/arch/i386/mm/kmalloc.c"
+    ```
 
-### Deallocation (`kfree`)
-- **Coalescing**: When a block is freed, the allocator automatically merges it with any adjacent free blocks (previous or next) to combat external fragmentation.
+### Deallocation (`kfree`):
+- **Coalescing**: When a block is freed, it is merged with its neighbors (if they are also free) to reduce fragmentation.
 
-### Thread Safety
-Both `kmalloc` and `kfree` are wrapped in `interrupt_save()` and `interrupt_restore()` calls. This ensures that memory allocation is atomic and safe even if an interrupt occurs (e.g., a timer interrupt triggering a context switch) during the process.
+---
 
-### API
-- `kmalloc(size)`: Allocates `size` bytes. Returns a pointer to the payload.
-- `kfree(ptr)`: Frees the block starting at `ptr`.
-- `kcalloc(n, size)`: Allocates `n * size` bytes and clears the memory to zero.
-- `krealloc(ptr, size)`: Resizes an allocation. If the new size is smaller, it may return the same pointer. If larger, it allocates a new block and copies the data.
+## 4. Test/Example: Stress-Testing the Heap
+
+You can verify the heap's correctness by allocating large chunks and then freeing them to ensure coalescing works:
+
+```c
+void test_heap() {
+    // 1. Allocate 100 small chunks
+    void* ptrs[100];
+    for (int i = 0; i < 100; i++) {
+        ptrs[i] = kmalloc(64);
+    }
+
+    // 2. Free alternating chunks (Creating gaps)
+    for (int i = 0; i < 100; i += 2) {
+        kfree(ptrs[i]);
+    }
+
+    // 3. Allocate a larger chunk (Should trigger coalescing)
+    void* big = kmalloc(512);
+    kfree(big);
+
+    // 4. Free the rest
+    for (int i = 1; i < 100; i += 2) {
+        kfree(ptrs[i]);
+    }
+}
+```
+
+---
+
+## References
+- [OSDev: Paging](https://wiki.osdev.org/Paging)
+- [OSDev: Physical Memory Manager](https://wiki.osdev.org/Physical_Memory_Manager)
+- [Wikipedia: Memory Management Unit](https://en.wikipedia.org/wiki/Memory_management_unit)
+- [Wikipedia: C Dynamic Memory Allocation](https://en.wikipedia.org/wiki/C_dynamic_memory_allocation)
+- [Wikipedia: Paging](https://en.wikipedia.org/wiki/Paging)

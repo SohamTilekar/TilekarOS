@@ -13,6 +13,20 @@ To maintain a clean and consistent codebase, TilekarOS follows these guidelines.
 - **Braces**: K&R style (Brace on the same line for `if`/`while`, new line for functions).
 - **Headers**: Use `#ifndef HEADER_NAME_H` guards.
 
+```c
+// Example
+#ifndef MY_HEADER_H
+#define MY_HEADER_H
+
+void my_function(int arg) {
+    if (arg > 0) {
+        // ...
+    }
+}
+
+#endif
+```
+
 ## 2. Assembly Style
 
 - **NASM**: Use Intel syntax.
@@ -28,3 +42,9 @@ To maintain a clean and consistent codebase, TilekarOS follows these guidelines.
 
 - Keep commits small and focused.
 - Use descriptive commit messages.
+
+---
+
+## References
+- [K&R Style (Wikipedia)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
+- [OSDev: C Style Guide](https://wiki.osdev.org/C_Style_Guide)

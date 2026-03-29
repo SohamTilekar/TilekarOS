@@ -1,7 +1,11 @@
 site_name: TilekarOS Documentation
 site_description: A 32-bit x86 Hobby Operating System
 site_author: TilekarOS Team
-repo_url: https://github.com/your-username/TilekarOS
+repo_name: SohamTilekar/TilekarOS
+repo_url: https://github.com/SohamTilekar/TilekarOS
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; 2024 - 2026 Soham Tilekar Under MIT License
 
 theme:
   name: material
@@ -9,7 +13,7 @@ theme:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: deep orange
+      primary: indigo
       accent: indigo
       toggle:
         icon: material/brightness-7
@@ -17,25 +21,57 @@ theme:
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: deep orange
+      primary: black
       accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  icon:
+    annotation: material/more
   features:
     - navigation.tabs
     - navigation.sections
     - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.instant.preview
+    - navigation.path
+    - navigation.prune
+    - navigation.tracking
     - search.suggest
     - search.highlight
+    - search.share
     - content.code.copy
+    - content.code.select
+    - content.code.annotate
+    - content.action.edit
+    - content.action.view
+    - toc.follow
+    - header.autohide
+
+plugins:
+  - search
 
 markdown_extensions:
+  - toc:
+      permalink: true
   - admonition
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: .
+      check_paths: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.betterem:
+      smart_enable: all
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.superfences:
@@ -45,8 +81,25 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.caret
   - attr_list
   - md_in_html
+  - abbr
+  - def_list
+  - footnotes
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SohamTilekar/TilekarOS
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:sohamtilekar233@gmail.com
 
 extra_javascript:
   - javascripts/katex.js
@@ -57,29 +110,24 @@ extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
 
 nav:
-  - Home: README.md
-  - Getting Started:
-      - Build System: getting-started/build-system.md
-      - Installation Guide: getting-started/installation.md
-      - Experimenting & Messing Around: getting-started/experimenting.md
-  - Kernel Internals:
-      - Architecture Overview: kernel/architecture.md
-      - Kernel Initialization: kernel/kernel-init.md
-      - GDT & TSS: kernel/gdt.md
-      - Memory Management: kernel/memory-management.md
-      - Interrupts & Exceptions: kernel/interrupts.md
-      - Multitasking: kernel/multitasking.md
-      - Task Management Guide: kernel/tasks-guide.md
-      - ELF Executables Guide: kernel/elf-guide.md
-      - System Call Dispatcher: kernel/syscalls.md
-      - Kernel Utilities: kernel/kernel-utilities.md
-  - Drivers:
-      - VGA/TTY: drivers/vga-tty.md
-      - Keyboard: drivers/keyboard.md
-      - Timer: drivers/timer.md
-  - API Reference:
-      - System Call Reference: api/syscall-reference.md
-      - LibC Reference: api/libc-reference.md
-  - Development & Contributions:
-      - Coding Style: development/coding-style.md
-      - Documentation Guide: development/documentation-guide.md
+  - 🏠 Home: README.md
+  - 🛠️ Getting Started:
+      - 🏗️ Build System: getting-started/build-system.md
+      - 📥 Installation Guide: getting-started/installation.md
+      - 📂 Project Structure: getting-started/project-structure.md
+      - 🧪 Experimenting & Messing Around: getting-started/experimenting.md
+  - 🧠 Kernel Internals:
+      - 🚀 Boot & Initialization: kernel/boot-and-init.md
+      - 📟 CPU & Interrupts: kernel/cpu-internals.md
+      - 💾 Memory Management: kernel/memory-management.md
+      - 🔄 Multitasking & ELF: kernel/multitasking.md
+      - 📁 Filesystem Stack: kernel/filesystem.md
+  - 🔌 Drivers & Hardware:
+      - 📟 Driver Reference: drivers/driver-reference.md
+  - 📚 API Reference:
+      - 🔌 System Call Reference: api/syscall-reference.md
+      - 📚 LibC Reference: api/libc-reference.md
+      - ⚙️ LibC Internals: api/libc-internals.md
+  - 👷 Development & Contributions:
+      - 📏 Coding Style: development/coding-style.md
+      - 📖 Documentation Guide: development/documentation-guide.md
