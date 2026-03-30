@@ -24,12 +24,42 @@ typedef struct
 void out_port_b(uint16_t port, uint8_t value);
 
 /**
+ * out_port_w - Writes a word to an I/O port.
+ * @port: The I/O port address.
+ * @value: The value to write.
+ */
+void out_port_w(uint16_t port, uint16_t value);
+
+/**
+ * out_port_l - Writes a double word (32-bit) to an I/O port.
+ * @port: The I/O port address.
+ * @value: The value to write.
+ */
+void out_port_l(uint16_t port, uint32_t value);
+
+/**
  * in_port_b - Reads a byte from an I/O port.
  * @port: The I/O port address.
  *
  * Return: The byte read from the port.
  */
 uint8_t in_port_b(uint16_t port);
+
+/**
+ * in_port_w - Reads a word from an I/O port.
+ * @port: The I/O port address.
+ *
+ * Return: The word read from the port.
+ */
+uint16_t in_port_w(uint16_t port);
+
+/**
+ * in_port_l - Reads a double word (32-bit) from an I/O port.
+ * @port: The I/O port address.
+ *
+ * Return: The dword read from the port.
+ */
+uint32_t in_port_l(uint16_t port);
 
 #define CEIL_DIV(a,b) (((a + b) - 1)/b)
 

@@ -49,7 +49,7 @@ void init_memory(uint32_t mem_upper_kb, uint32_t physical_alloc_start);
 /**
  * flush_tlb_entry - Invalidate a Translation Lookaside Buffer (TLB) entry.
  * @vaddr: The virtual address to invalidate.
- * 
+ *
  * Flushes the TLB entry for the specified virtual address using the `invlpg`
  * instruction.
  */
@@ -57,10 +57,10 @@ void flush_tlb_entry(uint32_t vaddr);
 
 /**
  * pmm_alloc_page_frame - Allocate a single physical page frame.
- * 
+ *
  * Scans the physical memory bitmap for a free page frame, marks it as used,
  * and returns its physical address.
- * 
+ *
  * Return: The physical address of the allocated frame, or 0 if out of memory.
  */
 uint32_t pmm_alloc_page_frame(void);
@@ -70,7 +70,7 @@ uint32_t pmm_alloc_page_frame(void);
  * @virtual_addr: The virtual address to map.
  * @phys_addr: The physical address to map to.
  * @flags: Page table flags (e.g., PAGE_FLAG_WRITE).
- * 
+ *
  * Updates the page tables to map the specified virtual address to the physical
  * address. Allocates new page tables if necessary.
  */
@@ -78,7 +78,7 @@ void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags);
 
 /**
  * memory_get_current_pagedir - Get the current page directory physical address.
- * 
+ *
  * Return: The linear address of the current page directory.
  */
 uint32_t* memory_get_current_pagedir(void);
@@ -93,5 +93,13 @@ uint32_t* memory_create_user_pagedir(void);
  * @pd: The physical address of the new page directory.
  */
 void memory_set_pagedir(uint32_t* pd);
+
+/**
+ * memory_get_phys - Get the physical address for a virtual address.
+ * @virtual_addr: The virtual address to translate.
+ *
+ * Return: The physical address, or 0 if not mapped.
+ */
+uint32_t memory_get_phys(uint32_t virtual_addr);
 
 #endif // ARCH_I386_MEMORY_H
