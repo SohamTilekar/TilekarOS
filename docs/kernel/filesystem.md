@@ -11,7 +11,7 @@ TilekarOS uses a tiered approach to storage:
 | | **FAT** ([fat.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/fs/fat.c){: target="_blank" }) | File Allocation Table (FAT12 implementation) |
 | | **Buffer Cache** ([buffer.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/fs/buffer.c){: target="_blank" }) | Caches disk sectors in RAM to speed up I/O |
 | **Low** | **Device Layer** ([devices.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/drivers/devices.c){: target="_blank" }) | Unified interface for Block/Char hardware |
-| | **Drivers** ([ramdisk.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/drivers/ramdisk.c){: target="_blank" }) | Hardware-specific code |
+| | **Drivers** ([ata.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/drivers/ata.c){: target="_blank" }, [ramdisk.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/drivers/ramdisk.c){: target="_blank" }) | Hardware-specific code (Supports **PIO** and **DMA**) |
 
 ```mermaid
 graph TD
@@ -19,6 +19,7 @@ graph TD
     VFS -->|Mount| FAT[FAT12 Driver]
     FAT -->|Request Sector| BC[Buffer Cache]
     BC -->|Read/Write| DEV[Device Registry]
+    DEV -->|Block I/O| ATA[ATA Disk Driver]
     DEV -->|Block I/O| RD[Ramdisk Driver]
 ```
 
@@ -29,35 +30,23 @@ graph TD
 
 The VFS provides a common interface for file operations like `open`, `read`, and `write`.
 
-??? example "Code Preview: `vfs.h`"
-    ```c
-    --8<-- "kernel/arch/i386/fs/vfs.h"
-    ```
-
 ### Key Concepts:
 - **`vnode_t`**: Represents a file or directory on any filesystem.
 - **`file_t`**: Represents an open instance of a file (contains current seek position).
-- **Mounting**: Attaching a filesystem driver to a specific path (e.g., mounting the ramdisk to `/`).
+- **Mounting**: Attaching a filesystem driver to a specific path.
 
 ---
 
 ## 3. FAT12 Filesystem
 **Source Files**: [fat.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/fs/fat.c){: target="_blank" }, [fat.h](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/fs/fat.h){: target="_blank" }
 
-TilekarOS includes a native **FAT12** driver, commonly used for floppy disks and ramdisks.
+TilekarOS includes a native **FAT12** driver, which supports both read and write operations.
 
 ### Implementation Details:
 - **BPB (BIOS Parameter Block)**: Parsed from the first sector to get cluster size and FAT location.
 - **Cluster Chains**: Follows the FAT table to read files spanning multiple non-contiguous clusters.
 - **8.3 Filenames**: Supports standard short filenames (e.g., `README.TXT`).
-
-??? example "Code Preview: `fat.h`"
-    ```c
-    --8<-- "kernel/arch/i386/fs/fat.h"
-    ```
-
-!!! info "OSDev Reference"
-    For technical specs on the FAT format, see [OSDev: FAT](https://wiki.osdev.org/FAT).
+- **Directory Management**: Supports `mkdir`, `rmdir`, and `readdir` operations.
 
 ---
 
@@ -66,27 +55,15 @@ TilekarOS includes a native **FAT12** driver, commonly used for floppy disks and
 
 The Buffer Cache (`buffer_t`) reduces physical I/O by keeping recently accessed sectors in memory. If a sector is "dirty" (modified), it is only written back to disk when `buffer_flush()` is called or the system shuts down.
 
-??? example "Code Preview: `buffer.h`"
-    ```c
-    --8<-- "kernel/arch/i386/fs/buffer.h"
-    ```
-
 ---
 
 ## 5. Storage Initialization
-The kernel initializes a **Ramdisk** at boot to serve as the root filesystem.
+The kernel initializes available storage devices at boot.
 
-Check the initialization sequence in [kernel.c](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/kernel.c){: target="_blank" }.
-
-??? example "Code Preview: `kernel.c` (Storage Init)"
-    ```c
-    --8<-- "kernel/kernel.c"
-    ```
-
-1.  **Ramdisk Allocation**: A 1.44MB buffer is allocated using `kmalloc`.
-2.  **Formatting**: The ramdisk is formatted as a **FAT12** volume labeled "TILEKAROS".
-3.  **VFS Mount**: The FAT12 driver is mounted at the root (`/`) of the VFS.
-4.  **Initial Contents**: The kernel creates a `/BIN` directory and a sample file `/BIN/HELLO.TXT`.
+1.  **PCI Scan**: The kernel scans the PCI bus to find IDE/ATA controllers.
+2.  **ATA Discovery**: For each controller found, the kernel probes for connected Master/Slave drives.
+3.  **Device Registration**: Disks are registered in the device registry (e.g., `ata0`, `ata1`).
+4.  **VFS Mount**: The boot partition (usually on `ata0`) is mounted at the root (`/`) of the VFS.
 
 ---
 
@@ -112,5 +89,4 @@ void demo_filesystem() {
 ## References
 - [OSDev: FAT](https://wiki.osdev.org/FAT)
 - [OSDev: VFS](https://wiki.osdev.org/VFS)
-- [Wikipedia: FAT](https://en.wikipedia.org/wiki/File_Allocation_Table)
-- [Wikipedia: Virtual File System](https://en.wikipedia.org/wiki/Virtual_file_system)
+- [OSDev: ATA](https://wiki.osdev.org/ATA_PIO_Mode)

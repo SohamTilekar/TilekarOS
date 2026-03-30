@@ -4,51 +4,50 @@ This document is the definitive guide to the TilekarOS build system. It is desig
 
 ## 1. Philosophy & Architecture
 
-TilekarOS uses **CMake** (v3.15+) as its primary build system generator. While `Makefiles` exist in the project, they are thin wrappers (Facades) intended for user convenience (`make`, `make iso`), while CMake handles the heavy lifting of dependency graph generation, compiler configuration, and cross-compilation toolchains.
+TilekarOS uses **CMake** (v3.15+) as its primary build system generator. While `Makefiles` exist in the project, they are thin wrappers (Facades) intended for user convenience (`make`, `make run`), while CMake handles the heavy lifting of dependency graph generation, compiler configuration, and cross-compilation toolchains.
 
 ### Why CMake?
-*   **Cross-Platform**: Generates Makefiles, Ninja build files, or VS Code / IDE projects seamlessly.
-*   **Multi-Architecture**: Easy switching between `i386`, `x86_64`, `arm`, etc., using toolchain files.
-*   **Dependency Management**: Correctly handles complex chains like *C Header $\rightarrow$ Python Script $\rightarrow$ ASM Include $\rightarrow$ ASM Object $\rightarrow$ Kernel Binary*.
+*   **Cross-Platform**: Generates Makefiles, Ninja build files, or IDE projects seamlessly.
+*   **Multi-Architecture**: Easy switching between architectures using toolchain files.
+*   **Dependency Management**: Correctly handles complex build chains.
+*   **IDE Support**: Automatically generates `.clangd` for robust IntelliSense in editors like Zed, VS Code, and CLion.
+
+### Dynamic Workspaces & Storage
+The build system features a "Workspace" concept for emulation:
+*   **VM Workspaces**: Use `VM=Name` to create isolated environments for different test scenarios.
+*   **Dynamic Drives**: Use `DRIVES=name:size_mb,...` to automatically generate and resize disk images for the VM.
 
 ### The Build Pipeline
 
-The build process transforms raw C and Assembly source code into a bootable ISO image.
+The build process transforms raw C and Assembly source code into a bootable kernel or ISO image.
 
 ```mermaid
 graph TD
     subgraph Phase1 ["Phase 1: Configuration"]
         CMake[CMake] -->|Reads| Toolchain["cmake/toolchains/ARCH.cmake"]
-        CMake -->|Reads| CM_Root["CMakeLists.txt"]
+        CMake -->|Generates| Clangd[".clangd Config"]
         CMake -->|Generates| BuildEnv["Build Directory (Makefiles)"]
     end
 
-    subgraph Phase2 ["Phase 2: Pre-Processing"]
-        Config_H[include/kernel/config.h]
-        Helper[helpers/h2inc.py]
-        
-        Helper -->|Parses| Config_H
-        Helper -->|Generates| Config_Inc[build/config.inc]
+    subgraph Phase2 ["Phase 2: Preparation"]
+        Make[Makefile] -->|prepare_vm| VM_Dir["VM Workspace"]
+        VM_Dir -->|dd/truncate| Drives["Disk Images (.img)"]
     end
 
     subgraph Phase3 ["Phase 3: Compilation"]
         direction LR
-        Config_Inc -.->|Included| ASM_Src["Assembly Sources"]
-        
-        ASM_Src -->|nasm| ASM_Obj["ASM Objects"]
         C_Src["C Sources"] -->|clang| C_Obj["C Objects"]
+        ASM_Src["Assembly Sources"] -->|nasm| ASM_Obj["ASM Objects"]
         LibC_Src["LibC Sources"] -->|clang| LibC_Lib["liblibc.a"]
     end
 
     subgraph Phase4 ["Phase 4: Linking"]
         ASM_Obj & C_Obj & LibC_Lib --> Linker[ld.lld]
-        Linker -->|arch/ARCH/linker.ld| Kernel["myos.kernel"]
+        Linker -->|arch/ARCH/linker.ld| Kernel["tilekaros.kernel"]
     end
 
-    subgraph Phase5 ["Phase 5: Packaging"]
-        Kernel -->|cp| ISO_Dir[isodir]
-        GRUB[grub.cfg] -->|cp| ISO_Dir
-        ISO_Dir -->|grub-mkrescue| ISO["myos.iso"]
+    subgraph Phase5 ["Phase 5: Execution"]
+        Kernel -->|QEMU/Bochs| Run["System Emulation"]
     end
 ```
 
@@ -56,84 +55,53 @@ graph TD
 
 ## 2. Multi-Architecture Support
 
-The build system is designed to be **Architecture Agnostic**. The target architecture is controlled by the `OS_ARCH` variable.
+The build system is designed to be **Architecture Agnostic**. The target architecture is controlled by the `OS_ARCH` variable (defaulting to `i386`).
 
-### Toolchain Example:
-See [i386.cmake](https://github.com/SohamTilekar/TilekarOS/blob/main/cmake/toolchains/i386.cmake){: target="_blank" } for the x86 32-bit toolchain configuration.
-
-??? example "Code Preview: `i386.cmake`"
-    ```cmake
-    --8<-- "cmake/toolchains/i386.cmake"
-    ```
+### Toolchain Files
+Located in `cmake/toolchains/`, these files define the cross-compiler, linker flags, and target triple.
 
 ---
 
 ## 3. Core Build Files
 
 ### Root `CMakeLists.txt`
-The central configuration for the entire project. It defines the project, sets the C standard, and includes subdirectories.
-
-**Source File**: [CMakeLists.txt](https://github.com/SohamTilekar/TilekarOS/blob/main/CMakeLists.txt){: target="_blank" }
-
-??? example "Code Preview: `CMakeLists.txt`"
-    ```cmake
-    --8<-- "CMakeLists.txt"
-    ```
+The central configuration. It handles project initialization, subdirectory processing, and **automatic IDE configuration** by writing a `.clangd` file with correct include paths and flags.
 
 ### Wrapper `Makefile`
-A convenient facade for common development tasks.
-
-**Source File**: [Makefile](https://github.com/SohamTilekar/TilekarOS/blob/main/Makefile){: target="_blank" }
-
-??? example "Code Preview: `Makefile`"
-    ```makefile
-    --8<-- "Makefile"
-    ```
+A powerful facade for daily development. It manages:
+1.  **Build Orchestration**: Calls CMake to build targets.
+2.  **VM Provisioning**: Automatically creates and resizes disk images based on `DRIVES` variable.
+3.  **Cleaning**: Targeted cleaning of both build artifacts and VM workspaces.
 
 ---
 
-## 4. Helper Scripts & Custom Commands
+## 4. Helper Scripts
 
-### `helpers/h2inc.py` (The Bridge)
-**Problem**: We define constants like `GDT_OFFSET_KERNEL_CODE = 0x08` in C header files (`config.h`). The assembly code (`boot.asm`) needs these exact values to set up segments. Hardcoding them in two places leads to "Magic Number" bugs.
-
-**Solution**:
-
-1.  CMake invokes `h2inc.py` during the build.
-2.  The script reads C `#define` macros.
-3.  It outputs a NASM-compatible `%define` file (`build/config.inc`).
-4.  NASM files include this generated file via the `-P` flag.
-
-Refer to [kernel/CMakeLists.txt](https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/CMakeLists.txt){: target="_blank" } for the `add_custom_command` that invokes this script.
-
-??? example "Code Preview: `kernel/CMakeLists.txt`"
-    ```cmake
-    --8<-- "kernel/CMakeLists.txt"
-    ```
+### `helpers/h2inc.py`
+Bridging C and Assembly by converting `#define` constants into NASM-compatible `%define` macros, ensuring single-source-of-truth for shared constants.
 
 ---
 
-## 5. Test/Example: Adding a New Source File
-
-To add a new C file to the kernel:
-1.  Create `kernel/my_new_feature.c`.
-2.  The root `kernel/CMakeLists.txt` automatically picks it up via `file(GLOB KERNEL_C_SOURCES "*.c")`.
-3.  Run `make` to re-compile.
-
----
-
-## 6. Command Reference
+## 5. Command Reference
 
 | Command | Variables | Description |
 | :--- | :--- | :--- |
-| `make` | `ARCH=...` | Builds the kernel binary. |
-| `make iso` | `ARCH=...` | Builds the bootable ISO image. |
-| `make run` | `ARCH=...` | Runs the kernel binary directly in QEMU. |
-| `make clean` | | Removes the `build/` directory. |
+| `make` | `ARCH=...` | Builds kernel and libc. |
+| `make run` | `VM=... DRIVES=...` | Builds and runs in QEMU with specific drives. |
+| `make run_iso` | `VM=...` | Builds a bootable ISO and runs it. |
+| `make run_bochs` | | Runs the kernel in the Bochs emulator. |
+| `make debug_run` | | Runs in QEMU with GDB stub enabled (port 1234). |
+| `make clean` | `VM=...` | Removes build files and the specified VM workspace. |
+
+### Variables
+*   `ARCH`: Target architecture (e.g., `i386`).
+*   `VM`: Name of the workspace folder (default: `VirtualMachine`).
+*   `DRIVES`: Comma-separated list of `name:size` (in MB). Example: `DRIVES=os:20,data:50`.
 
 ---
 
-## References
-- [CMake Documentation](https://cmake.org/documentation/)
-- [OSDev: GCC Cross-Compiler](https://wiki.osdev.org/GCC_Cross-Compiler)
-- [Wikipedia: Makefile](https://en.wikipedia.org/wiki/Makefile)
+## 6. IDE Integration
+
+The build system is optimized for modern editors:
+*   **Clangd**: Every time you run `cmake` (or `make`), a `.clangd` file is generated at the root. This provides perfect autocomplete, "Go to Definition", and error checking.
+*   **Compile Commands**: `compile_commands.json` is generated in the `build/` directory.

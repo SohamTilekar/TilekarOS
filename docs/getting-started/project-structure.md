@@ -10,22 +10,26 @@ TilekarOS/
 │   ├── arch/i386/          # 📟 x86 Specific Implementation
 │   │   ├── boot/           # 🚀 Entry point and Linker script
 │   │   ├── cpu/            # 📟 GDT, IDT, and CPU control
-│   │   ├── drivers/        # 🔌 Hardware Drivers (VGA, Keyboard, Timer)
+│   │   ├── drivers/        # 🔌 Hardware Drivers
+│   │   │   ├── ata.c       # 💾 ATA Disk Driver
+│   │   │   ├── pci.c       # 🚌 PCI Bus Driver
+│   │   │   ├── keyboard.c  # ⌨️ Keyboard Driver
+│   │   │   └── tty.c       # 🖥️ TTY/VGA Console
 │   │   ├── fs/             # 📁 Filesystem & VFS
+│   │   │   ├── vfs.c       # 🌐 Virtual File System
+│   │   │   ├── fat.c       # 📂 FAT16/32 Driver
+│   │   │   └── buffer.c    # 💾 Block Buffer Cache
 │   │   ├── mm/             # 💾 Memory Management (PMM, VMM, Heap)
 │   │   ├── syscalls/       # 🔌 System Call Dispatcher
 │   │   ├── task/           # 🔄 Multitasking & ELF Loader
 │   │   └── utils/          # 🛠️ Kernel Utilities
 │   └── include/            # 📂 Kernel-wide Headers
 ├── libc/                   # 📚 Minimal C Standard Library
-│   ├── include/            # 📂 LibC Headers (stdio.h, string.h, etc.)
-│   ├── stdio/              # 📟 Standard I/O Implementation
-│   ├── stdlib/             # 🛠️ Standard Library (abort, etc.)
-│   └── string/             # 🧵 String Manipulation
 ├── docs/                   # 📖 Documentation (MkDocs)
-├── scripts/                # 🛠️ Build and Helper Scripts
+├── helpers/                # 🛠️ Build and Helper Scripts
 ├── sysroot/                # 📁 Build System Root
-├── isodir/                 # 💿 ISO Image Layout
+├── VirtualMachine/         # 💻 Default VM Workspace (Generated)
+│   └── drives/             # 📀 VM Disk Images (.img)
 └── build/                  # 🏗️ Build Artifacts (Generated)
 ```
 
@@ -36,7 +40,7 @@ TilekarOS/
 | `Makefile` | The main build orchestration file. |
 | `CMakeLists.txt` | Configuration for the CMake build system. |
 | `grub.cfg` | Configuration for the GRUB bootloader. |
-| `.clangd` | Configuration for the Clangd Language Server. |
+| `.clangd` | Configuration for the Clangd Language Server (Generated). |
 | `LICENSE` | The project license (MIT). |
 
 ## 🚀 Key Entry Points
@@ -51,6 +55,6 @@ TilekarOS/
 ## 🛠️ Build System Hierarchy
 
 TilekarOS uses a nested build system for modularity:
-1.  **Top-level Makefile**: Manages the overall build process (ISO creation, cleaning).
-2.  **CMake**: Manages the compilation of the kernel and libc.
-3.  **Kernel-specific Makefile**: (Optional) Handles specialized kernel build tasks.
+1.  **Top-level Makefile**: Manages the overall build process, VM workspaces, and dynamic drives.
+2.  **CMake**: Manages the compilation of the kernel and libc, generating IDE configuration.
+3.  **Toolchains**: `cmake/toolchains/*.cmake` define cross-compilation settings.

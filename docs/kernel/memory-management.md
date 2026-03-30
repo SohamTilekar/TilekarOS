@@ -97,6 +97,9 @@ graph TD
     PA -->|Return Data| VA
 ```
 
+### Physical Address Translation
+The kernel provides a `memory_get_phys(uintptr_t vaddr)` function. This is critical for **DMA** and low-level drivers that need to provide the actual physical memory addresses to hardware devices like the ATA controller.
+
 !!! info "OSDev Reference"
     For details on recursive mapping, see [OSDev: Recursive Paging](https://wiki.osdev.org/Recursive_Paging).
 
