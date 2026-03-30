@@ -48,7 +48,54 @@ vnode_t* vfs_device_node_create(device_t* dev) {
     node->dev = dev;
     node->fs_data = NULL;
     node->refcount = 1;
+    node->mounted_vnode = NULL;
     return node;
+}
+
+static vnode_t* resolve_path(const char* path) {
+    if (!root_vnode || path[0] != '/') return NULL;
+    vnode_t* curr = root_vnode;
+    const char* p = path + 1;
+    while (*p) {
+        char component[256];
+        const char* end = strchr(p, '/');
+        if (end) {
+            size_t len = end - p;
+            strncpy(component, p, len);
+            component[len] = '\0';
+            p = end + 1;
+        } else {
+            strcpy(component, p);
+            p += strlen(p);
+        }
+        if (component[0] == '\0') continue;
+        if (!curr->ops->lookup) return NULL;
+        vnode_t* next = curr->ops->lookup(curr, component);
+        if (!next) return NULL;
+
+        // Follow mount point if this vnode is one
+        while (next->mounted_vnode) {
+            next = next->mounted_vnode;
+        }
+
+        if (*p && next->type != VFS_TYPE_DIRECTORY) return NULL;
+        curr = next;
+    }
+    return curr;
+}
+
+vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_t*)) {
+    if (strcmp(path, "/") == 0) {
+        root_vnode = mount_fn(dev);
+        return root_vnode;
+    }
+    
+    vnode_t* mount_point = resolve_path(path);
+    if (!mount_point || mount_point->type != VFS_TYPE_DIRECTORY) return NULL;
+    
+    vnode_t* new_root = mount_fn(dev);
+    mount_point->mounted_vnode = new_root;
+    return new_root;
 }
 
 void vfs_init() {
@@ -84,40 +131,6 @@ void vfs_init() {
         f2->flags = 0;
         global_file_table[2] = f2; // stderr
     }
-}
-
-vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_t*)) {
-    if (strcmp(path, "/") == 0) {
-        root_vnode = mount_fn(dev);
-        return root_vnode;
-    }
-    return NULL;
-}
-
-static vnode_t* resolve_path(const char* path) {
-    if (!root_vnode || path[0] != '/') return NULL;
-    vnode_t* curr = root_vnode;
-    const char* p = path + 1;
-    while (*p) {
-        char component[256];
-        const char* end = strchr(p, '/');
-        if (end) {
-            size_t len = end - p;
-            strncpy(component, p, len);
-            component[len] = '\0';
-            p = end + 1;
-        } else {
-            strcpy(component, p);
-            p += strlen(p);
-        }
-        if (component[0] == '\0') continue;
-        if (!curr->ops->lookup) return NULL;
-        vnode_t* next = curr->ops->lookup(curr, component);
-        if (!next) return NULL;
-        if (*p && next->type != VFS_TYPE_DIRECTORY) return NULL;
-        curr = next;
-    }
-    return curr;
 }
 
 static int split_path(const char* path, char* parent_path, char* child_name) {

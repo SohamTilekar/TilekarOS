@@ -36,6 +36,7 @@ typedef struct vnode {
     void* fs_data;
     device_t* dev;
     int refcount;
+    struct vnode* mounted_vnode; // Redirection for mount points
 } vnode_t;
 
 typedef struct file {
