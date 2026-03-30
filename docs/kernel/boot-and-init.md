@@ -119,8 +119,11 @@ Once in the higher half, the `init_kernel` function orchestrates the setup of al
     - **PMM**: Calculates available RAM from the `boot_info` provided by GRUB.
     - **Paging**: Sets up recursive paging and removes the identity mapping.
 5.  **Heap**: Initializes `kmalloc` with a 1MB pool.
-6.  **VFS**: Registers standard I/O devices (`tty0`, `kbd0`) and initializes the filesystem stack.
-7.  **Multitasking**: Sets up the scheduler and the first "Main" task.
+6.  **PCI Scan**: Enumerate devices on the PCI bus to find IDE/ATA controllers.
+7.  **Storage & Filesystem**:
+    - **ATA**: Probes for hard disks and registers them in the device registry.
+    - **VFS**: Registers standard I/O devices (`tty0`, `kbd0`) and mounts the root filesystem.
+8.  **Multitasking**: Sets up the scheduler, the first "Main" task, and any initial user-mode processes.
 
 ---
 

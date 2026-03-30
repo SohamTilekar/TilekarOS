@@ -9,21 +9,18 @@ TilekarOS is a hobbyist, 32-bit monolithic operating system built from scratch f
 
 ## ✨ Key Features
 
-- **🛡️ x86 Protected Mode**: Operates in 32-bit Protected Mode with a custom Global Descriptor Table (GDT) and Task State Segment (TSS).
-- **📟 Interrupt Handling**: Robust Interrupt Descriptor Table (IDT) with handlers for CPU exceptions (Divide-by-Zero, Page Fault, etc.) and hardware IRQs.
-- **🧠 Memory Management**:
-    - **Physical Memory Manager (PMM)**: Uses a bitmap to track and allocate 4KB physical page frames.
-    - **Paging**: Implements Page Directories and Page Tables for virtual memory management.
-    - **Kernel Heap**: A dynamic memory allocator (`kmalloc`/`kfree`) for internal kernel use.
-- **🔄 Multitasking**:
-    - Preemptive multitasking using a round-robin scheduler triggered by the Programmable Interval Timer (PIT).
-    - Support for Kernel-mode (Ring 0) and User-mode (Ring 3) tasks.
-- **⌨️ Hardware Drivers**:
-    - **VGA TTY**: A text-mode terminal driver with support for scrolling and basic ANSI-like colors.
-    - **PS/2 Keyboard**: Interrupt-driven keyboard driver with scancode-to-ASCII mapping.
-    - **PIT**: System timer for scheduling and delays.
-- **📦 Custom Standard Library**: A minimal `libc` implementation including `stdio.h`, `string.h`, and `stdlib.h`.
-- **🛠️ System Calls**: Basic infrastructure for user-space programs to interact with the kernel (via `int 0x80`).
+- **🛡️ x86 Protected Mode**: Operates in 32-bit Protected Mode with custom GDT and IDT.
+- **🔄 Multitasking & ELF**: Preemptive multitasking with a round-robin scheduler and **ELF32** executable loading.
+- **📁 Storage & Filesystem**:
+    - **VFS (Virtual File System)**: Abstracted file operations (`open`, `read`, `write`, `mkdir`).
+    - **FAT12**: Native File Allocation Table implementation with read/write support.
+    - **Buffer Cache**: Sector-level caching to accelerate disk I/O.
+- **🔌 Hardware Drivers**:
+    - **ATA (IDE)**: Support for hard disks using **PIO** and high-speed **DMA** modes.
+    - **PCI Bus**: Automatic hardware discovery, enumeration, and Bus Master configuration.
+    - **PS/2 Keyboard & VGA TTY**: Fully interactive console and input system.
+- **🛠️ System Calls**: Robust API (via `int 0x80`) for user-space interaction.
+- **📦 Custom LibC**: Minimal C standard library (`stdio`, `string`, `stdlib`).
 
 ---
 
@@ -32,22 +29,13 @@ TilekarOS is a hobbyist, 32-bit monolithic operating system built from scratch f
 ```text
 .
 ├── kernel/                 # Kernel source code
-│   ├── arch/i386/          # x86-specific architecture code (GDT, IDT, Paging)
+│   ├── arch/i386/          # x86-specific architecture, drivers, and fs
 │   └── include/            # Kernel-wide headers
 ├── libc/                   # Minimal C library implementation
 ├── docs/                   # Detailed technical documentation & guides
-├── cmake/                  # Build system configuration
-├── scripts/                # Utility scripts for ISO generation
-├── isodir/                 # Temporary directory for GRUB ISO creation
-└── Makefile                # Convenient wrapper for build commands
+├── cmake/toolchains/       # Cross-compilation configuration
+└── Makefile                # Powerful wrapper for build & emulation
 ```
-
----
-
-## 📚 Documentation
-
-Comprehensive technical documentation, including architecture deep-dives and development guides, is available at:
-👉 **[sohamtilekar.github.io/TilekarOS/](https://sohamtilekar.github.io/TilekarOS/)**
 
 ---
 
@@ -56,55 +44,40 @@ Comprehensive technical documentation, including architecture deep-dives and dev
 ### 🧰 Prerequisites
 
 Ensure you have the following tools installed:
-
-- **Compiler**: `Clang` (Cross-compiling for `i386-elf`)
-- **Assembler**: `NASM`
-- **Build System**: `CMake` & `Make`
-- **Emulator**: `QEMU` (specifically `qemu-system-i386`)
-- **Bootloader Tools**: `grub-common`, `mtools`, `xorriso` (for `grub-mkrescue`)
+`Clang`, `LLD`, `NASM`, `CMake`, `Make`, `QEMU`, `grub-common`, `xorriso`.
 
 ### 🛠️ Build and Run
 
-TilekarOS uses a `Makefile` wrapper around **CMake** for a seamless development experience.
+TilekarOS uses a **Dynamic Build System** that manages isolated VM workspaces and disk images.
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/sohamtilekar/TilekarOS.git
 cd TilekarOS
 
-# Configure, build the ISO, and launch in QEMU
+# 2. Build and run in QEMU with a 10MB disk image
+make run DRIVES=disk:10
+
+# 3. Build and run a bootable ISO
 make run_iso
 
-# To build only the kernel binary (without ISO)
-make
+# 4. Debug with GDB
+make debug_run
 
-# To clean build artifacts
-make clean
+# 5. Clean build artifacts and VM workspace
+make clean VM=MyTestVM
 ```
 
 ---
 
-## 🤝 Contributing
+## 📚 Documentation
 
-Contributions are welcome! Whether it's fixing a bug, improving documentation, or adding a new driver, feel free to open an issue or submit a pull request.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+Comprehensive technical documentation is available at:
+👉 **[sohamtilekar.github.io/TilekarOS/](https://sohamtilekar.github.io/TilekarOS/)**
 
 ---
 
 ## 📜 License
 
 Distributed under the **MIT License**. See `LICENSE` for more information.
-
----
-
-## 🍎 Acknowledgments
-
-- [OSDev Wiki](https://wiki.osdev.org/) - The ultimate resource for OS developers.
-- [Philipp Oppermann's Writing an OS in Rust](https://os.phil-opp.com/) - For architectural inspiration.
-- All the hobbyist OS developers sharing their knowledge online!
 

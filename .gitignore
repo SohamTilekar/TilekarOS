@@ -11,3 +11,4 @@ site/*
 **.o
 **.elf
 **.log
+**.img
