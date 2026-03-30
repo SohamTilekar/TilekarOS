@@ -4,6 +4,8 @@
 #include "task.h"
 #include "timer.h"
 #include "keyboard.h"
+#include "ata.h"
+#include "pci.h"
 #include "vfs.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -29,6 +31,7 @@ void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
     init_terminal();
     init_gdt();
     init_idt();
+    pci_init();
     init_keyboard();
 
     {
@@ -70,6 +73,7 @@ void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
     // Register devices and VFS now that heap is ready
     tty_register();
     keyboard_register();
+    init_ata();
     vfs_init();
 
     // 5. init Kernel Task Scheduler
