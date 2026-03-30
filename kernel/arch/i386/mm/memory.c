@@ -239,6 +239,18 @@ void memory_map_page(uint32_t virtual_addr, uint32_t phys_addr, uint32_t flags) 
     interrupt_restore(intr_flags);
 }
 
+uint32_t memory_get_phys(uint32_t virtual_addr) {
+    uint32_t pd_index = virtual_addr >> 22;
+    uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
+
+    uint32_t* page_dir = RECURSIVE_PAGE_DIR;
+    if (!(page_dir[pd_index] & PAGE_FLAG_PRESENT)) return 0;
+
+    uint32_t* pt = RECURSIVE_PAGE_TABLE(pd_index);
+    if (!(pt[pt_index] & PAGE_FLAG_PRESENT)) return 0;
+
+    return (pt[pt_index] & ~0xFFF) | (virtual_addr & 0xFFF);
+}
 
 /*
  * init_memory - Initialize the memory system (Paging + PMM)
