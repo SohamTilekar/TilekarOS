@@ -32,6 +32,7 @@ struct device {
 // Global device management
 int device_register(device_t* dev);
 device_t* device_get(const char* name);
+device_t* device_get_next(device_t* current);
 
 // Generic wrapper functions
 int device_read(device_t* dev, uint32_t lba, uint8_t* buffer);
