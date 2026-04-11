@@ -15,7 +15,7 @@ bool elf_check_supported(Elf32_Ehdr *hdr) {
     return true;
 }
 
-void* elf_load_segments(Elf32_Ehdr *hdr, void* elf_data) {
+void* elf_load_segments(Elf32_Ehdr *hdr, void* elf_data, uint8_t privilege_level) {
     Elf32_Phdr *ph = (Elf32_Phdr *)((uint8_t *)elf_data + hdr->e_phoff);
     for (int i = 0; i < hdr->e_phnum; i++) {
         if (ph[i].p_type == PT_LOAD) {
@@ -32,7 +32,8 @@ void* elf_load_segments(Elf32_Ehdr *hdr, void* elf_data) {
                 uint32_t phys = pmm_alloc_page_frame();
                 if (!phys) return NULL;
                 
-                uint32_t flags = PAGE_FLAG_USER | PAGE_FLAG_PRESENT;
+                uint32_t flags = PAGE_FLAG_PRESENT;
+                if (privilege_level == 3) flags |= PAGE_FLAG_USER;
                 if (ph[i].p_flags & PF_W) flags |= PAGE_FLAG_WRITE;
                 
                 memory_map_page(page_vaddr, phys, flags);

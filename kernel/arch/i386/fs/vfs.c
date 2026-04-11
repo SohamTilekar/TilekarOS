@@ -225,6 +225,11 @@ int vfs_open(const char* path, int flags) {
     return fd;
 }
 
+uint32_t vfs_get_size(int fd) {
+    if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) return 0;
+    return global_file_table[fd]->node->size;
+}
+
 int vfs_read(int fd, void* buffer, uint32_t size) {
     if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) return -1;
     file_t* file = global_file_table[fd];

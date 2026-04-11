@@ -69,9 +69,10 @@ void kernel_main(uint32_t magic, void* boot_info) {
 
   init_storage();
 
-  // printf("\n--- Multitasking Stress Test ---\n");
-
-  // task_create_user(&_start_user_task, &_end_user_task);
+  if (primary_storage) {
+      printf("Loading test program from disk...\n");
+      task_create_elf_from_file("/testprog", 3);
+  }
 
   printf("Main task (TID 0) entering infinite yield loop.\n");
   while (true) {

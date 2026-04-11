@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "gdt.h"
 #include "elf.h"
+#include "../fs/vfs.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -241,7 +242,7 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
     return task;
 }
 
-task_t* task_create_elf(void* elf_data) {
+task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     Elf32_Ehdr *hdr = (Elf32_Ehdr *)elf_data;
     if (!elf_check_supported(hdr)) {
         printf("ELF: Unsupported or invalid ELF file\n");
@@ -268,7 +269,7 @@ task_t* task_create_elf(void* elf_data) {
     task->stack_limit = stack;
     task->id = next_tid++;
     task->state = TASK_READY;
-    task->privilege_level = 3;
+    task->privilege_level = privilege_level;
 
     uint32_t* pd_virt = memory_create_user_pagedir();
     uint32_t pd_phys = (uint32_t)pd_virt - KERNEL_START;
@@ -277,12 +278,14 @@ task_t* task_create_elf(void* elf_data) {
     uint32_t current_pd = get_cr3();
     memory_set_pagedir(pd_virt);
 
-    // Map a 4KB page for the user stack at 0xB0000000
-    uint32_t ustack_phys = pmm_alloc_page_frame();
-    memory_map_page(0xB0000000, ustack_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+    if (privilege_level == 3) {
+        // Map a 4KB page for the user stack at 0xB0000000
+        uint32_t ustack_phys = pmm_alloc_page_frame();
+        memory_map_page(0xB0000000, ustack_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+    }
 
     // Load ELF segments
-    void* entry = elf_load_segments(hdr, elf_data);
+    void* entry = elf_load_segments(hdr, elf_data, privilege_level);
     if (!entry) {
         // Switch back before failing
         memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
@@ -325,9 +328,48 @@ task_t* task_create_elf(void* elf_data) {
     task->next = current_task->next;
     current_task->next = task;
 
-    printf("ELF Task created. TID: %d, Entry: %p, ESP: %x\n", task->id, entry, (uint32_t)task->kernel_stack);
+    printf("ELF Task created. TID: %d, Entry: %p, Privilege: %d, ESP: %x\n", 
+           task->id, entry, task->privilege_level, (uint32_t)task->kernel_stack);
 
     interrupt_restore(flags);
+    return task;
+}
+
+task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level) {
+    int fd = vfs_open(path, 0);
+    if (fd < 0) {
+        printf("ELF: Failed to open file %s\n", path);
+        return NULL;
+    }
+
+    uint32_t size = vfs_get_size(fd);
+    if (size == 0) {
+        printf("ELF: File %s is empty or size unknown\n", path);
+        vfs_close(fd);
+        return NULL;
+    }
+
+    void* elf_data = kmalloc(size);
+    if (!elf_data) {
+        printf("ELF: Failed to allocate memory for ELF data\n");
+        vfs_close(fd);
+        return NULL;
+    }
+
+    int bytes_read = vfs_read(fd, elf_data, size);
+    vfs_close(fd);
+
+    if (bytes_read != (int)size) {
+        printf("ELF: Failed to read full file %s (read %d of %d)\n", path, bytes_read, size);
+        kfree(elf_data);
+        return NULL;
+    }
+
+    task_t* task = task_create_elf(elf_data, privilege_level);
+    
+    // We can free elf_data because task_create_elf copies data into the new process pages
+    kfree(elf_data);
+    
     return task;
 }
 

@@ -62,10 +62,18 @@ task_t* task_create_user(void* start_addr, void* end_addr);
 /**
  * task_create_elf - Creates a new task from an ELF image.
  * @elf_data: Pointer to the ELF image in memory.
+ * @privilege_level: The privilege level (0 for kernel, 3 for user).
  *
  * Return: The created task, or NULL on failure.
  */
-task_t* task_create_elf(void* elf_data);
+task_t* task_create_elf(void* elf_data, uint8_t privilege_level);
+
+/**
+ * task_create_elf_from_file - Loads an ELF from disk and creates a task.
+ * @path: Path to the ELF file.
+ * @privilege_level: The privilege level.
+ */
+task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level);
 
 /**
  * task_yield - Yields the CPU to the next ready task.

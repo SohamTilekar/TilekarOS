@@ -157,7 +157,7 @@ extern char _end_elf_user_task;
 
 // Inside kernel_main
 uint32_t elf_size = (uint32_t)(&_end_elf_user_task - &_start_elf_user_task);
-task_create_elf(&_start_elf_user_task, elf_size);
+task_create_elf(&_start_elf_user_task, 3); // 3 for user mode, 0 for kernel mode
 ```
 
 ---

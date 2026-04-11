@@ -53,6 +53,7 @@ vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_
 vnode_t* vfs_device_node_create(device_t* dev);
 
 int vfs_open(const char* path, int flags);
+uint32_t vfs_get_size(int fd);
 int vfs_read(int fd, void* buffer, uint32_t size);
 int vfs_write(int fd, const void* buffer, uint32_t size);
 void vfs_close(int fd);
