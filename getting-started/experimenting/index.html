@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../installation/">
+        <link rel="prev" href="../project-structure/">
       
       
-        <link rel="next" href="../../kernel/architecture/">
+        <link rel="next" href="../../kernel/boot-and-init/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Experimenting & Messing Around - TilekarOS Documentation</title>
+        <title>🧪 Experimenting & Messing Around - TilekarOS Documentation</title>
       
     
     
@@ -37,6 +37,12 @@
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
+
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M19%2013.5a1.5%201.5%200%200%201-1.5-1.5%201.5%201.5%200%200%201%201.5-1.5%201.5%201.5%200%200%201%201.5%201.5%201.5%201.5%200%200%201-1.5%201.5m-5%200a1.5%201.5%200%200%201-1.5-1.5%201.5%201.5%200%200%201%201.5-1.5%201.5%201.5%200%200%201%201.5%201.5%201.5%201.5%200%200%201-1.5%201.5m-5%200A1.5%201.5%200%200%201%207.5%2012%201.5%201.5%200%200%201%209%2010.5a1.5%201.5%200%200%201%201.5%201.5A1.5%201.5%200%200%201%209%2013.5M22%203H7c-.69%200-1.23.35-1.59.88L0%2012l5.41%208.11c.36.53.96.89%201.65.89H22a2%202%200%200%200%202-2V5a2%202%200%200%200-2-2%22/%3E%3C/svg%3E');}</style>
 
 
     
@@ -71,7 +77,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="indigo">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -114,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Experimenting & Messing Around
+              🧪 Experimenting & Messing Around
             
           </span>
         </div>
@@ -127,7 +133,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
@@ -137,7 +143,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
@@ -171,6 +177,11 @@
       </label>
       <nav class="md-search__options" aria-label="Search">
         
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
         <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
@@ -196,13 +207,13 @@
     
     
       <div class="md-header__source">
-        <a href="https://github.com/your-username/TilekarOS" title="Go to repository" class="md-source" data-md-component="source">
+        <a href="https://github.com/SohamTilekar/TilekarOS" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    GitHub
+    SohamTilekar/TilekarOS
   </div>
 </a>
       </div>
@@ -233,7 +244,7 @@
   
     
   
-  Home
+  🏠 Home
 
       </a>
     </li>
@@ -254,7 +265,7 @@
           
   
   
-  Getting Started
+  🛠️ Getting Started
 
         </a>
       </li>
@@ -270,11 +281,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../kernel/architecture/" class="md-tabs__link">
+        <a href="../../kernel/boot-and-init/" class="md-tabs__link">
           
   
   
-  Kernel Internals
+  🧠 Kernel Internals
 
         </a>
       </li>
@@ -290,11 +301,11 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../drivers/vga-tty/" class="md-tabs__link">
+        <a href="../../drivers/driver-reference/" class="md-tabs__link">
           
   
   
-  Drivers
+  🔌 Drivers & Hardware
 
         </a>
       </li>
@@ -314,7 +325,7 @@
           
   
   
-  API Reference
+  📚 API Reference
 
         </a>
       </li>
@@ -334,7 +345,7 @@
           
   
   
-  Development & Contributions
+  👷 Development & Contributions
 
         </a>
       </li>
@@ -374,13 +385,13 @@
   </label>
   
     <div class="md-nav__source">
-      <a href="https://github.com/your-username/TilekarOS" title="Go to repository" class="md-source" data-md-component="source">
+      <a href="https://github.com/SohamTilekar/TilekarOS" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
-    GitHub
+    SohamTilekar/TilekarOS
   </div>
 </a>
     </div>
@@ -401,7 +412,7 @@
   <span class="md-ellipsis">
     
   
-    Home
+    🏠 Home
   
 
     
@@ -435,6 +446,8 @@
       
     
     
+      
+    
     <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
@@ -449,7 +462,7 @@
   <span class="md-ellipsis">
     
   
-    Getting Started
+    🛠️ Getting Started
   
 
     
@@ -465,7 +478,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Getting Started
+    🛠️ Getting Started
   
 
           </label>
@@ -485,7 +498,7 @@
   <span class="md-ellipsis">
     
   
-    Build System
+    🏗️ Build System
   
 
     
@@ -513,7 +526,35 @@
   <span class="md-ellipsis">
     
   
-    Installation Guide
+    📥 Installation Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📂 Project Structure
   
 
     
@@ -550,7 +591,7 @@
   <span class="md-ellipsis">
     
   
-    Experimenting & Messing Around
+    🧪 Experimenting & Messing Around
   
 
     
@@ -568,7 +609,7 @@
   <span class="md-ellipsis">
     
   
-    Experimenting & Messing Around
+    🧪 Experimenting & Messing Around
   
 
     
@@ -694,30 +735,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#technical-deep-dive-the-why-behind-the-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technical Deep Dive: The "Why" behind the implementation
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-ring-3-pitfalls-restrictions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Ring 3 Pitfalls &amp; Restrictions
-      
-    </span>
-  </a>
   
 </li>
       
@@ -766,17 +785,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#d-out-of-memory-oom" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D. Out of Memory (OOM)
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -805,19 +813,19 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#stack-overflows" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stack Overflows
+        References
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -853,21 +861,25 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
         
-          
-          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
-            
+  
+  
+  
+    <a href="../../kernel/boot-and-init/" class="md-nav__link">
+      
   
   
   <span class="md-ellipsis">
     
   
-    Kernel Internals
+    🧠 Kernel Internals
   
 
     
@@ -875,274 +887,12 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_3">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Kernel Internals
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Architecture Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/kernel-init/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Kernel Initialization
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/gdt/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    GDT & TSS
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/memory-management/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Memory Management
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/interrupts/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Interrupts & Exceptions
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/multitasking/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multitasking
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/tasks-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Task Management Guide
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/syscalls/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    System Call Dispatcher
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../kernel/kernel-utilities/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Kernel Utilities
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -1164,21 +914,25 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
         
-          
-          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
-            
+  
+  
+  
+    <a href="../../drivers/driver-reference/" class="md-nav__link">
+      
   
   
   <span class="md-ellipsis">
     
   
-    Drivers
+    🔌 Drivers & Hardware
   
 
     
@@ -1186,106 +940,12 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_4">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Drivers
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../drivers/vga-tty/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    VGA/TTY
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../drivers/keyboard/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Keyboard
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../drivers/timer/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Timer
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -1307,21 +967,25 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
         
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
-            
+  
+  
+  
+    <a href="../../api/syscall-reference/" class="md-nav__link">
+      
   
   
   <span class="md-ellipsis">
     
   
-    API Reference
+    📚 API Reference
   
 
     
@@ -1329,78 +993,12 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    API Reference
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/syscall-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    System Call Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/libc-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    LibC Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -1422,21 +1020,25 @@
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
         
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
+  
+  
+  
+    <a href="../../development/coding-style/" class="md-nav__link">
+      
   
   
   <span class="md-ellipsis">
     
   
-    Development & Contributions
+    👷 Development & Contributions
   
 
     
@@ -1444,78 +1046,12 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Development & Contributions
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../development/coding-style/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Coding Style
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../development/documentation-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Documentation Guide
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -1648,30 +1184,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#technical-deep-dive-the-why-behind-the-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technical Deep Dive: The "Why" behind the implementation
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-ring-3-pitfalls-restrictions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Ring 3 Pitfalls &amp; Restrictions
-      
-    </span>
-  </a>
   
 </li>
       
@@ -1720,17 +1234,6 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#d-out-of-memory-oom" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D. Out of Memory (OOM)
-      
-    </span>
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
   
@@ -1759,19 +1262,19 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#stack-overflows" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Stack Overflows
+        References
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1786,135 +1289,233 @@
           
             <div class="md-content" data-md-component="content">
               
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    🏠 Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../build-system/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    🛠️ Getting Started
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
               <article class="md-content__inner md-typeset">
                 
                   
 
 
   
+    <a href="https://github.com/SohamTilekar/TilekarOS/edit/main/docs/getting-started/experimenting.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/SohamTilekar/TilekarOS/raw/main/docs/getting-started/experimenting.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
   
 
 
-<h1 id="experimenting-with-tilekaros">Experimenting with TilekarOS</h1>
+<h1 id="experimenting-with-tilekaros">Experimenting with TilekarOS<a class="headerlink" href="#experimenting-with-tilekaros" title="Permanent link">&para;</a></h1>
 <p>TilekarOS is designed to be a playground for learning OS internals. This guide shows you how to "mess" with the system, create tasks, and intentionally trigger failures to see how the kernel responds.</p>
-<h2 id="1-creating-kernel-tasks-ring-0">1. Creating Kernel Tasks (Ring 0)</h2>
+<h2 id="1-creating-kernel-tasks-ring-0">1. Creating Kernel Tasks (Ring 0)<a class="headerlink" href="#1-creating-kernel-tasks-ring-0" title="Permanent link">&para;</a></h2>
 <p>Kernel tasks run with full privileges. They are easy to create and can access any part of the hardware.</p>
-<h3 id="how-to-add-a-task">How to add a task:</h3>
+<h3 id="how-to-add-a-task">How to add a task:<a class="headerlink" href="#how-to-add-a-task" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>Define a function</strong> in <code>kernel/kernel.c</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">my_experiment_task</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;[Experiment] Running...</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">);</span><span class="w"> </span><span class="c1">// Busy wait</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="n">task_yield</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span><span class="w"> </span><span class="c1">// Give up CPU</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
-</code></pre></div></li>
+    <div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">my_experiment_task</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;[Experiment] Running...</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">        </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1000000</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">);</span><span class="w"> </span><span class="c1">// Busy wait</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">        </span><span class="n">task_yield</span><span class="p">(</span><span class="nb">NULL</span><span class="p">);</span><span class="w"> </span><span class="c1">// Give up CPU</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="p">}</span>
+</span></code></pre></div></li>
 <li><strong>Register it</strong> in <code>kernel_main()</code>:
-    <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">task_create</span><span class="p">(</span><span class="n">my_experiment_task</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
-</code></pre></div></li>
+    <div class="language-c highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">task_create</span><span class="p">(</span><span class="n">my_experiment_task</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+</span></code></pre></div></li>
 </ol>
-<h3 id="voluntary-vs-preemptive">Voluntary vs. Preemptive:</h3>
+<h3 id="voluntary-vs-preemptive">Voluntary vs. Preemptive:<a class="headerlink" href="#voluntary-vs-preemptive" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><code>task_yield(NULL)</code></strong>: Manually tells the scheduler to pick the next task.</li>
-<li><strong>Preemption</strong>: If you don't call yield, the <strong>Timer Interrupt</strong> will eventually force a context switch after 10ms.</li>
+<li><strong>Preemption</strong>: If you don't call yield, the <strong>Timer Interrupt</strong> (IRQ 0) will eventually force a context switch after its time slice.</li>
 </ul>
 <hr />
-<h2 id="2-creating-user-tasks-ring-3">2. Creating User Tasks (Ring 3)</h2>
+<h2 id="2-creating-user-tasks-ring-3">2. Creating User Tasks (Ring 3)<a class="headerlink" href="#2-creating-user-tasks-ring-3" title="Permanent link">&para;</a></h2>
 <p>User tasks are isolated and run in their own virtual address space. They cannot access kernel memory or execute privileged instructions.</p>
-<h3 id="the-lifecycle-of-a-user-task">The Lifecycle of a User Task</h3>
+<h3 id="the-lifecycle-of-a-user-task">The Lifecycle of a User Task<a class="headerlink" href="#the-lifecycle-of-a-user-task" title="Permanent link">&para;</a></h3>
 <p>In TilekarOS, a user task is typically defined as a block of code (assembly or C) that is copied into a new address space.</p>
-<h4 id="step-1-define-the-user-code">Step 1: Define the User Code</h4>
-<p>User tasks use <strong>System Calls</strong> to interact with the kernel. For example, to print "Hello from Ring 3" and exit:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">[</span><span class="nf">bits</span><span class="w"> </span><span class="mi">32</span><span class="p">]</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nf">section</span><span class="w"> </span><span class="no">.text</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nf">global</span><span class="w"> </span><span class="no">_start_user_task</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nf">global</span><span class="w"> </span><span class="no">_end_user_task</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nl">_start_user_task:</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="c1">; SYS_WRITE (1), STDOUT (1)</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="no">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="no">ebx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="no">ecx</span><span class="p">,</span><span class="w"> </span><span class="no">msg</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="no">edx</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mi">0x80</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
-<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="c1">; SYS_EXIT (0)</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="no">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="nf">xor</span><span class="w"> </span><span class="no">ebx</span><span class="p">,</span><span class="w"> </span><span class="no">ebx</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mi">0x80</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>
-<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="nf">msg</span><span class="w"> </span><span class="no">db</span><span class="w"> </span><span class="err">&#39;</span><span class="no">Hello</span><span class="w"> </span><span class="no">from</span><span class="w"> </span><span class="no">Ring</span><span class="w"> </span><span class="mi">3</span><span class="p">!</span><span class="err">&#39;</span><span class="p">,</span><span class="w"> </span><span class="mi">0xA</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
-<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="nl">_end_user_task:</span>
-</code></pre></div>
-<h4 id="step-2-launch-the-task">Step 2: Launch the Task</h4>
+<h4 id="step-1-define-the-user-code">Step 1: Define the User Code<a class="headerlink" href="#step-1-define-the-user-code" title="Permanent link">&para;</a></h4>
+<p>User tasks use <strong>System Calls</strong> to interact with the kernel. See <a href="https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/user_process.asm" target="_blank">user_process.asm</a> for a complete example of a user task using syscalls to list directories.</p>
+<details class="example">
+<summary>Code Preview: <code>user_process.asm</code></summary>
+<div class="language-nasm highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="err">[</span><span class="k">BITS</span><span class="w"> </span><span class="mi">32</span><span class="p">]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">section</span><span class="w"> </span><span class="nv">.text</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">global</span><span class="w"> </span><span class="nv">_start_user_task</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">global</span><span class="w"> </span><span class="nv">_end_user_task</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nl">_start_user_task:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="c1">; 1. Create directory /TESTDIR</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="w">          </span><span class="c1">; SYS_MKDIR</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="nf">call</span><span class="w"> </span><span class="nv">.get_dir_path</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="kd">db</span><span class="w"> </span><span class="s">&quot;/TESTDIR&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nl">.get_dir_path:</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nf">pop</span><span class="w"> </span><span class="nb">ebx</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="c1">; 2. Open root directory /</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="w">          </span><span class="c1">; SYS_OPEN</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="nf">call</span><span class="w"> </span><span class="nv">.get_root_path</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="kd">db</span><span class="w"> </span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="nl">.get_root_path:</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">    </span><span class="nf">pop</span><span class="w"> </span><span class="nb">ebx</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="nf">push</span><span class="w"> </span><span class="nb">eax</span><span class="w">            </span><span class="c1">; Save root FD</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="c1">; 3. List root directory</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w">          </span><span class="c1">; SYS_WRITE</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ebx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">    </span><span class="nf">call</span><span class="w"> </span><span class="nv">.get_msg_list_root</span>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">    </span><span class="kd">db</span><span class="w"> </span><span class="s">&quot;Root Directory Listing:&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="nl">.get_msg_list_root:</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="nf">pop</span><span class="w"> </span><span class="nb">ecx</span>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">edx</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a>
+</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">    </span><span class="nf">sub</span><span class="w"> </span><span class="nb">esp</span><span class="p">,</span><span class="w"> </span><span class="mi">264</span><span class="w">        </span><span class="c1">; vfs_dirent_t buffer</span>
+</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">edi</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w">          </span><span class="c1">; index</span>
+</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="nl">.loop_root:</span>
+</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="w">          </span><span class="c1">; SYS_READDIR</span>
+</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ebx</span><span class="p">,</span><span class="w"> </span><span class="p">[</span><span class="nb">esp</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">264</span><span class="p">]</span><span class="w"> </span><span class="c1">; root FD</span>
+</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="nb">edi</span><span class="w">        </span><span class="c1">; index</span>
+</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">edx</span><span class="p">,</span><span class="w"> </span><span class="nb">esp</span><span class="w">        </span><span class="c1">; out buffer</span>
+</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="w">    </span><span class="nf">cmp</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-2-45"><a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">    </span><span class="nf">jne</span><span class="w"> </span><span class="nv">.done_root</span>
+</span><span id="__span-2-46"><a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a>
+</span><span id="__span-2-47"><a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">    </span><span class="c1">; Print entry name</span>
+</span><span id="__span-2-48"><a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w">          </span><span class="c1">; SYS_WRITE</span>
+</span><span id="__span-2-49"><a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ebx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-2-50"><a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="nb">esp</span><span class="w">        </span><span class="c1">; dirent-&gt;name</span>
+</span><span id="__span-2-51"><a id="__codelineno-2-51" name="__codelineno-2-51" href="#__codelineno-2-51"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">edx</span><span class="p">,</span><span class="w"> </span><span class="mi">256</span><span class="w">        </span><span class="c1">; max name len</span>
+</span><span id="__span-2-52"><a id="__codelineno-2-52" name="__codelineno-2-52" href="#__codelineno-2-52"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-53"><a id="__codelineno-2-53" name="__codelineno-2-53" href="#__codelineno-2-53"></a>
+</span><span id="__span-2-54"><a id="__codelineno-2-54" name="__codelineno-2-54" href="#__codelineno-2-54"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w">          </span><span class="c1">; SYS_WRITE</span>
+</span><span id="__span-2-55"><a id="__codelineno-2-55" name="__codelineno-2-55" href="#__codelineno-2-55"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">ebx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-2-56"><a id="__codelineno-2-56" name="__codelineno-2-56" href="#__codelineno-2-56"></a><span class="w">    </span><span class="nf">call</span><span class="w"> </span><span class="nv">.get_newline</span>
+</span><span id="__span-2-57"><a id="__codelineno-2-57" name="__codelineno-2-57" href="#__codelineno-2-57"></a><span class="w">    </span><span class="kd">db</span><span class="w"> </span><span class="mi">10</span>
+</span><span id="__span-2-58"><a id="__codelineno-2-58" name="__codelineno-2-58" href="#__codelineno-2-58"></a><span class="nl">.get_newline:</span>
+</span><span id="__span-2-59"><a id="__codelineno-2-59" name="__codelineno-2-59" href="#__codelineno-2-59"></a><span class="w">    </span><span class="nf">pop</span><span class="w"> </span><span class="nb">ecx</span>
+</span><span id="__span-2-60"><a id="__codelineno-2-60" name="__codelineno-2-60" href="#__codelineno-2-60"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">edx</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span>
+</span><span id="__span-2-61"><a id="__codelineno-2-61" name="__codelineno-2-61" href="#__codelineno-2-61"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-62"><a id="__codelineno-2-62" name="__codelineno-2-62" href="#__codelineno-2-62"></a>
+</span><span id="__span-2-63"><a id="__codelineno-2-63" name="__codelineno-2-63" href="#__codelineno-2-63"></a><span class="w">    </span><span class="nf">inc</span><span class="w"> </span><span class="nb">edi</span>
+</span><span id="__span-2-64"><a id="__codelineno-2-64" name="__codelineno-2-64" href="#__codelineno-2-64"></a><span class="w">    </span><span class="nf">jmp</span><span class="w"> </span><span class="nv">.loop_root</span>
+</span><span id="__span-2-65"><a id="__codelineno-2-65" name="__codelineno-2-65" href="#__codelineno-2-65"></a><span class="nl">.done_root:</span>
+</span><span id="__span-2-66"><a id="__codelineno-2-66" name="__codelineno-2-66" href="#__codelineno-2-66"></a><span class="w">    </span><span class="nf">add</span><span class="w"> </span><span class="nb">esp</span><span class="p">,</span><span class="w"> </span><span class="mi">264</span>
+</span><span id="__span-2-67"><a id="__codelineno-2-67" name="__codelineno-2-67" href="#__codelineno-2-67"></a>
+</span><span id="__span-2-68"><a id="__codelineno-2-68" name="__codelineno-2-68" href="#__codelineno-2-68"></a><span class="w">    </span><span class="c1">; 4. Close root FD</span>
+</span><span id="__span-2-69"><a id="__codelineno-2-69" name="__codelineno-2-69" href="#__codelineno-2-69"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">5</span><span class="w">          </span><span class="c1">; SYS_CLOSE</span>
+</span><span id="__span-2-70"><a id="__codelineno-2-70" name="__codelineno-2-70" href="#__codelineno-2-70"></a><span class="w">    </span><span class="nf">pop</span><span class="w"> </span><span class="nb">ebx</span>
+</span><span id="__span-2-71"><a id="__codelineno-2-71" name="__codelineno-2-71" href="#__codelineno-2-71"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-72"><a id="__codelineno-2-72" name="__codelineno-2-72" href="#__codelineno-2-72"></a>
+</span><span id="__span-2-73"><a id="__codelineno-2-73" name="__codelineno-2-73" href="#__codelineno-2-73"></a><span class="w">    </span><span class="c1">; 5. Delete directory /TESTDIR (using unlink for now as rmdir is alias)</span>
+</span><span id="__span-2-74"><a id="__codelineno-2-74" name="__codelineno-2-74" href="#__codelineno-2-74"></a><span class="w">    </span><span class="c1">; Actually, let&#39;s just exit</span>
+</span><span id="__span-2-75"><a id="__codelineno-2-75" name="__codelineno-2-75" href="#__codelineno-2-75"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">eax</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w">          </span><span class="c1">; SYS_EXIT</span>
+</span><span id="__span-2-76"><a id="__codelineno-2-76" name="__codelineno-2-76" href="#__codelineno-2-76"></a><span class="w">    </span><span class="nf">int</span><span class="w"> </span><span class="mh">0x80</span>
+</span><span id="__span-2-77"><a id="__codelineno-2-77" name="__codelineno-2-77" href="#__codelineno-2-77"></a>
+</span><span id="__span-2-78"><a id="__codelineno-2-78" name="__codelineno-2-78" href="#__codelineno-2-78"></a><span class="nl">_end_user_task:</span>
+</span></code></pre></div>
+</details>
+<h4 id="step-2-launch-the-task">Step 2: Launch the Task<a class="headerlink" href="#step-2-launch-the-task" title="Permanent link">&para;</a></h4>
 <p>In <code>kernel_main</code>, use the <code>extern</code> symbols to pass the code block to <code>task_create_user</code>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">extern</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">_start_user_task</span><span class="p">;</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">extern</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">_end_user_task</span><span class="p">;</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">task_create_user</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_start_user_task</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">_end_user_task</span><span class="p">);</span>
-</code></pre></div></p>
-<h3 id="what-happens-under-the-hood">What happens under the hood?</h3>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">extern</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">_start_user_task</span><span class="p">;</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">extern</span><span class="w"> </span><span class="kt">char</span><span class="w"> </span><span class="n">_end_user_task</span><span class="p">;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">task_create_user</span><span class="p">(</span><span class="o">&amp;</span><span class="n">_start_user_task</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">_end_user_task</span><span class="p">);</span>
+</span></code></pre></div></p>
+<h3 id="what-happens-under-the-hood">What happens under the hood?<a class="headerlink" href="#what-happens-under-the-hood" title="Permanent link">&para;</a></h3>
 <ol>
 <li><strong>Memory Mapping</strong>: The code block is copied to a new page directory starting at <strong><code>0x08048000</code></strong>.</li>
 <li><strong>Stack Setup</strong>: A user-mode stack is automatically mapped at <strong><code>0xB0000000</code></strong>.</li>
 <li><strong>Ring Transition</strong>: The kernel uses the <code>iret</code> instruction to drop the CPU's privilege level to Ring 3.</li>
 <li><strong>TSS Update</strong>: The Task State Segment (TSS) is updated with the task's kernel stack pointer (<code>esp0</code>) so the CPU can transition back to Ring 0 during interrupts or syscalls.</li>
 </ol>
-<h3 id="technical-deep-dive-the-why-behind-the-implementation">Technical Deep Dive: The "Why" behind the implementation</h3>
-<p>You might wonder why we use specific addresses or why we copy code around. Here is the technical rationale:</p>
-<ul>
-<li><strong>Why <code>extern char</code>?</strong>: Since TilekarOS doesn't have a filesystem yet, we "embed" user programs inside the kernel binary. These symbols tell the kernel exactly where that embedded code starts and ends.</li>
-<li><strong>Why Copying?</strong>: The CPU prevents Ring 3 (User Mode) from accessing any memory marked as "Supervisor." Because the kernel is mapped at <code>0xC0000000</code>, the user task cannot "reach" its own code if it stays in the kernel region. We must copy it to a User-accessible page.</li>
-<li><strong>Why <code>0x08048000</code>?</strong>: This is the standard base address for 32-bit x86 executables (ELF). Using it maintains compatibility with traditional toolchains.</li>
-<li><strong>Why <code>0xB0000000</code>?</strong>: We want the stack to be as far away from the code as possible to allow both to grow. This address is high in the user's 3GB space but leaves enough room before hitting the 3GB Kernel boundary.</li>
-<li><strong>Why <code>iret</code>?</strong>: The CPU hardware forbids jumping from Ring 0 to Ring 3. The only way to "drop" privilege is to simulate returning from an interrupt. We push a "fake" user-mode state onto the stack and execute <code>iret</code>, which tricks the CPU into switching to Ring 3.</li>
-</ul>
 <hr />
-<h2 id="4-ring-3-pitfalls-restrictions">4. Ring 3 Pitfalls &amp; Restrictions</h2>
-<p>When experimenting in Ring 3, remember these rules:</p>
-<ul>
-<li><strong>No Direct I/O</strong>: <code>outb</code>/<code>inb</code> will trigger a General Protection Fault (GPF).</li>
-<li><strong>No Privileged Instructions</strong>: <code>hlt</code>, <code>cli</code>, <code>sti</code>, <code>lgdt</code>, <code>lidt</code>, <code>mov crX, reg</code> will all cause a GPF.</li>
-<li><strong>No Kernel Memory</strong>: Accessing any address above <code>0xC0000000</code> will trigger a Page Fault.</li>
-<li><strong>Strictly Syscalls</strong>: You <em>must</em> use <code>int 0x80</code> to request services from the kernel.</li>
-</ul>
-<hr />
-<h2 id="3-how-to-make-things-fail">3. How to Make Things Fail</h2>
+<h2 id="3-how-to-make-things-fail">3. How to Make Things Fail<a class="headerlink" href="#3-how-to-make-things-fail" title="Permanent link">&para;</a></h2>
 <p>Testing the kernel's robustness is part of the fun. Here is how you can trigger common CPU exceptions.</p>
-<h3 id="a-division-by-zero-isr-0">A. Division by Zero (ISR 0)</h3>
-<p>Add this to any task to see the "Division By Zero" exception message:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
-</code></pre></div></p>
-<h3 id="b-page-fault-isr-14">B. Page Fault (ISR 14)</h3>
-<p>Triggered when a task tries to access memory it doesn't own.
-- <strong>From Kernel</strong>: <code>*(int*)0x0 = 123;</code> (Accessing NULL).
-- <strong>From User</strong>: Trying to read kernel memory (addresses above <code>0xC0000000</code>).</p>
-<h3 id="c-general-protection-fault-isr-13">C. General Protection Fault (ISR 13)</h3>
+<h3 id="a-division-by-zero-isr-0">A. Division by Zero (ISR 0)<a class="headerlink" href="#a-division-by-zero-isr-0" title="Permanent link">&para;</a></h3>
+<p>Add this to any task:
+<div class="language-c highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="k">volatile</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">b</span><span class="p">;</span>
+</span></code></pre></div></p>
+<h3 id="b-page-fault-isr-14">B. Page Fault (ISR 14)<a class="headerlink" href="#b-page-fault-isr-14" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>From Kernel</strong>: <code>*(int*)0x0 = 123;</code> (Accessing NULL).</li>
+<li><strong>From User</strong>: Trying to read kernel memory (addresses above <code>0xC0000000</code>).</li>
+</ul>
+<h3 id="c-general-protection-fault-isr-13">C. General Protection Fault (ISR 13)<a class="headerlink" href="#c-general-protection-fault-isr-13" title="Permanent link">&para;</a></h3>
 <p>Triggered in User Mode if you try to execute privileged instructions:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Inside a User Task</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;hlt&quot;</span><span class="p">);</span><span class="w"> </span><span class="c1">// Only allowed in Ring 0</span>
-</code></pre></div>
-The kernel will catch this and usually terminate the offending user task.</p>
-<h3 id="d-out-of-memory-oom">D. Out of Memory (OOM)</h3>
-<p>Stress the heap allocator by requesting more memory than available:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">100</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="kt">void</span><span class="o">*</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">kmalloc</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span><span class="w"> </span><span class="c1">// Request 1MB repeatedly</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Heap exhausted at %d MB</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">);</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="p">}</span>
-</code></pre></div></p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Inside a User Task</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">asm</span><span class="w"> </span><span class="k">volatile</span><span class="p">(</span><span class="s">&quot;hlt&quot;</span><span class="p">);</span><span class="w"> </span><span class="c1">// Only allowed in Ring 0</span>
+</span></code></pre></div></p>
 <hr />
-<h2 id="4-debugging-tips">4. Debugging Tips</h2>
-<h3 id="headless-logging-serial-com1">Headless Logging (Serial COM1)</h3>
-<p>TilekarOS mirrors all <code>printf</code> output to the serial port <code>0x3F8</code>. If you are using QEMU, you can see these logs in your terminal by adding:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>qemu-system-i386<span class="w"> </span>-cdrom<span class="w"> </span>TilekarOS.iso<span class="w"> </span>-serial<span class="w"> </span>stdio
-</code></pre></div></p>
-<h3 id="stack-overflows">Stack Overflows</h3>
-<p>The kernel allocates <strong>4KB</strong> for each task's stack. If you define a massive local array (e.g., <code>char buf[5000];</code>), you will overwrite other kernel data or the <code>task_t</code> structure, leading to a spectacular (and educational) crash.</p>
+<h2 id="4-debugging-tips">4. Debugging Tips<a class="headerlink" href="#4-debugging-tips" title="Permanent link">&para;</a></h2>
+<h3 id="headless-logging-serial-com1">Headless Logging (Serial COM1)<a class="headerlink" href="#headless-logging-serial-com1" title="Permanent link">&para;</a></h3>
+<p>TilekarOS mirrors all <code>printf</code> output to the serial port <code>0x3F8</code>. Add <code>-serial stdio</code> to QEMU to see these logs in your terminal.</p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://wiki.osdev.org/Testing">OSDev: Testing</a></li>
+<li><a href="https://wiki.osdev.org/Serial_Ports">OSDev: Serial Ports</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Protection_ring">Wikipedia: Ring (computer_security)</a></li>
+</ul>
 
 
 
@@ -1945,14 +1546,82 @@ The kernel will catch this and usually terminate the offending user task.</p>
       
         <footer class="md-footer">
   
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../project-structure/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 📂 Project Structure">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                📂 Project Structure
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../kernel/boot-and-init/" class="md-footer__link md-footer__link--next" aria-label="Next: 🚀 Boot &amp; Initialization">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                🚀 Boot & Initialization
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
   <div class="md-footer-meta md-typeset">
     <div class="md-footer-meta__inner md-grid">
       <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 - 2026 Soham Tilekar Under MIT License
+    </div>
   
   
     Made with
     <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
       Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/SohamTilekar/TilekarOS" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:sohamtilekar233@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M536.4-26.3c9.8-3.5 20.6-1 28 6.3s9.8 18.2 6.3 28l-178 496.9c-5 13.9-18.1 23.1-32.8 23.1-14.2 0-27-8.6-32.3-21.7l-64.2-158c-4.5-11-2.5-23.6 5.2-32.6l94.5-112.4c5.1-6.1 4.7-15-.9-20.6s-14.6-6-20.6-.9l-112.4 94.3c-9.1 7.6-21.6 9.6-32.6 5.2L38.1 216.8c-13.1-5.3-21.7-18.1-21.7-32.3 0-14.7 9.2-27.8 23.1-32.8z"/></svg>
     </a>
   
 </div>
@@ -1966,11 +1635,13 @@ The kernel will catch this and usually terminate the offending user task.</p>
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
     
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "navigation.path", "navigation.prune", "navigation.tracking", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.code.annotate", "content.action.edit", "content.action.view", "toc.follow", "header.autohide"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>

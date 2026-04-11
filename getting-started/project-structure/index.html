@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../../api/libc-internals/">
+        <link rel="prev" href="../installation/">
       
       
-        <link rel="next" href="../documentation-guide/">
+        <link rel="next" href="../experimenting/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>📏 Coding Style - TilekarOS Documentation</title>
+        <title>📂 Project Structure - TilekarOS Documentation</title>
       
     
     
@@ -86,7 +86,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#coding-style-guidelines" class="md-skip">
+        <a href="#project-structure" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              📏 Coding Style
+              📂 Project Structure
             
           </span>
         </div>
@@ -255,11 +255,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../getting-started/build-system/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../build-system/" class="md-tabs__link">
           
   
   
@@ -335,13 +337,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../development/coding-style/" class="md-tabs__link">
           
   
   
@@ -429,12 +429,17 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
@@ -442,18 +447,16 @@
     
     
       
-        
-        
-      
     
-    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
-  
-  
-  
-    <a href="../../getting-started/build-system/" class="md-nav__link">
-      
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
   
   
   <span class="md-ellipsis">
@@ -467,12 +470,225 @@
   
   
 
-      
-        <span class="md-nav__icon md-icon"></span>
-      
-    </a>
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    🛠️ Getting Started
   
 
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../build-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🏗️ Build System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📥 Installation Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📂 Project Structure
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📂 Project Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#directory-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📂 Directory Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Key Files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-entry-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚀 Key Entry Points
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-system-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Build System Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../experimenting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🧪 Experimenting & Messing Around
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
     </li>
   
@@ -641,34 +857,31 @@
       
   
   
+  
+  
     
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
   
   
   
-    
-    
-    
-    
+    <a href="../../development/coding-style/" class="md-nav__link">
       
-        
-        
-      
-      
-        
-      
-    
-    
-      
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
-            
   
   
   <span class="md-ellipsis">
@@ -682,180 +895,12 @@
   
   
 
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    👷 Development & Contributions
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
   
 
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    📏 Coding Style
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    📏 Coding Style
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#1-c-language-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. C Language Style
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#2-assembly-style" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Assembly Style
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#3-documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Documentation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#4-git" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Git
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../documentation-guide/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    📖 Documentation Guide
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
       
     </li>
   
@@ -888,10 +933,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-c-language-style" class="md-nav__link">
+  <a href="#directory-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. C Language Style
+        📂 Directory Overview
       
     </span>
   </a>
@@ -899,10 +944,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#2-assembly-style" class="md-nav__link">
+  <a href="#key-files" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Assembly Style
+        🛠️ Key Files
       
     </span>
   </a>
@@ -910,10 +955,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#3-documentation" class="md-nav__link">
+  <a href="#key-entry-points" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Documentation
+        🚀 Key Entry Points
       
     </span>
   </a>
@@ -921,21 +966,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#4-git" class="md-nav__link">
+  <a href="#build-system-hierarchy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Git
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        References
+        🛠️ Build System Hierarchy
       
     </span>
   </a>
@@ -985,10 +1019,10 @@
     
     
       <li class="md-path__item">
-        <a href="./" class="md-path__link">
+        <a href="../build-system/" class="md-path__link">
           
   <span class="md-ellipsis">
-    👷 Development & Contributions
+    🛠️ Getting Started
   </span>
 
         </a>
@@ -1007,7 +1041,7 @@
 
 
   
-    <a href="https://github.com/SohamTilekar/TilekarOS/edit/main/docs/development/coding-style.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/SohamTilekar/TilekarOS/edit/main/docs/getting-started/project-structure.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1016,60 +1050,87 @@
     
       
     
-    <a href="https://github.com/SohamTilekar/TilekarOS/raw/main/docs/development/coding-style.md" title="View source of this page" class="md-content__button md-icon">
+    <a href="https://github.com/SohamTilekar/TilekarOS/raw/main/docs/getting-started/project-structure.md" title="View source of this page" class="md-content__button md-icon">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
     </a>
   
 
 
-<h1 id="coding-style-guidelines">Coding Style &amp; Guidelines<a class="headerlink" href="#coding-style-guidelines" title="Permanent link">&para;</a></h1>
-<p>To maintain a clean and consistent codebase, TilekarOS follows these guidelines.</p>
-<h2 id="1-c-language-style">1. C Language Style<a class="headerlink" href="#1-c-language-style" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Indentation</strong>: 4 spaces (No tabs).</li>
-<li><strong>Naming</strong>:</li>
-<li>Functions: <code>snake_case()</code> (e.g., <code>terminal_putchar</code>).</li>
-<li>Variables: <code>snake_case</code>.</li>
-<li>Types: <code>snake_case_t</code> (e.g., <code>task_t</code>).</li>
-<li>Macros/Constants: <code>UPPER_SNAKE_CASE</code>.</li>
-<li><strong>Braces</strong>: K&amp;R style (Brace on the same line for <code>if</code>/<code>while</code>, new line for functions).</li>
-<li><strong>Headers</strong>: Use <code>#ifndef HEADER_NAME_H</code> guards.</li>
-</ul>
-<div class="language-c highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Example</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="cp">#ifndef MY_HEADER_H</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="cp">#define MY_HEADER_H</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="kt">void</span><span class="w"> </span><span class="nf">my_function</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">arg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">arg</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">        </span><span class="c1">// ...</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">    </span><span class="p">}</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">}</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="cp">#endif</span>
+<h1 id="project-structure">Project Structure<a class="headerlink" href="#project-structure" title="Permanent link">&para;</a></h1>
+<p>This document provides an overview of the TilekarOS directory layout and where to find key components of the system.</p>
+<h2 id="directory-overview">📂 Directory Overview<a class="headerlink" href="#directory-overview" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>TilekarOS/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── kernel/                 # 🧠 Core Kernel Source
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>│   ├── arch/i386/          # 📟 x86 Specific Implementation
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   │   ├── boot/           # 🚀 Entry point and Linker script
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>│   │   ├── cpu/            # 📟 GDT, IDT, and CPU control
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>│   │   ├── drivers/        # 🔌 Hardware Drivers
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>│   │   │   ├── ata.c       # 💾 ATA Disk Driver
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   │   │   ├── pci.c       # 🚌 PCI Bus Driver
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   │   │   ├── keyboard.c  # ⌨️ Keyboard Driver
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   │   │   └── tty.c       # 🖥️ TTY/VGA Console
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   │   ├── fs/             # 📁 Filesystem &amp; VFS
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   │   │   ├── vfs.c       # 🌐 Virtual File System
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   │   │   ├── fat.c       # 📂 FAT16/32 Driver
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   │   │   └── buffer.c    # 💾 Block Buffer Cache
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   │   ├── mm/             # 💾 Memory Management (PMM, VMM, Heap)
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   │   ├── syscalls/       # 🔌 System Call Dispatcher
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   │   ├── task/           # 🔄 Multitasking &amp; ELF Loader
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   │   └── utils/          # 🛠️ Kernel Utilities
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   └── include/            # 📂 Kernel-wide Headers
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>├── libc/                   # 📚 Minimal C Standard Library
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>├── docs/                   # 📖 Documentation (MkDocs)
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>├── helpers/                # 🛠️ Build and Helper Scripts
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>├── sysroot/                # 📁 Build System Root
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>├── VirtualMachine/         # 💻 Default VM Workspace (Generated)
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│   └── drives/             # 📀 VM Disk Images (.img)
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>└── build/                  # 🏗️ Build Artifacts (Generated)
 </span></code></pre></div>
-<h2 id="2-assembly-style">2. Assembly Style<a class="headerlink" href="#2-assembly-style" title="Permanent link">&para;</a></h2>
+<h2 id="key-files">🛠️ Key Files<a class="headerlink" href="#key-files" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>Makefile</code></td>
+<td style="text-align: left;">The main build orchestration file.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>CMakeLists.txt</code></td>
+<td style="text-align: left;">Configuration for the CMake build system.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>grub.cfg</code></td>
+<td style="text-align: left;">Configuration for the GRUB bootloader.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>.clangd</code></td>
+<td style="text-align: left;">Configuration for the Clangd Language Server (Generated).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>LICENSE</code></td>
+<td style="text-align: left;">The project license (MIT).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="key-entry-points">🚀 Key Entry Points<a class="headerlink" href="#key-entry-points" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>NASM</strong>: Use Intel syntax.</li>
-<li><strong>Comments</strong>: Use <code>;</code> for comments.</li>
-<li><strong>Organization</strong>: Label global entry points with an underscore (e.g., <code>_start</code>).</li>
-</ul>
-<h2 id="3-documentation">3. Documentation<a class="headerlink" href="#3-documentation" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Every new public function in the kernel should have a brief comment explaining its parameters and return value.</li>
-<li>Significant changes should be reflected in the relevant file in the <code>docs/</code> directory.</li>
-</ul>
-<h2 id="4-git">4. Git<a class="headerlink" href="#4-git" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Keep commits small and focused.</li>
-<li>Use descriptive commit messages.</li>
+<li><strong>Kernel Entry (ASM)</strong>: <code>kernel/arch/i386/boot/boot.asm</code> - The very first code executed by the bootloader.</li>
+<li><strong>Kernel Entry (C)</strong>: <code>kernel/arch/i386/init_kernel.c</code> - Performs architecture-specific initialization.</li>
+<li><strong>Kernel Main</strong>: <code>kernel/kernel.c</code> - The platform-independent kernel main loop.</li>
+<li><strong>Linker Script</strong>: <code>kernel/arch/i386/boot/linker.ld</code> - Defines the memory layout of the kernel binary.</li>
 </ul>
 <hr />
-<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="https://en.wikipedia.org/wiki/Indentation_style#K&amp;R_style">K&amp;R Style (Wikipedia)</a></li>
-<li><a href="https://wiki.osdev.org/C_Style_Guide">OSDev: C Style Guide</a></li>
-</ul>
+<h2 id="build-system-hierarchy">🛠️ Build System Hierarchy<a class="headerlink" href="#build-system-hierarchy" title="Permanent link">&para;</a></h2>
+<p>TilekarOS uses a nested build system for modularity:
+1.  <strong>Top-level Makefile</strong>: Manages the overall build process, VM workspaces, and dynamic drives.
+2.  <strong>CMake</strong>: Manages the compilation of the kernel and libc, generating IDE configuration.
+3.  <strong>Toolchains</strong>: <code>cmake/toolchains/*.cmake</code> define cross-compilation settings.</p>
 
 
 
@@ -1105,7 +1166,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../api/libc-internals/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ⚙️ LibC Internals">
+          <a href="../installation/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 📥 Installation Guide">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1115,20 +1176,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                ⚙️ LibC Internals
+                📥 Installation Guide
               </div>
             </div>
           </a>
         
         
           
-          <a href="../documentation-guide/" class="md-footer__link md-footer__link--next" aria-label="Next: 📖 Documentation Guide">
+          <a href="../experimenting/" class="md-footer__link md-footer__link--next" aria-label="Next: 🧪 Experimenting &amp; Messing Around">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                📖 Documentation Guide
+                🧪 Experimenting & Messing Around
               </div>
             </div>
             <div class="md-footer__button md-icon">

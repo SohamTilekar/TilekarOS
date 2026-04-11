@@ -1,0 +1,1769 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A 32-bit x86 Hobby Operating System">
+      
+      
+        <meta name="author" content="TilekarOS Team">
+      
+      
+      
+        <link rel="prev" href="../../getting-started/experimenting/">
+      
+      
+        <link rel="next" href="../cpu-internals/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+    
+    
+      
+        <title>🚀 Boot & Initialization - TilekarOS Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+  
+  
+  
+  
+  <style>:root{--md-annotation-icon:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M19%2013.5a1.5%201.5%200%200%201-1.5-1.5%201.5%201.5%200%200%201%201.5-1.5%201.5%201.5%200%200%201%201.5%201.5%201.5%201.5%200%200%201-1.5%201.5m-5%200a1.5%201.5%200%200%201-1.5-1.5%201.5%201.5%200%200%201%201.5-1.5%201.5%201.5%200%200%201%201.5%201.5%201.5%201.5%200%200%201-1.5%201.5m-5%200A1.5%201.5%200%200%201%207.5%2012%201.5%201.5%200%200%201%209%2010.5a1.5%201.5%200%200%201%201.5%201.5A1.5%201.5%200%200%201%209%2013.5M22%203H7c-.69%200-1.23.35-1.59.88L0%2012l5.41%208.11c.36.53.96.89%201.65.89H22a2%202%200%200%200%202-2V5a2%202%200%200%200-2-2%22/%3E%3C/svg%3E');}</style>
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="https://unpkg.com/katex@0/dist/katex.min.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#boot-and-kernel-initialization" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="TilekarOS Documentation" class="md-header__button md-logo" aria-label="TilekarOS Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            TilekarOS Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              🚀 Boot & Initialization
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SohamTilekar/TilekarOS" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SohamTilekar/TilekarOS
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  🏠 Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/build-system/" class="md-tabs__link">
+          
+  
+  
+  🛠️ Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  🧠 Kernel Internals
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../drivers/driver-reference/" class="md-tabs__link">
+          
+  
+  
+  🔌 Drivers & Hardware
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/syscall-reference/" class="md-tabs__link">
+          
+  
+  
+  📚 API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/coding-style/" class="md-tabs__link">
+          
+  
+  
+  👷 Development & Contributions
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="TilekarOS Documentation" class="md-nav__button md-logo" aria-label="TilekarOS Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    TilekarOS Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SohamTilekar/TilekarOS" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SohamTilekar/TilekarOS
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🏠 Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../getting-started/build-system/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🛠️ Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🧠 Kernel Internals
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    🧠 Kernel Internals
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🚀 Boot & Initialization
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🚀 Boot & Initialization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-the-bootloader-handoff-grub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Bootloader Handoff (GRUB)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. The Bootloader Handoff (GRUB)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-multiboot-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Multiboot Header
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-low-level-entry-bootasm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Low-Level Entry (boot.asm)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Low-Level Entry (boot.asm)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#higher-half-trampoline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Higher-Half Trampoline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-linker-layout-linkerld" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Linker Layout (linker.ld)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-c-initialization-init_kernelc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. C Initialization (init_kernel.c)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. C Initialization (init_kernel.c)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initialization-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initialization Steps:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-testexample-verifying-multiboot-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Test/Example: Verifying Multiboot Info
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cpu-internals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📟 CPU & Interrupts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../memory-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    💾 Memory Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../multitasking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🔄 Multitasking & ELF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../filesystem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📁 Filesystem Stack
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../drivers/driver-reference/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    🔌 Drivers & Hardware
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../api/syscall-reference/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    📚 API Reference
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+  
+    <a href="../../development/coding-style/" class="md-nav__link">
+      
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    👷 Development & Contributions
+  
+
+    
+  </span>
+  
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-the-bootloader-handoff-grub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The Bootloader Handoff (GRUB)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. The Bootloader Handoff (GRUB)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-multiboot-header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Multiboot Header
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-low-level-entry-bootasm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Low-Level Entry (boot.asm)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Low-Level Entry (boot.asm)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#higher-half-trampoline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Higher-Half Trampoline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-linker-layout-linkerld" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Linker Layout (linker.ld)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-c-initialization-init_kernelc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. C Initialization (init_kernel.c)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. C Initialization (init_kernel.c)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#initialization-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initialization Steps:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-testexample-verifying-multiboot-info" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Test/Example: Verifying Multiboot Info
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="../.." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    🏠 Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="./" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    🧠 Kernel Internals
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/SohamTilekar/TilekarOS/edit/main/docs/kernel/boot-and-init.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/SohamTilekar/TilekarOS/raw/main/docs/kernel/boot-and-init.md" title="View source of this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 18c.56 0 1 .44 1 1s-.44 1-1 1-1-.44-1-1 .44-1 1-1m0-3c-2.73 0-5.06 1.66-6 4 .94 2.34 3.27 4 6 4s5.06-1.66 6-4c-.94-2.34-3.27-4-6-4m0 6.5a2.5 2.5 0 0 1-2.5-2.5 2.5 2.5 0 0 1 2.5-2.5 2.5 2.5 0 0 1 2.5 2.5 2.5 2.5 0 0 1-2.5 2.5M9.27 20H6V4h7v5h5v4.07c.7.08 1.36.25 2 .49V8l-6-6H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h4.5a8.2 8.2 0 0 1-1.23-2"/></svg>
+    </a>
+  
+
+
+<h1 id="boot-and-kernel-initialization">Boot and Kernel Initialization<a class="headerlink" href="#boot-and-kernel-initialization" title="Permanent link">&para;</a></h1>
+<p>This document provides a deep dive into how TilekarOS transitions from the BIOS to a fully operational 32-bit higher-half kernel.</p>
+<h2 id="1-the-bootloader-handoff-grub">1. The Bootloader Handoff (GRUB)<a class="headerlink" href="#1-the-bootloader-handoff-grub" title="Permanent link">&para;</a></h2>
+<p>TilekarOS is <strong>Multiboot-compliant</strong>, meaning it relies on a bootloader like GRUB to perform the initial hardware setup.</p>
+<h3 id="the-multiboot-header">The Multiboot Header<a class="headerlink" href="#the-multiboot-header" title="Permanent link">&para;</a></h3>
+<p><strong>Source File</strong>: <a href="https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/boot/boot.asm" target="_blank">boot.asm</a></p>
+<p>GRUB looks for a specific magic number (<code>0x1BADB002</code>) within the first 8KB of the kernel binary. This header contains flags that request page alignment for modules and memory information from the bootloader.</p>
+<details class="example">
+<summary>Code Preview: <code>boot.asm</code> (Header)</summary>
+<div class="language-nasm highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">; Multiboot header constants.</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="no">MULBOOT_PAGE_ALIGN</span><span class="w">  </span><span class="kd">equ</span><span class="w">  </span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w">            </span><span class="c1">; Request page-aligned modules</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="no">MULBOOT_MEMORY_INFO</span><span class="w">  </span><span class="kd">equ</span><span class="w">  </span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">1</span><span class="w">            </span><span class="c1">; Request memory map from bootloader</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="no">MULBOOT_HEADER_FLAGS</span><span class="w">  </span><span class="kd">equ</span><span class="w">  </span><span class="nv">MULBOOT_PAGE_ALIGN</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="nv">MULBOOT_MEMORY_INFO</span><span class="w"> </span><span class="c1">; Combined flag field</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="no">MULBOOT_HEADER_MAGIC</span><span class="w">    </span><span class="kd">equ</span><span class="w">  </span><span class="mh">0x1BADB002</span><span class="w">        </span><span class="c1">; Multiboot magic signature</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="no">MULBOOT_HEADER_CHECKSUM</span><span class="w"> </span><span class="kd">equ</span><span class="w"> </span><span class="o">-</span><span class="p">(</span><span class="nv">MULBOOT_HEADER_MAGIC</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nv">MULBOOT_HEADER_FLAGS</span><span class="p">)</span><span class="w"> </span><span class="c1">; Validates header (`MAGIC` + `FLAGS` + `CHECKSUM` == 0)</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1">; Multiboot header section</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">; Must be located within the first 8 KiB of the kernel image at a 32-bit boundary.</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1">; Bootloader parses this header to identify the image as a valid multiboot kernel.</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="k">section</span><span class="w"> </span><span class="nv">.multiboot</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="k">align</span><span class="w"> </span><span class="mi">4</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="nv">MULBOOT_HEADER_MAGIC</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="nv">MULBOOT_HEADER_FLAGS</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="nv">MULBOOT_HEADER_CHECKSUM</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="mi">1024</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="mi">768</span>
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">    </span><span class="kd">dd</span><span class="w"> </span><span class="mi">32</span>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="c1">; Kernel stack definition.</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="c1">; Stack grows downward. Reserve 16 KiB for early kernel stack usage.</span>
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="c1">; The stack must be 16-byte aligned (System V ABI requirement).</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="k">section</span><span class="w"> </span><span class="nv">.bss</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="k">align</span><span class="w"> </span><span class="mi">16</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="nl">stack_bottom:</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="kd">resb</span><span class="w"> </span><span class="mi">16384</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="nl">stack_top:</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a><span class="c1">; Kernel entry point.</span>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="c1">; `_start` is set in the linker script as the entry symbol.</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a><span class="c1">; The bootloader transfers control here in 32-bit protected mode.</span>
+</span><span id="__span-0-36"><a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a><span class="c1">; At this stage: interrupts and paging are disabled, GDT not yet configured.</span>
+</span><span id="__span-0-37"><a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a><span class="k">section</span><span class="w"> </span><span class="nv">.boot</span>
+</span><span id="__span-0-38"><a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a><span class="k">global</span><span class="w"> </span><span class="nv">_start</span><span class="p">:</span><span class="nv">function</span><span class="w"> </span><span class="p">(</span><span class="nv">_start.end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">_start</span><span class="p">)</span>
+</span><span id="__span-0-39"><a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a><span class="nl">_start:</span>
+</span><span id="__span-0-40"><a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a><span class="w">    </span><span class="c1">; Initilizing Paging</span>
+</span><span id="__span-0-41"><a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a><span class="w">    </span><span class="nf">MOV</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="nv">initial_page_dir</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mh">0xC0000000</span><span class="p">)</span>
+</span><span id="__span-0-42"><a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a><span class="w">    </span><span class="nf">MOV</span><span class="w"> </span><span class="nb">cr3</span><span class="p">,</span><span class="w"> </span><span class="nb">ecx</span>
+</span><span id="__span-0-43"><a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>
+</span><span id="__span-0-44"><a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a><span class="w">    </span><span class="nf">MOV</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="nb">cr4</span>
+</span><span id="__span-0-45"><a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a><span class="w">    </span><span class="nf">OR</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="mh">0x10</span>
+</span><span id="__span-0-46"><a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a><span class="w">    </span><span class="nf">MOV</span><span class="w"> </span><span class="nb">cr4</span><span class="p">,</span><span class="w"> </span><span class="nb">ecx</span>
+</span><span id="__span-0-47"><a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>
+</span><span id="__span-0-48"><a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a><span class="w">    </span><span class="nf">MOV</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="nb">cr0</span>
+</span><span id="__span-0-49"><a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a><span class="w">    </span><span class="nf">OR</span><span class="w"> </span><span class="nb">ecx</span><span class="p">,</span><span class="w"> </span><span class="mh">0x80000000</span>
+</span><span id="__span-0-50"><a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a><span class="w">    </span><span class="nf">MOV</span><span class="w"> </span><span class="nb">cr0</span><span class="p">,</span><span class="w"> </span><span class="nb">ecx</span>
+</span><span id="__span-0-51"><a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>
+</span><span id="__span-0-52"><a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a><span class="w">    </span><span class="nf">jmp</span><span class="w"> </span><span class="nv">higher_half_kernel</span>
+</span><span id="__span-0-53"><a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a><span class="nl">.end:</span>
+</span><span id="__span-0-54"><a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>
+</span><span id="__span-0-55"><a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a><span class="k">section</span><span class="w"> </span><span class="nv">.text</span>
+</span><span id="__span-0-56"><a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a><span class="nl">higher_half_kernel:</span>
+</span><span id="__span-0-57"><a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a><span class="w">    </span><span class="c1">; Initialize stack pointer</span>
+</span><span id="__span-0-58"><a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a><span class="w">    </span><span class="nf">mov</span><span class="w"> </span><span class="nb">esp</span><span class="p">,</span><span class="w"> </span><span class="nv">stack_top</span>
+</span><span id="__span-0-59"><a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>
+</span><span id="__span-0-60"><a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="w">    </span><span class="c1">; used later in kernel_main</span>
+</span><span id="__span-0-61"><a id="__codelineno-0-61" name="__codelineno-0-61" href="#__codelineno-0-61"></a><span class="w">    </span><span class="nf">push</span><span class="w"> </span><span class="nb">ebx</span><span class="w"> </span><span class="c1">; Push the pointer to the Multiboot information structure</span>
+</span><span id="__span-0-62"><a id="__codelineno-0-62" name="__codelineno-0-62" href="#__codelineno-0-62"></a><span class="w">    </span><span class="nf">push</span><span class="w"> </span><span class="nb">eax</span><span class="w"> </span><span class="c1">; Push the magic value</span>
+</span><span id="__span-0-63"><a id="__codelineno-0-63" name="__codelineno-0-63" href="#__codelineno-0-63"></a>
+</span><span id="__span-0-64"><a id="__codelineno-0-64" name="__codelineno-0-64" href="#__codelineno-0-64"></a><span class="w">    </span><span class="k">extern</span><span class="w"> </span><span class="nv">init_kernel</span>
+</span><span id="__span-0-65"><a id="__codelineno-0-65" name="__codelineno-0-65" href="#__codelineno-0-65"></a><span class="w">    </span><span class="nf">call</span><span class="w"> </span><span class="nv">init_kernel</span>
+</span><span id="__span-0-66"><a id="__codelineno-0-66" name="__codelineno-0-66" href="#__codelineno-0-66"></a>
+</span><span id="__span-0-67"><a id="__codelineno-0-67" name="__codelineno-0-67" href="#__codelineno-0-67"></a><span class="w">    </span><span class="nf">sti</span>
+</span><span id="__span-0-68"><a id="__codelineno-0-68" name="__codelineno-0-68" href="#__codelineno-0-68"></a>
+</span><span id="__span-0-69"><a id="__codelineno-0-69" name="__codelineno-0-69" href="#__codelineno-0-69"></a><span class="w">    </span><span class="c1">; Transfer control to the C/C++ kernel entry.</span>
+</span><span id="__span-0-70"><a id="__codelineno-0-70" name="__codelineno-0-70" href="#__codelineno-0-70"></a><span class="w">    </span><span class="c1">; Stack alignment is preserved (16-byte aligned at call time).</span>
+</span><span id="__span-0-71"><a id="__codelineno-0-71" name="__codelineno-0-71" href="#__codelineno-0-71"></a><span class="w">    </span><span class="k">extern</span><span class="w"> </span><span class="nv">kernel_main</span>
+</span><span id="__span-0-72"><a id="__codelineno-0-72" name="__codelineno-0-72" href="#__codelineno-0-72"></a><span class="w">    </span><span class="nf">call</span><span class="w"> </span><span class="nv">kernel_main</span>
+</span><span id="__span-0-73"><a id="__codelineno-0-73" name="__codelineno-0-73" href="#__codelineno-0-73"></a>
+</span><span id="__span-0-74"><a id="__codelineno-0-74" name="__codelineno-0-74" href="#__codelineno-0-74"></a><span class="c1">; System halt loop.</span>
+</span><span id="__span-0-75"><a id="__codelineno-0-75" name="__codelineno-0-75" href="#__codelineno-0-75"></a><span class="c1">; Ensures CPU remains idle when kernel_main returns (should never happen).</span>
+</span><span id="__span-0-76"><a id="__codelineno-0-76" name="__codelineno-0-76" href="#__codelineno-0-76"></a><span class="nl">halt:</span>
+</span><span id="__span-0-77"><a id="__codelineno-0-77" name="__codelineno-0-77" href="#__codelineno-0-77"></a><span class="k">global</span><span class="w"> </span><span class="nv">halt</span><span class="p">:</span><span class="nv">function</span><span class="w"> </span><span class="p">(</span><span class="nv">halt.end</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nv">halt</span><span class="p">)</span>
+</span><span id="__span-0-78"><a id="__codelineno-0-78" name="__codelineno-0-78" href="#__codelineno-0-78"></a><span class="w">    </span><span class="nf">cli</span>
+</span><span id="__span-0-79"><a id="__codelineno-0-79" name="__codelineno-0-79" href="#__codelineno-0-79"></a><span class="nl">.mh:</span>
+</span><span id="__span-0-80"><a id="__codelineno-0-80" name="__codelineno-0-80" href="#__codelineno-0-80"></a><span class="w">    </span><span class="nf">hlt</span>
+</span><span id="__span-0-81"><a id="__codelineno-0-81" name="__codelineno-0-81" href="#__codelineno-0-81"></a><span class="w">    </span><span class="nf">jmp</span><span class="w"> </span><span class="nv">.mh</span>
+</span><span id="__span-0-82"><a id="__codelineno-0-82" name="__codelineno-0-82" href="#__codelineno-0-82"></a><span class="nl">.end:</span>
+</span><span id="__span-0-83"><a id="__codelineno-0-83" name="__codelineno-0-83" href="#__codelineno-0-83"></a>
+</span><span id="__span-0-84"><a id="__codelineno-0-84" name="__codelineno-0-84" href="#__codelineno-0-84"></a><span class="k">section</span><span class="w"> </span><span class="nv">.data</span>
+</span><span id="__span-0-85"><a id="__codelineno-0-85" name="__codelineno-0-85" href="#__codelineno-0-85"></a><span class="k">align</span><span class="w"> </span><span class="mi">4096</span>
+</span><span id="__span-0-86"><a id="__codelineno-0-86" name="__codelineno-0-86" href="#__codelineno-0-86"></a><span class="k">global</span><span class="w"> </span><span class="nv">initial_page_dir</span>
+</span><span id="__span-0-87"><a id="__codelineno-0-87" name="__codelineno-0-87" href="#__codelineno-0-87"></a><span class="nl">initial_page_dir:</span>
+</span><span id="__span-0-88"><a id="__codelineno-0-88" name="__codelineno-0-88" href="#__codelineno-0-88"></a><span class="w">    </span><span class="kd">DD</span><span class="w"> </span><span class="mb">10000011b</span>
+</span><span id="__span-0-89"><a id="__codelineno-0-89" name="__codelineno-0-89" href="#__codelineno-0-89"></a><span class="w">    </span><span class="kd">TIMES</span><span class="w"> </span><span class="mi">768</span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="nv">DD</span><span class="w"> </span><span class="mi">0</span>
+</span><span id="__span-0-90"><a id="__codelineno-0-90" name="__codelineno-0-90" href="#__codelineno-0-90"></a>
+</span><span id="__span-0-91"><a id="__codelineno-0-91" name="__codelineno-0-91" href="#__codelineno-0-91"></a><span class="w">    </span><span class="kd">DD</span><span class="w"> </span><span class="p">(</span><span class="mi">0</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">22</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mb">10000011b</span>
+</span><span id="__span-0-92"><a id="__codelineno-0-92" name="__codelineno-0-92" href="#__codelineno-0-92"></a><span class="w">    </span><span class="kd">DD</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">22</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mb">10000011b</span>
+</span><span id="__span-0-93"><a id="__codelineno-0-93" name="__codelineno-0-93" href="#__codelineno-0-93"></a><span class="w">    </span><span class="kd">DD</span><span class="w"> </span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">22</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mb">10000011b</span>
+</span><span id="__span-0-94"><a id="__codelineno-0-94" name="__codelineno-0-94" href="#__codelineno-0-94"></a><span class="w">    </span><span class="kd">DD</span><span class="w"> </span><span class="p">(</span><span class="mi">3</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">22</span><span class="p">)</span><span class="w"> </span><span class="o">|</span><span class="w"> </span><span class="mb">10000011b</span>
+</span><span id="__span-0-95"><a id="__codelineno-0-95" name="__codelineno-0-95" href="#__codelineno-0-95"></a><span class="w">    </span><span class="kd">TIMES</span><span class="w"> </span><span class="mi">256</span><span class="o">-</span><span class="mi">4</span><span class="w"> </span><span class="nv">DD</span><span class="w"> </span><span class="mi">0</span>
+</span></code></pre></div>
+</details>
+<div class="admonition info">
+<p class="admonition-title">OSDev Reference</p>
+<p>For more on the Multiboot specification, see the <a href="https://wiki.osdev.org/Multiboot">OSDev Wiki: Multiboot</a> or <a href="https://en.wikipedia.org/wiki/Multiboot_specification">Wikipedia: Multiboot</a>.</p>
+</div>
+<hr />
+<h2 id="2-low-level-entry-bootasm">2. Low-Level Entry (<code>boot.asm</code>)<a class="headerlink" href="#2-low-level-entry-bootasm" title="Permanent link">&para;</a></h2>
+<p>When GRUB jumps to the <code>_start</code> symbol, the CPU is in <strong>32-bit Protected Mode</strong>, but paging is disabled.</p>
+<h3 id="higher-half-trampoline">Higher-Half Trampoline<a class="headerlink" href="#higher-half-trampoline" title="Permanent link">&para;</a></h3>
+<p>TilekarOS is a <strong>Higher-Half Kernel</strong>, meaning it lives at virtual address <code>0xC0000000</code> (3GB). However, it is loaded at <code>0x00100000</code> (1MB) in physical RAM.</p>
+<p>To bridge this gap, the entry code performs the following "trampoline" sequence:
+1.  <strong>Initial Page Directory</strong>: It sets up a temporary page directory (<code>initial_page_dir</code>).
+2.  <strong>Identity Mapping</strong>: It maps the first 4MB of physical memory to the first 4MB of virtual memory. This ensures the CPU doesn't crash immediately when paging is enabled.
+3.  <strong>Higher-Half Mapping</strong>: It maps the first 16MB of physical memory to virtual <code>0xC0000000</code>.
+4.  <strong>Large Pages (4MB)</strong>: It uses <a href="https://en.wikipedia.org/wiki/Page_Size_Extension">Page Size Extensions (PSE)</a> to map 4MB blocks at once, simplifying the initial boot code.</p>
+<pre class="mermaid"><code>flowchart TD
+    %% --- Hardware / Bootloader ---
+    subgraph SystemStart ["System Start"]
+        direction TB
+        BIOS["BIOS / UEFI"]:::hardware --&gt; GRUB[GRUB Bootloader]:::hardware
+        GRUB -- Multiboot Magic --&gt; ProtMode["32-bit Protected Mode"]:::hardware
+    end
+
+    %% --- Low Level Entry ---
+    subgraph BootASM ["boot.asm _start"]
+        direction TB
+        Paging["Enable Paging (4MB Pages)"]:::asm
+        Stack["Setup Stack (esp = stack_top)"]:::asm
+        Paging --&gt; Stack
+        Stack --&gt; InitHub{Init Sequence}:::asm
+    end
+
+    SystemStart --&gt; BootASM
+
+    %% --- Modules ---
+
+    %% TTY
+    InitHub -- 1 --&gt; TTY["tty.c: init_terminal"]:::c_module
+
+    %% GDT
+    subgraph GDT_Scope ["gdt.c: init_gdt"]
+        direction LR
+        G_Ld[Load GDTR]:::c_func --&gt; G_TSS[Install TSS]:::c_func
+        G_TSS --&gt; G_TR[Load TR]:::c_func
+    end
+    InitHub -- 2 --&gt; GDT_Scope
+
+    %% IDT
+    subgraph IDT_Scope ["idt.c: init_idt"]
+        direction LR
+        I_PIC["Remap PIC (0x20 / 0x28)"]:::c_func --&gt; I_Fill[Fill Gates]:::c_func
+        I_Fill --&gt; I_Ld[Load IDTR]:::c_func
+    end
+    InitHub -- 3 --&gt; IDT_Scope
+
+    %% Kernel Main
+    subgraph Kernel_Scope ["kernel.c: kernel_main"]
+        direction TB
+        AppLogic["Print Banner &amp; Run Tests"]:::kernel --&gt; Halt((Infinite Loop)):::hardware
+    end
+    InitHub -- 4 --&gt; Kernel_Scope
+
+    %% FORCE LEFT-TO-RIGHT ORDERING
+    TTY ~~~ G_Ld ~~~ I_PIC ~~~ AppLogic</code></pre>
+<h2 id="3-linker-layout-linkerld">3. Linker Layout (<code>linker.ld</code>)<a class="headerlink" href="#3-linker-layout-linkerld" title="Permanent link">&para;</a></h2>
+<p><strong>Source File</strong>: <a href="https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/boot/linker.ld" target="_blank">linker.ld</a></p>
+<p>The linker script is responsible for the final organization of the binary. It defines where each section (text, data, bss) is placed in both physical and virtual memory.</p>
+<details class="example">
+<summary>Code Preview: <code>linker.ld</code></summary>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>/* The bootloader will look at this image and start execution at the symbol
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>   designated as the entry point. */
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>ENTRY(_start)
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>/* Tell the linker that we want the specific sections in the output file
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>   to be organized as follows: */
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>SECTIONS
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>{
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    /* --- PHYSICAL MEMORY SETUP --- */
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    /* The kernel will be loaded at 1MB into physical memory. */
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    /* We skip the first 1MB to avoid BIOS routines, the VGA text buffer (0xB8000),
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>       and other hardware-reserved areas typically found in the lower 1MB. */
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    . = 1M;
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    /* The Multiboot header must appear very early in the binary (within the
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>       first 8 KiB) so the bootloader (like GRUB) can find it. */
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    .multiboot :
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    {
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>        /* Ensure the multiboot header stays at the beginning */
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>        *(.multiboot)
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    }
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    /* Sometimes the compiler adds a build-id note. We include it explicitly
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>       to prevent the linker from placing it somewhere that breaks the layout. */
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    .note.gnu.build-id ALIGN(4K) :
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a>    {
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a>        *(.note.gnu.build-id)
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a>    }
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a>    /* The .boot section contains the &quot;trampoline&quot; code.
+</span><span id="__span-1-32"><a id="__codelineno-1-32" name="__codelineno-1-32" href="#__codelineno-1-32"></a>       Since paging is not yet enabled when the kernel starts, this code
+</span><span id="__span-1-33"><a id="__codelineno-1-33" name="__codelineno-1-33" href="#__codelineno-1-33"></a>       must execute from low physical memory (around 1MB). */
+</span><span id="__span-1-34"><a id="__codelineno-1-34" name="__codelineno-1-34" href="#__codelineno-1-34"></a>    .boot ALIGN(4K) :
+</span><span id="__span-1-35"><a id="__codelineno-1-35" name="__codelineno-1-35" href="#__codelineno-1-35"></a>    {
+</span><span id="__span-1-36"><a id="__codelineno-1-36" name="__codelineno-1-36" href="#__codelineno-1-36"></a>        *(.boot)
+</span><span id="__span-1-37"><a id="__codelineno-1-37" name="__codelineno-1-37" href="#__codelineno-1-37"></a>    }
+</span><span id="__span-1-38"><a id="__codelineno-1-38" name="__codelineno-1-38" href="#__codelineno-1-38"></a>
+</span><span id="__span-1-39"><a id="__codelineno-1-39" name="__codelineno-1-39" href="#__codelineno-1-39"></a>    /* --- HIGHER HALF KERNEL SETUP --- */
+</span><span id="__span-1-40"><a id="__codelineno-1-40" name="__codelineno-1-40" href="#__codelineno-1-40"></a>
+</span><span id="__span-1-41"><a id="__codelineno-1-41" name="__codelineno-1-41" href="#__codelineno-1-41"></a>    /* We now increment the location counter (.) by 3GB (0xC0000000).
+</span><span id="__span-1-42"><a id="__codelineno-1-42" name="__codelineno-1-42" href="#__codelineno-1-42"></a>       From this point on, all symbols will be assigned virtual addresses
+</span><span id="__span-1-43"><a id="__codelineno-1-43" name="__codelineno-1-43" href="#__codelineno-1-43"></a>       in the upper half of memory (e.g., 0xC0100000), but we still need
+</span><span id="__span-1-44"><a id="__codelineno-1-44" name="__codelineno-1-44" href="#__codelineno-1-44"></a>       to load them at physical address 0x00100000. */
+</span><span id="__span-1-45"><a id="__codelineno-1-45" name="__codelineno-1-45" href="#__codelineno-1-45"></a>    . += 0xC0000000;
+</span><span id="__span-1-46"><a id="__codelineno-1-46" name="__codelineno-1-46" href="#__codelineno-1-46"></a>
+</span><span id="__span-1-47"><a id="__codelineno-1-47" name="__codelineno-1-47" href="#__codelineno-1-47"></a>    /* CODE SECTION (.text)
+</span><span id="__span-1-48"><a id="__codelineno-1-48" name="__codelineno-1-48" href="#__codelineno-1-48"></a>       ALIGN(4K): Align sections on 4KB page boundaries for easy mapping.
+</span><span id="__span-1-49"><a id="__codelineno-1-49" name="__codelineno-1-49" href="#__codelineno-1-49"></a>       AT(...):   This specifies the Load Memory Address (LMA).
+</span><span id="__span-1-50"><a id="__codelineno-1-50" name="__codelineno-1-50" href="#__codelineno-1-50"></a>                  We calculate the physical address by taking the current
+</span><span id="__span-1-51"><a id="__codelineno-1-51" name="__codelineno-1-51" href="#__codelineno-1-51"></a>                  Virtual Address (ADDR(.text)) and subtracting the 3GB offset. */
+</span><span id="__span-1-52"><a id="__codelineno-1-52" name="__codelineno-1-52" href="#__codelineno-1-52"></a>    .text ALIGN(4K) : AT(ADDR(.text) - 0xC0000000)
+</span><span id="__span-1-53"><a id="__codelineno-1-53" name="__codelineno-1-53" href="#__codelineno-1-53"></a>    {
+</span><span id="__span-1-54"><a id="__codelineno-1-54" name="__codelineno-1-54" href="#__codelineno-1-54"></a>        *(.text)
+</span><span id="__span-1-55"><a id="__codelineno-1-55" name="__codelineno-1-55" href="#__codelineno-1-55"></a>    }
+</span><span id="__span-1-56"><a id="__codelineno-1-56" name="__codelineno-1-56" href="#__codelineno-1-56"></a>
+</span><span id="__span-1-57"><a id="__codelineno-1-57" name="__codelineno-1-57" href="#__codelineno-1-57"></a>    /* READ-ONLY DATA (.rodata)
+</span><span id="__span-1-58"><a id="__codelineno-1-58" name="__codelineno-1-58" href="#__codelineno-1-58"></a>       Contains constants, string literals, and C++ vtables. */
+</span><span id="__span-1-59"><a id="__codelineno-1-59" name="__codelineno-1-59" href="#__codelineno-1-59"></a>    .rodata ALIGN(4K) : AT(ADDR(.rodata) - 0xC0000000)
+</span><span id="__span-1-60"><a id="__codelineno-1-60" name="__codelineno-1-60" href="#__codelineno-1-60"></a>    {
+</span><span id="__span-1-61"><a id="__codelineno-1-61" name="__codelineno-1-61" href="#__codelineno-1-61"></a>        *(.rodata)
+</span><span id="__span-1-62"><a id="__codelineno-1-62" name="__codelineno-1-62" href="#__codelineno-1-62"></a>    }
+</span><span id="__span-1-63"><a id="__codelineno-1-63" name="__codelineno-1-63" href="#__codelineno-1-63"></a>
+</span><span id="__span-1-64"><a id="__codelineno-1-64" name="__codelineno-1-64" href="#__codelineno-1-64"></a>    /* INITIALIZED DATA (.data)
+</span><span id="__span-1-65"><a id="__codelineno-1-65" name="__codelineno-1-65" href="#__codelineno-1-65"></a>       Contains global variables that have been assigned a value (e.g., int x = 5;). */
+</span><span id="__span-1-66"><a id="__codelineno-1-66" name="__codelineno-1-66" href="#__codelineno-1-66"></a>    .data ALIGN(4K) : AT(ADDR(.data) - 0xC0000000)
+</span><span id="__span-1-67"><a id="__codelineno-1-67" name="__codelineno-1-67" href="#__codelineno-1-67"></a>    {
+</span><span id="__span-1-68"><a id="__codelineno-1-68" name="__codelineno-1-68" href="#__codelineno-1-68"></a>        *(.data)
+</span><span id="__span-1-69"><a id="__codelineno-1-69" name="__codelineno-1-69" href="#__codelineno-1-69"></a>    }
+</span><span id="__span-1-70"><a id="__codelineno-1-70" name="__codelineno-1-70" href="#__codelineno-1-70"></a>
+</span><span id="__span-1-71"><a id="__codelineno-1-71" name="__codelineno-1-71" href="#__codelineno-1-71"></a>    /* UNINITIALIZED DATA (.bss)
+</span><span id="__span-1-72"><a id="__codelineno-1-72" name="__codelineno-1-72" href="#__codelineno-1-72"></a>       Contains global variables that are zeroed or uninitialized (e.g., int x;).
+</span><span id="__span-1-73"><a id="__codelineno-1-73" name="__codelineno-1-73" href="#__codelineno-1-73"></a>       Also usually contains the kernel stack.
+</span><span id="__span-1-74"><a id="__codelineno-1-74" name="__codelineno-1-74" href="#__codelineno-1-74"></a>       *(COMMON) catches C variables that are &quot;tentative&quot; definitions. */
+</span><span id="__span-1-75"><a id="__codelineno-1-75" name="__codelineno-1-75" href="#__codelineno-1-75"></a>    .bss ALIGN(4K) : AT(ADDR(.bss) - 0xC0000000)
+</span><span id="__span-1-76"><a id="__codelineno-1-76" name="__codelineno-1-76" href="#__codelineno-1-76"></a>    {
+</span><span id="__span-1-77"><a id="__codelineno-1-77" name="__codelineno-1-77" href="#__codelineno-1-77"></a>        *(COMMON)
+</span><span id="__span-1-78"><a id="__codelineno-1-78" name="__codelineno-1-78" href="#__codelineno-1-78"></a>        *(.bss)
+</span><span id="__span-1-79"><a id="__codelineno-1-79" name="__codelineno-1-79" href="#__codelineno-1-79"></a>    }
+</span><span id="__span-1-80"><a id="__codelineno-1-80" name="__codelineno-1-80" href="#__codelineno-1-80"></a>
+</span><span id="__span-1-81"><a id="__codelineno-1-81" name="__codelineno-1-81" href="#__codelineno-1-81"></a>    /* End of the kernel image marker. Useful for the memory manager (PMM)
+</span><span id="__span-1-82"><a id="__codelineno-1-82" name="__codelineno-1-82" href="#__codelineno-1-82"></a>       to know where free memory begins. */
+</span><span id="__span-1-83"><a id="__codelineno-1-83" name="__codelineno-1-83" href="#__codelineno-1-83"></a>    _kernel_end = .;
+</span><span id="__span-1-84"><a id="__codelineno-1-84" name="__codelineno-1-84" href="#__codelineno-1-84"></a>}
+</span></code></pre></div>
+</details>
+<div class="admonition tip">
+<p class="admonition-title">Under the Hood: VMA vs LMA</p>
+<p>The <strong>LMA</strong> (Load Memory Address) is where the data is actually loaded in RAM (1MB). The <strong>VMA</strong> (Virtual Memory Address) is where the code <em>expects</em> to be when it runs (<code>0xC0000000 + 1MB</code>). The difference between the two is handled by the initial paging setup in <code>boot.asm</code>.</p>
+</div>
+<hr />
+<h2 id="4-c-initialization-init_kernelc">4. C Initialization (<code>init_kernel.c</code>)<a class="headerlink" href="#4-c-initialization-init_kernelc" title="Permanent link">&para;</a></h2>
+<p><strong>Source File</strong>: <a href="https://github.com/SohamTilekar/TilekarOS/blob/main/kernel/arch/i386/init_kernel.c" target="_blank">init_kernel.c</a></p>
+<p>Once in the higher half, the <code>init_kernel</code> function orchestrates the setup of all major subsystems. It takes the multiboot magic number and the pointer to the multiboot information structure as arguments.</p>
+<details class="example">
+<summary>Code Preview: <code>init_kernel.c</code></summary>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;kernel/tty.h&quot;</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;gdt.h&quot;</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;idt.h&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;task.h&quot;</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;timer.h&quot;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;keyboard.h&quot;</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;ata.h&quot;</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;ahci.h&quot;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;pci.h&quot;</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;vfs.h&quot;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;memory.h&quot;</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;kmalloc.h&quot;</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="k">extern</span><span class="w"> </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">_kernel_end</span><span class="p">;</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="cm">/*</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="cm"> * init_kernel</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="cm"> * The main entry point for C kernel initialization.</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="cm"> * Called from boot.asm after stack setup.</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="cm"> */</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="kt">void</span><span class="w"> </span><span class="nf">init_kernel</span><span class="p">(</span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">magic</span><span class="p">,</span><span class="w"> </span><span class="n">MultiBootInfo</span><span class="o">*</span><span class="w"> </span><span class="n">boot_info</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">magic</span><span class="p">;</span><span class="w"> </span><span class="c1">// Suppress unused parameter warning</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="c1">// Convert boot_info to virtual address (higher half)</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="c1">// GRUB passes a physical address, which is currently identity mapped.</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">    </span><span class="c1">// We must use the virtual address once identity mapping is removed.</span>
+</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">    </span><span class="n">boot_info</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">MultiBootInfo</span><span class="o">*</span><span class="p">)((</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">boot_info</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">KERNEL_START</span><span class="p">);</span>
+</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a>
+</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">    </span><span class="c1">// Initialize core kernel subsystems</span>
+</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">    </span><span class="n">init_terminal</span><span class="p">();</span>
+</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="n">init_gdt</span><span class="p">();</span>
+</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">    </span><span class="n">init_idt</span><span class="p">();</span>
+</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">    </span><span class="n">pci_init</span><span class="p">();</span>
+</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">    </span><span class="n">init_keyboard</span><span class="p">();</span>
+</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a>
+</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">        </span><span class="cm">/*</span>
+</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="cm">        * Memory Management Initialization</span>
+</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="cm">        *</span>
+</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="cm">        * 1. Calculate the end of the last loaded module (e.g., initrd).</span>
+</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="cm">        * If no modules are present, we use the end of the kernel image.</span>
+</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="cm">        */</span>
+</span><span id="__span-2-45"><a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">module_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="o">&amp;</span><span class="n">_kernel_end</span><span class="p">;</span>
+</span><span id="__span-2-46"><a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a>
+</span><span id="__span-2-47"><a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">        </span><span class="c1">// Convert to physical address if it&#39;s a virtual address from the linker</span>
+</span><span id="__span-2-48"><a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">module_end</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">KERNEL_START</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-49"><a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">            </span><span class="n">module_end</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">KERNEL_START</span><span class="p">;</span>
+</span><span id="__span-2-50"><a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-2-51"><a id="__codelineno-2-51" name="__codelineno-2-51" href="#__codelineno-2-51"></a>
+</span><span id="__span-2-52"><a id="__codelineno-2-52" name="__codelineno-2-52" href="#__codelineno-2-52"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">mods_count</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-53"><a id="__codelineno-2-53" name="__codelineno-2-53" href="#__codelineno-2-53"></a><span class="w">            </span><span class="c1">// mods_addr is a physical address</span>
+</span><span id="__span-2-54"><a id="__codelineno-2-54" name="__codelineno-2-54" href="#__codelineno-2-54"></a><span class="w">            </span><span class="kt">uint32_t</span><span class="o">*</span><span class="w"> </span><span class="n">mods</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">uint32_t</span><span class="o">*</span><span class="p">)(</span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">mods_addr</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">KERNEL_START</span><span class="p">);</span>
+</span><span id="__span-2-55"><a id="__codelineno-2-55" name="__codelineno-2-55" href="#__codelineno-2-55"></a><span class="w">            </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">first_mod_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mods</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"> </span><span class="c1">// end address of the first module</span>
+</span><span id="__span-2-56"><a id="__codelineno-2-56" name="__codelineno-2-56" href="#__codelineno-2-56"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">first_mod_end</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">module_end</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-2-57"><a id="__codelineno-2-57" name="__codelineno-2-57" href="#__codelineno-2-57"></a><span class="w">                </span><span class="n">module_end</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">first_mod_end</span><span class="p">;</span>
+</span><span id="__span-2-58"><a id="__codelineno-2-58" name="__codelineno-2-58" href="#__codelineno-2-58"></a><span class="w">            </span><span class="p">}</span>
+</span><span id="__span-2-59"><a id="__codelineno-2-59" name="__codelineno-2-59" href="#__codelineno-2-59"></a><span class="w">        </span><span class="p">}</span>
+</span><span id="__span-2-60"><a id="__codelineno-2-60" name="__codelineno-2-60" href="#__codelineno-2-60"></a>
+</span><span id="__span-2-61"><a id="__codelineno-2-61" name="__codelineno-2-61" href="#__codelineno-2-61"></a><span class="w">        </span><span class="cm">/*</span>
+</span><span id="__span-2-62"><a id="__codelineno-2-62" name="__codelineno-2-62" href="#__codelineno-2-62"></a><span class="cm">        * 2. Align the start of free physical memory to the next 4KB page boundary.</span>
+</span><span id="__span-2-63"><a id="__codelineno-2-63" name="__codelineno-2-63" href="#__codelineno-2-63"></a><span class="cm">        */</span>
+</span><span id="__span-2-64"><a id="__codelineno-2-64" name="__codelineno-2-64" href="#__codelineno-2-64"></a><span class="w">        </span><span class="kt">uint32_t</span><span class="w"> </span><span class="n">phys_alloc_start</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">module_end</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mh">0xFFF</span><span class="p">)</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="o">~</span><span class="mh">0xFFF</span><span class="p">;</span>
+</span><span id="__span-2-65"><a id="__codelineno-2-65" name="__codelineno-2-65" href="#__codelineno-2-65"></a>
+</span><span id="__span-2-66"><a id="__codelineno-2-66" name="__codelineno-2-66" href="#__codelineno-2-66"></a><span class="w">        </span><span class="c1">// 3. Initialize the physical memory manager and paging system.</span>
+</span><span id="__span-2-67"><a id="__codelineno-2-67" name="__codelineno-2-67" href="#__codelineno-2-67"></a><span class="w">        </span><span class="c1">// boot_info-&gt;mem_upper is KB above 1MB. Total memory = 1024 + mem_upper.</span>
+</span><span id="__span-2-68"><a id="__codelineno-2-68" name="__codelineno-2-68" href="#__codelineno-2-68"></a><span class="w">        </span><span class="n">init_memory</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">mem_upper</span><span class="p">,</span><span class="w"> </span><span class="n">phys_alloc_start</span><span class="p">);</span>
+</span><span id="__span-2-69"><a id="__codelineno-2-69" name="__codelineno-2-69" href="#__codelineno-2-69"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-2-70"><a id="__codelineno-2-70" name="__codelineno-2-70" href="#__codelineno-2-70"></a>
+</span><span id="__span-2-71"><a id="__codelineno-2-71" name="__codelineno-2-71" href="#__codelineno-2-71"></a><span class="w">    </span><span class="c1">// 4. Initialize the kernel heap (1MB initial size).</span>
+</span><span id="__span-2-72"><a id="__codelineno-2-72" name="__codelineno-2-72" href="#__codelineno-2-72"></a><span class="w">    </span><span class="n">kmalloc_init</span><span class="p">(</span><span class="mi">1024</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
+</span><span id="__span-2-73"><a id="__codelineno-2-73" name="__codelineno-2-73" href="#__codelineno-2-73"></a>
+</span><span id="__span-2-74"><a id="__codelineno-2-74" name="__codelineno-2-74" href="#__codelineno-2-74"></a><span class="w">    </span><span class="c1">// Register devices and VFS now that heap is ready</span>
+</span><span id="__span-2-75"><a id="__codelineno-2-75" name="__codelineno-2-75" href="#__codelineno-2-75"></a><span class="w">    </span><span class="n">tty_register</span><span class="p">();</span>
+</span><span id="__span-2-76"><a id="__codelineno-2-76" name="__codelineno-2-76" href="#__codelineno-2-76"></a><span class="w">    </span><span class="n">keyboard_register</span><span class="p">();</span>
+</span><span id="__span-2-77"><a id="__codelineno-2-77" name="__codelineno-2-77" href="#__codelineno-2-77"></a><span class="w">    </span><span class="n">init_ata</span><span class="p">();</span>
+</span><span id="__span-2-78"><a id="__codelineno-2-78" name="__codelineno-2-78" href="#__codelineno-2-78"></a><span class="w">    </span><span class="n">init_ahci</span><span class="p">();</span>
+</span><span id="__span-2-79"><a id="__codelineno-2-79" name="__codelineno-2-79" href="#__codelineno-2-79"></a><span class="w">    </span><span class="n">vfs_init</span><span class="p">();</span>
+</span><span id="__span-2-80"><a id="__codelineno-2-80" name="__codelineno-2-80" href="#__codelineno-2-80"></a>
+</span><span id="__span-2-81"><a id="__codelineno-2-81" name="__codelineno-2-81" href="#__codelineno-2-81"></a><span class="w">    </span><span class="c1">// 5. init Kernel Task Scheduler</span>
+</span><span id="__span-2-82"><a id="__codelineno-2-82" name="__codelineno-2-82" href="#__codelineno-2-82"></a><span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Initializing Multitasking...</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-2-83"><a id="__codelineno-2-83" name="__codelineno-2-83" href="#__codelineno-2-83"></a><span class="w">    </span><span class="n">task_init_scheduler</span><span class="p">();</span>
+</span><span id="__span-2-84"><a id="__codelineno-2-84" name="__codelineno-2-84" href="#__codelineno-2-84"></a>
+</span><span id="__span-2-85"><a id="__codelineno-2-85" name="__codelineno-2-85" href="#__codelineno-2-85"></a><span class="w">    </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Memory allocation initialized.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+</span><span id="__span-2-86"><a id="__codelineno-2-86" name="__codelineno-2-86" href="#__codelineno-2-86"></a><span class="p">}</span>
+</span></code></pre></div>
+</details>
+<h3 id="initialization-steps">Initialization Steps:<a class="headerlink" href="#initialization-steps" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>VGA/TTY</strong>: Clears the screen and prepares for text output.</li>
+<li><strong>GDT &amp; IDT</strong>: Replaces the GRUB-provided table with our own to handle memory segments and interrupts.</li>
+<li><strong>Keyboard</strong>: Initializes the PS/2 keyboard driver.</li>
+<li><strong>Memory Management</strong>:<ul>
+<li><strong>PMM</strong>: Calculates available RAM from the <code>boot_info</code> provided by GRUB.</li>
+<li><strong>Paging</strong>: Sets up recursive paging and removes the identity mapping.</li>
+</ul>
+</li>
+<li><strong>Heap</strong>: Initializes <code>kmalloc</code> with a 1MB pool.</li>
+<li><strong>PCI Scan</strong>: Enumerate devices on the PCI bus to find IDE/ATA controllers.</li>
+<li><strong>Storage &amp; Filesystem</strong>:<ul>
+<li><strong>ATA</strong>: Probes for hard disks and registers them in the device registry.</li>
+<li><strong>VFS</strong>: Registers standard I/O devices (<code>tty0</code>, <code>kbd0</code>) and mounts the root filesystem.</li>
+</ul>
+</li>
+<li><strong>Multitasking</strong>: Sets up the scheduler, the first "Main" task, and any initial user-mode processes.</li>
+</ol>
+<hr />
+<h2 id="5-testexample-verifying-multiboot-info">5. Test/Example: Verifying Multiboot Info<a class="headerlink" href="#5-testexample-verifying-multiboot-info" title="Permanent link">&para;</a></h2>
+<p>You can verify that GRUB is passing correct information by checking the <code>MultiBootInfo</code> struct in <code>init_kernel.c</code>:</p>
+<div class="language-c highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kt">void</span><span class="w"> </span><span class="nf">test_multiboot</span><span class="p">(</span><span class="n">MultiBootInfo</span><span class="o">*</span><span class="w"> </span><span class="n">boot_info</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">MULTIBOOT_INFO_MEMORY</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Lower Memory: %u KB</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">mem_lower</span><span class="p">);</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Upper Memory: %u KB</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">mem_upper</span><span class="p">);</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">flags</span><span class="w"> </span><span class="o">&amp;</span><span class="w"> </span><span class="n">MULTIBOOT_INFO_BOOT_LOADER_NAME</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Bootloader: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="kt">char</span><span class="o">*</span><span class="p">)</span><span class="n">boot_info</span><span class="o">-&gt;</span><span class="n">boot_loader_name</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">KERNEL_START</span><span class="p">);</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="https://wiki.osdev.org/Kernel_Boot_Process">OSDev: Kernel Boot Process</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Protected_mode">Wikipedia: Protected Mode</a></li>
+<li><a href="https://www.gnu.org/software/grub/manual/multiboot/multiboot.html">Multiboot Specification</a></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../../getting-started/experimenting/" class="md-footer__link md-footer__link--prev" aria-label="Previous: 🧪 Experimenting &amp; Messing Around">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                🧪 Experimenting & Messing Around
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../cpu-internals/" class="md-footer__link md-footer__link--next" aria-label="Next: 📟 CPU &amp; Interrupts">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                📟 CPU & Interrupts
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2024 - 2026 Soham Tilekar Under MIT License
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/SohamTilekar/TilekarOS" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:sohamtilekar233@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M536.4-26.3c9.8-3.5 20.6-1 28 6.3s9.8 18.2 6.3 28l-178 496.9c-5 13.9-18.1 23.1-32.8 23.1-14.2 0-27-8.6-32.3-21.7l-64.2-158c-4.5-11-2.5-23.6 5.2-32.6l94.5-112.4c5.1-6.1 4.7-15-.9-20.6s-14.6-6-20.6-.9l-112.4 94.3c-9.1 7.6-21.6 9.6-32.6 5.2L38.1 216.8c-13.1-5.3-21.7-18.1-21.7-32.3 0-14.7 9.2-27.8 23.1-32.8z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "navigation.instant", "navigation.instant.prefetch", "navigation.instant.progress", "navigation.instant.preview", "navigation.path", "navigation.prune", "navigation.tracking", "search.suggest", "search.highlight", "search.share", "content.code.copy", "content.code.select", "content.code.annotate", "content.action.edit", "content.action.view", "toc.follow", "header.autohide"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/katex.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/katex.min.js"></script>
+      
+        <script src="https://unpkg.com/katex@0/dist/contrib/auto-render.min.js"></script>
+      
+    
+  </body>
+</html>
