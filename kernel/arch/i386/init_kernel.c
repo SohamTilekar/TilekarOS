@@ -5,6 +5,7 @@
 #include "timer.h"
 #include "keyboard.h"
 #include "ata.h"
+#include "ahci.h"
 #include "pci.h"
 #include "vfs.h"
 #include <stdint.h>
@@ -74,6 +75,7 @@ void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
     tty_register();
     keyboard_register();
     init_ata();
+    init_ahci();
     vfs_init();
 
     // 5. init Kernel Task Scheduler

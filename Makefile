@@ -38,8 +38,8 @@ prepare_vm:
 	@mkdir -p $(DRIVE_DIR)
 	@echo "Preparing Workspace [$(VM)]: $(DRIVES)"
 	@for entry in $$(echo "$(DRIVES)" | tr ',' ' '); do \
-		name=$${entry%%:*}; \
-		size=$${entry#*:}; \
+		name=$$(echo $$entry | cut -d: -f1); \
+		size=$$(echo $$entry | cut -d: -f2); \
 		if [ "$$name" = "$$size" ]; then size=""; fi; \
 		img="$(DRIVE_DIR)/$$name.img"; \
 		if [ -n "$$size" ]; then \

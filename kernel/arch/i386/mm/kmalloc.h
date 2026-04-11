@@ -42,4 +42,13 @@ void* kcalloc(size_t nmemb, size_t size);
  */
 void* krealloc(void* ptr, size_t size);
 
+/**
+ * kmalloc_aligned - Allocate a block of memory with a specific alignment.
+ * @size: The size of the block to allocate.
+ * @align: The alignment required (must be a power of 2).
+ *
+ * Return: A pointer to the allocated block, or NULL if allocation fails.
+ */
+void* kmalloc_aligned(size_t size, size_t align);
+
 #endif // KMALLOC_H

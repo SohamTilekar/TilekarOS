@@ -1,16 +1,15 @@
 #include "devices.h"
 #include <string.h>
-#include "kmalloc.h"
 
 static device_t* device_list_head = NULL;
 
 int device_register(device_t* dev) {
     if (!dev) return -1;
-    
+
     // Add to dynamic linked list
     dev->next = device_list_head;
     device_list_head = dev;
-    
+
     return 0;
 }
 

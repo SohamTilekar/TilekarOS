@@ -174,40 +174,60 @@ if(NOT VM_DIR)
     set(VM_DIR "VirtualMachine")
 endif()
 
-# Parse DRIVE_CONFIG (comma-separated list of NAME:SIZE) to generate QEMU flags
+# Parse DRIVE_CONFIG (comma-separated list of NAME:SIZE[:INTERFACE]) to generate QEMU flags
 set(QEMU_DRIVE_FLAGS "")
 if(DRIVE_CONFIG)
     string(REPLACE "," ";" DRIVE_LIST ${DRIVE_CONFIG})
-    set(DRIVE_NUM 0)
+    set(IDE_NUM 0)
+    set(AHCI_NUM 0)
+    set(HAS_AHCI FALSE)
     foreach(ENTRY ${DRIVE_LIST})
-        # Extract name from ENTRY (handle NAME:SIZE or just NAME)
+        # Extract name and interface from ENTRY
         string(REPLACE ":" ";" PARTS ${ENTRY})
         list(GET PARTS 0 NAME)
-
-        # Calculate bus and unit for the built-in controller (supports 4 drives)
-        math(EXPR BUS "${DRIVE_NUM} / 2")
-        math(EXPR UNIT "${DRIVE_NUM} % 2")
-
-        if(${DRIVE_NUM} LESS 4)
-            # Use built-in IDE controller for first 4 drives
-            list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=ide,bus=${BUS},unit=${UNIT}")
-        else()
-            # For 5th drive onwards, we need additional PCI IDE controllers.
-            math(EXPR EXTRA_IDX "(${DRIVE_NUM} - 4) / 4 + 1")
-            math(EXPR EXTRA_DRIVE_IDX "(${DRIVE_NUM} - 4) % 4")
-            math(EXPR EXTRA_BUS "${EXTRA_DRIVE_IDX} / 2")
-            math(EXPR EXTRA_UNIT "${EXTRA_DRIVE_IDX} % 2")
-
-            # Add the controller if it's the first drive on it
-            if(${EXTRA_DRIVE_IDX} EQUAL 0)
-                list(APPEND QEMU_DRIVE_FLAGS "-device" "piix4-ide,id=extide${EXTRA_IDX}")
-            endif()
-
-            list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=none,id=d${DRIVE_NUM}")
-            list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=extide${EXTRA_IDX}.${EXTRA_BUS},drive=d${DRIVE_NUM},unit=${EXTRA_UNIT}")
+        list(LENGTH PARTS LEN)
+        
+        # Default interface is 'ide'
+        set(INTERFACE "ide")
+        if(${LEN} GREATER 2)
+            list(GET PARTS 2 INTERFACE)
         endif()
 
-        math(EXPR DRIVE_NUM "${DRIVE_NUM} + 1")
+        if(${INTERFACE} STREQUAL "ahci")
+            # AHCI Controller (ich9-ahci supports 6 ports)
+            if(NOT HAS_AHCI)
+                list(APPEND QEMU_DRIVE_FLAGS "-device" "ich9-ahci,id=ahci0")
+                set(HAS_AHCI TRUE)
+            endif()
+            
+            list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=none,id=ahci_d${AHCI_NUM}")
+            list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=ahci0.${AHCI_NUM},drive=ahci_d${AHCI_NUM}")
+            math(EXPR AHCI_NUM "${AHCI_NUM} + 1")
+        else()
+            # Legacy IDE Logic
+            math(EXPR BUS "${IDE_NUM} / 2")
+            math(EXPR UNIT "${IDE_NUM} % 2")
+
+            if(${IDE_NUM} LESS 4)
+                # Use built-in IDE controller for first 4 drives
+                list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=ide,bus=${BUS},unit=${UNIT}")
+            else()
+                # For 5th drive onwards, we need additional PCI IDE controllers.
+                math(EXPR EXTRA_IDX "(${IDE_NUM} - 4) / 4 + 1")
+                math(EXPR EXTRA_DRIVE_IDX "(${IDE_NUM} - 4) % 4")
+                math(EXPR EXTRA_BUS "${EXTRA_DRIVE_IDX} / 2")
+                math(EXPR EXTRA_UNIT "${EXTRA_DRIVE_IDX} % 2")
+
+                # Add the controller if it's the first drive on it
+                if(${EXTRA_DRIVE_IDX} EQUAL 0)
+                    list(APPEND QEMU_DRIVE_FLAGS "-device" "piix4-ide,id=extide${EXTRA_IDX}")
+                endif()
+
+                list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=none,id=d${IDE_NUM}")
+                list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=extide${EXTRA_IDX}.${EXTRA_BUS},drive=d${IDE_NUM},unit=${EXTRA_UNIT}")
+            endif()
+            math(EXPR IDE_NUM "${IDE_NUM} + 1")
+        endif()
     endforeach()
 endif()
 

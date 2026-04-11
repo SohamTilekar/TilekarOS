@@ -392,11 +392,11 @@ static vnode_t* fat_vfs_lookup(vnode_t* parent, const char* name) {
     fat_directory_entry_t entry;
     uint32_t sector, idx;
     if (!find_in_directory(parent_data->fs, cluster, name, &entry, &sector, &idx)) return NULL;
-    vnode_t* node = kmalloc(sizeof(vnode_t));
+    vnode_t* node = kcalloc(1, sizeof(vnode_t));
     node->type = (entry.attributes & FAT_ATTR_DIRECTORY) ? VFS_TYPE_DIRECTORY : VFS_TYPE_FILE;
     node->size = entry.file_size;
     node->ops = parent->ops; node->dev = parent->dev;
-    fat_node_data_t* node_data = kmalloc(sizeof(fat_node_data_t));
+    fat_node_data_t* node_data = kcalloc(1, sizeof(fat_node_data_t));
     node_data->fs = parent_data->fs; node_data->entry = entry; node_data->parent_cluster = cluster;
     node->fs_data = node_data;
     return node;

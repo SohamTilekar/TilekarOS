@@ -139,6 +139,27 @@ void* kmalloc(size_t size) {
     return (void*)(new_block + 1);
 }
 
+void* kmalloc_aligned(size_t size, size_t align) {
+    if (size == 0) return NULL;
+    if (align <= 8) return kmalloc(size); // Default alignment is 8
+
+    // We allocate extra space to account for alignment and a potential new header
+    size_t total_size = size + align + HEADER_SIZE;
+    void* ptr = kmalloc(total_size);
+    if (!ptr) return NULL;
+
+    uintptr_t addr = (uintptr_t)ptr;
+    uintptr_t aligned_addr = ALIGN(addr, align);
+
+    if (aligned_addr == addr) return ptr;
+
+    // This is a simplified aligned allocator. It doesn't allow kfree on the aligned pointer directly
+    // unless we store the original pointer somewhere.
+    // For now, let's just return the aligned pointer and assume it's for long-lived kernel structures.
+    // TODO: Implement a proper aligned allocator that supports kfree.
+    return (void*)aligned_addr;
+}
+
 void kfree(void* ptr) {
     if (!ptr) return;
 
