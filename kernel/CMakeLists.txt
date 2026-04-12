@@ -174,6 +174,66 @@ if(NOT VM_DIR)
     set(VM_DIR "VirtualMachine")
 endif()
 
+# Target to prepare drives and copy .c files
+add_custom_target(prepare_vm
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${VM_DIR}/drives
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/${VM_DIR}/exported_drives
+    COMMAND /bin/sh -c " \
+        boot_drive=\$(echo \"${DRIVE_CONFIG}\" | tr ',' ' ' | head -n1 | cut -d: -f1); \
+        for entry in \$(echo \"${DRIVE_CONFIG}\" | tr ',' ' '); do \
+            name=\$(echo \$entry | cut -d: -f1); \
+            size=\$(echo \$entry | cut -d: -f2); \
+            [ \"\$name\" = \"\$size\" ] && size=\"\"; \
+            [ -z \"\$size\" ] && size=24; \
+            img=\"${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/\$name.img\"; \
+            export_dir=\"${CMAKE_SOURCE_DIR}/${VM_DIR}/exported_drives/\$name\"; \
+            if [ -d \"\$export_dir\" ] && [ ! -f \"\$img.bootable\" ]; then \
+                echo \"  Recreating \$img from \$export_dir...\"; \
+                dd if=/dev/zero of=\"\$img\" bs=1M count=\"\$size\" status=none; \
+                mkfs.fat \"\$img\" > /dev/null; \
+                if [ -n \"\$(ls -A \"\$export_dir\" 2>/dev/null)\" ]; then \
+                    mcopy -i \"\$img\" -s \"\$export_dir\"/* ::/ 2>/dev/null || true; \
+                fi; \
+            elif [ ! -f \"\$img\" ]; then \
+                echo \"  Creating empty \$img (\${size}MB)...\"; \
+                dd if=/dev/zero of=\"\$img\" bs=1M count=\"\$size\" status=none; \
+                mkfs.fat \"\$img\" > /dev/null; \
+            fi; \
+            if [ \"\$name\" = \"\$boot_drive\" ]; then \
+                for cfile in \$(find \"${CMAKE_SOURCE_DIR}/${VM_DIR}\" -maxdepth 1 -name \"*.c\"); do \
+                    if [ -f \"\$cfile\" ]; then \
+                        filename=\$(basename \"\$cfile\" .c); \
+                        echo \"  Adding \$cfile to \$img as /\$filename...\"; \
+                        mcopy -i \"\$img\" -D o \"\$cfile\" ::/\"\$filename\"; \
+                    fi; \
+                done; \
+            fi; \
+        done"
+    COMMENT "Preparing VM drives and placing .c files"
+    VERBATIM
+)
+
+# Target to export drives
+add_custom_target(export_drives
+    COMMAND /bin/sh -c " \
+        for entry in \$(echo \"${DRIVE_CONFIG}\" | tr ',' ' '); do \
+            name=\$(echo \$entry | cut -d: -f1); \
+            img=\"${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/\$name.img\"; \
+            export_dir=\"${CMAKE_SOURCE_DIR}/${VM_DIR}/exported_drives/\$name\"; \
+            if [ -f \"\$img\" ]; then \
+                if minfo -i \"\$img\" :: 2>/dev/null; then \
+                    echo \"  Exporting \$img to \$export_dir...\"; \
+                    mkdir -p \"\$export_dir\"; \
+                    mcopy -i \"\$img\" -snD o \"::/*\" \"\$export_dir\"/ 2>/dev/null || true; \
+                else \
+                    echo \"  Skipping export for \$img (not a valid FAT image)\"; \
+                fi; \
+            fi; \
+        done"
+    COMMENT "Exporting VM drives to folders"
+    VERBATIM
+)
+
 # Parse DRIVE_CONFIG (comma-separated list of NAME:SIZE[:INTERFACE]) to generate QEMU flags
 set(QEMU_DRIVE_FLAGS "")
 if(DRIVE_CONFIG)
@@ -181,6 +241,7 @@ if(DRIVE_CONFIG)
     set(IDE_NUM 0)
     set(AHCI_NUM 0)
     set(HAS_AHCI FALSE)
+    set(DRIVE_COUNT 0)
     foreach(ENTRY ${DRIVE_LIST})
         # Extract name and interface from ENTRY
         string(REPLACE ":" ";" PARTS ${ENTRY})
@@ -193,6 +254,12 @@ if(DRIVE_CONFIG)
             list(GET PARTS 2 INTERFACE)
         endif()
 
+        # Add bootindex=0 only to the first drive
+        set(BOOT_PROP "")
+        if(${DRIVE_COUNT} EQUAL 0)
+            set(BOOT_PROP ",bootindex=0")
+        endif()
+
         if(${INTERFACE} STREQUAL "ahci")
             # AHCI Controller (ich9-ahci supports 6 ports)
             if(NOT HAS_AHCI)
@@ -201,7 +268,7 @@ if(DRIVE_CONFIG)
             endif()
             
             list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=none,id=ahci_d${AHCI_NUM}")
-            list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=ahci0.${AHCI_NUM},drive=ahci_d${AHCI_NUM}")
+            list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=ahci0.${AHCI_NUM},drive=ahci_d${AHCI_NUM}${BOOT_PROP}")
             math(EXPR AHCI_NUM "${AHCI_NUM} + 1")
         else()
             # Legacy IDE Logic
@@ -210,7 +277,7 @@ if(DRIVE_CONFIG)
 
             if(${IDE_NUM} LESS 4)
                 # Use built-in IDE controller for first 4 drives
-                list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=ide,bus=${BUS},unit=${UNIT}")
+                list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=ide,bus=${BUS},unit=${UNIT}${BOOT_PROP}")
             else()
                 # For 5th drive onwards, we need additional PCI IDE controllers.
                 math(EXPR EXTRA_IDX "(${IDE_NUM} - 4) / 4 + 1")
@@ -224,10 +291,11 @@ if(DRIVE_CONFIG)
                 endif()
 
                 list(APPEND QEMU_DRIVE_FLAGS "-drive" "file=${CMAKE_SOURCE_DIR}/${VM_DIR}/drives/${NAME}.img,format=raw,if=none,id=d${IDE_NUM}")
-                list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=extide${EXTRA_IDX}.${EXTRA_BUS},drive=d${IDE_NUM},unit=${EXTRA_UNIT}")
+                list(APPEND QEMU_DRIVE_FLAGS "-device" "ide-hd,bus=extide${EXTRA_IDX}.${EXTRA_BUS},drive=d${IDE_NUM},unit=${EXTRA_UNIT}${BOOT_PROP}")
             endif()
             math(EXPR IDE_NUM "${IDE_NUM} + 1")
         endif()
+        math(EXPR DRIVE_COUNT "${DRIVE_COUNT} + 1")
     endforeach()
 endif()
 
@@ -241,28 +309,40 @@ string(REPLACE ";" " " QEMU_DRIVE_FLAGS_DISPLAY "${QEMU_DRIVE_FLAGS}")
 # 'make run' - Runs the kernel binary directly (-kernel flag)
 add_custom_target(run
     COMMAND qemu-system-${OS_ARCH} -kernel $<TARGET_FILE:myos.kernel> ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS}
-    DEPENDS myos.kernel
-    COMMENT "Running: qemu-system-${OS_ARCH} -kernel $<TARGET_FILE:myos.kernel> ${QEMU_DRIVE_FLAGS_DISPLAY}"
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
+    DEPENDS myos.kernel prepare_vm
+    COMMENT "Running (Kernel Mode): qemu-system-${OS_ARCH} -kernel $<TARGET_FILE:myos.kernel> ${QEMU_DRIVE_FLAGS_DISPLAY}"
+)
+
+# 'make run_disk' - Boots from the first hard disk
+add_custom_target(run_disk
+    COMMAND qemu-system-${OS_ARCH} -boot c ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
+    DEPENDS prepare_vm
+    COMMENT "Running (Disk Mode): qemu-system-${OS_ARCH} -boot c ${QEMU_DRIVE_FLAGS_DISPLAY}"
 )
 
 # 'make run_iso' - Boots the ISO image (-cdrom flag)
 add_custom_target(run_iso
-    COMMAND qemu-system-${OS_ARCH} -cdrom ${ISO_IMAGE} ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS}
-    DEPENDS iso
-    COMMENT "Running: qemu-system-${OS_ARCH} -cdrom ${ISO_IMAGE} ${QEMU_DRIVE_FLAGS_DISPLAY}"
+    COMMAND qemu-system-${OS_ARCH} -boot d -cdrom ${ISO_IMAGE} ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS}
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
+    DEPENDS iso prepare_vm
+    COMMENT "Running (ISO Mode): qemu-system-${OS_ARCH} -boot d -cdrom ${ISO_IMAGE} ${QEMU_DRIVE_FLAGS_DISPLAY}"
 )
 
 # 'make run_headless' - Runs the kernel binary directly headless
 add_custom_target(run_headless
     COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -kernel $<TARGET_FILE:myos.kernel> -display none -serial file:${CMAKE_SOURCE_DIR}/${VM_DIR}/serial.log ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} & sleep 2 && killall qemu-system-${OS_ARCH} || true"
-    DEPENDS myos.kernel
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
+    DEPENDS myos.kernel prepare_vm
     COMMENT "Running Headless: qemu-system-${OS_ARCH} -kernel $<TARGET_FILE:myos.kernel> -display none -serial file:${VM_DIR}/serial.log"
 )
 
 # 'make debug_run' - Runs the kernel binary directly with debug flags and connects GDB
 add_custom_target(debug_run
     COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -s -S -kernel $<TARGET_FILE:myos.kernel> ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS} & gdb -ex 'target remote localhost:1234' -ex 'symbol-file $<TARGET_FILE:myos.kernel>'"
-    DEPENDS myos.kernel
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
+    DEPENDS myos.kernel prepare_vm
     COMMENT "Debugging: qemu-system-${OS_ARCH} -s -S -kernel $<TARGET_FILE:myos.kernel> & gdb ..."
     USES_TERMINAL
     VERBATIM
@@ -270,16 +350,19 @@ add_custom_target(debug_run
 
 # 'make debug_iso' - Boots the ISO image with debug flags and connects GDB
 add_custom_target(debug_iso
-    COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -s -S -cdrom ${ISO_IMAGE} ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS} & gdb -ex 'target remote localhost:1234' -ex 'symbol-file $<TARGET_FILE:myos.kernel>'"
-    DEPENDS iso
-    COMMENT "Debugging ISO: qemu-system-${OS_ARCH} -s -S -cdrom ${ISO_IMAGE} & gdb ..."
+    COMMAND /bin/sh -c "qemu-system-${OS_ARCH} -s -S -boot d -cdrom ${ISO_IMAGE} ${QEMU_DRIVE_FLAGS} ${QEMU_LOG_FLAGS} ${QEMU_SERIAL_FLAGS} & gdb -ex 'target remote localhost:1234' -ex 'symbol-file $<TARGET_FILE:myos.kernel>'"
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
+    DEPENDS iso prepare_vm
+    COMMENT "Debugging ISO: qemu-system-${OS_ARCH} -s -S -boot d -cdrom ${ISO_IMAGE} & gdb ..."
     USES_TERMINAL
     VERBATIM
-) # 'make run_bochs' - Runs the ISO in Bochs
+)
+ # 'make run_bochs' - Runs the ISO in Bochs
 add_custom_target(run_bochs
     COMMAND bochs -f bochs/bochsrc
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target export_drives
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    DEPENDS iso
+    DEPENDS iso prepare_vm
     COMMENT "Running: bochs -f bochs/bochsrc"
     USES_TERMINAL
     VERBATIM

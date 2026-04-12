@@ -1,94 +1,218 @@
 # ==============================================================================
-# Wrapper Makefile for TilekarOS
+# TilekarOS Master Makefile
 # ==============================================================================
 
-# The directory where build artifacts will be generated.
-BUILD_DIR = build
+# ------------------------------------------------------------------------------
+# Configuration & Defaults
+# ------------------------------------------------------------------------------
 
-# Emulation Workspace (Can be overridden by user: make run VM=MyCustomVM)
+BUILD_DIR = build
 VM ?= VirtualMachine
 DRIVE_DIR = $(VM)/drives
-
-# Default Architecture
 ARCH ?= i386
+DRIVES ?= boot:24:ide
+SYSROOT = sysroot
 
-# Dynamic Drive Configuration
-DRIVES ?= disk:10,disk2:5
-
-# Arguments passed to CMake configuration step.
 CMAKE_ARGS = -DOS_ARCH=$(ARCH) \
-             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/$(ARCH).cmake \
-             -DDRIVE_CONFIG="$(DRIVES)" \
-             -DVM_DIR="$(VM)"
+             -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/$(ARCH).cmake
 
-.PHONY: all iso run run_iso run_bochs debug_run debug_iso clean configure help prepare_vm
+# Persist VM and DRIVES if provided
+ifneq ($(filter command line environment,$(origin VM)),)
+    CMAKE_ARGS += -DVM_DIR="$(VM)"
+endif
+ifneq ($(filter command line environment,$(origin DRIVES)),)
+    CMAKE_ARGS += -DDRIVE_CONFIG="$(DRIVES)"
+endif
 
 # ------------------------------------------------------------------------------
-# Targets
+# Primary Targets
 # ------------------------------------------------------------------------------
 
-all: configure
-	cmake --build $(BUILD_DIR)
+.PHONY: all kernel iso sysroot full_build clean help prepare_vm run run_iso run_disk debug_run debug_iso export_drives comp_exe configure disk_img
+
+all: kernel sysroot
+
+kernel: configure
+	@echo "--- Building Kernel ---"
+	cmake --build $(BUILD_DIR) --target myos.kernel
+
+iso: configure
+	@echo "--- Generating ISO ---"
+	cmake --build $(BUILD_DIR) --target iso
+
+sysroot: kernel
+	@echo "--- Populating Sysroot ---"
+	cmake --build $(BUILD_DIR) --target sysroot_extras
+
+full_build: all iso
+
+# Internal target to create bootable folder structure
+_prepare_isodir: all
+	@rm -rf $(BUILD_DIR)/disk_isodir
+	@mkdir -p $(BUILD_DIR)/disk_isodir/boot/grub
+	@cp $(BUILD_DIR)/kernel/myos.kernel $(BUILD_DIR)/disk_isodir/boot/
+	@cp grub.cfg $(BUILD_DIR)/disk_isodir/boot/grub/
+	@if [ -d "$(VM)/exported_drives/boot" ]; then \
+		cp -r $(VM)/exported_drives/boot/* $(BUILD_DIR)/disk_isodir/ 2>/dev/null || true; \
+	fi
+	@for cfile in $$(find "$(VM)" -maxdepth 1 -name "*.c" 2>/dev/null); do \
+		if [ -f "$$cfile" ]; then \
+			filename=$$(basename "$$cfile" .c); \
+			cp "$$cfile" $(BUILD_DIR)/disk_isodir/"$$filename"; \
+		fi; \
+	done
+
+# Create a standalone bootable disk image
+disk_img: _prepare_isodir
+	@echo "--- Generating Standalone Bootable Disk Image ---"
+	grub-mkrescue -o $(BUILD_DIR)/tilekaros.img $(BUILD_DIR)/disk_isodir
+
+# ------------------------------------------------------------------------------
+# Build Infrastructure
+# ------------------------------------------------------------------------------
 
 configure:
+	@mkdir -p $(BUILD_DIR)
 	cmake -B $(BUILD_DIR) $(CMAKE_ARGS)
 
-# Helper to setup the VM workspace and create/resize disk images
+# ------------------------------------------------------------------------------
+# Userspace Development
+# ------------------------------------------------------------------------------
+
+comp_exe: all
+	@if [ -z "$(FILE)" ]; then echo "Usage: make comp_exe FILE=src.c"; exit 1; fi
+	@if [ -z "$(OUT)" ]; then OUT=$$(basename $(FILE) .c); fi; \
+	mkdir -p $$(dirname $(OUT)); \
+	clang --target=$(ARCH)-elf --sysroot=$(SYSROOT) -nostdlib -ffreestanding -fno-pic -fno-pie -static -O2 -Wall \
+		-Wl,-z,noexecstack -Wl,--build-id=none -T $(SYSROOT)/usr/lib/user.ld \
+		$(SYSROOT)/usr/lib/crt0.o $(FILE) $(SYSROOT)/usr/lib/libc.a -o $(OUT)
+
+# ------------------------------------------------------------------------------
+# VM Management & Emulation
+# ------------------------------------------------------------------------------
+
 prepare_vm:
 	@mkdir -p $(DRIVE_DIR)
+	@mkdir -p $(VM)/exported_drives
 	@echo "Preparing Workspace [$(VM)]: $(DRIVES)"
-	@for entry in $$(echo "$(DRIVES)" | tr ',' ' '); do \
+	@boot_drive=$$(echo "$(DRIVES)" | tr ',' ' ' | head -n1 | cut -d: -f1); \
+	for entry in $$(echo "$(DRIVES)" | tr ',' ' '); do \
 		name=$$(echo $$entry | cut -d: -f1); \
 		size=$$(echo $$entry | cut -d: -f2); \
-		if [ "$$name" = "$$size" ]; then size=""; fi; \
+		[ "$$name" = "$$size" ] && size=""; \
+		[ -z "$$size" ] && size=24; \
 		img="$(DRIVE_DIR)/$$name.img"; \
-		if [ -n "$$size" ]; then \
-			if [ ! -f "$$img" ]; then \
-				echo "  Creating $$img ($${size}MB)..."; \
-				dd if=/dev/zero of="$$img" bs=1M count="$$size" status=none; \
-			else \
-				current_size=$$(stat -c%s "$$img" 2>/dev/null || echo 0); \
-				target_size=$$(($$size * 1024 * 1024)); \
-				if [ "$$current_size" -ne "$$target_size" ]; then \
-					echo "  Resizing $$img to $${size}MB..."; \
-					truncate -s "$${size}M" "$$img"; \
-				fi; \
+		export_dir="$(VM)/exported_drives/$$name"; \
+		if [ -d "$$export_dir" ] && [ ! -f "$$img.bootable" ]; then \
+			echo "  Recreating $$img from $$export_dir..."; \
+			dd if=/dev/zero of="$$img" bs=1M count="$$size" status=none; \
+			mkfs.fat "$$img" > /dev/null; \
+			if [ -n "$$(ls -A "$$export_dir" 2>/dev/null)" ]; then \
+				mcopy -i "$$img" -s "$$export_dir"/* ::/ 2>/dev/null || true; \
 			fi; \
-		else \
-			if [ ! -f "$$img" ]; then \
-				echo "Error: $$img not found and no size specified."; \
-				exit 1; \
+		elif [ ! -f "$$img" ]; then \
+			echo "  Creating empty $$img ($${size}MB)..."; \
+			dd if=/dev/zero of="$$img" bs=1M count="$$size" status=none; \
+			mkfs.fat "$$img" > /dev/null; \
+		fi; \
+		if [ "$$name" = "$$boot_drive" ] && [ ! -f "$$img.bootable" ]; then \
+			echo "  Updating kernel and sources on $$img..."; \
+			mmd -i "$$img" ::/boot 2>/dev/null || true; \
+			mcopy -i "$$img" -D o "$(BUILD_DIR)/kernel/myos.kernel" ::/boot/myos.kernel 2>/dev/null || true; \
+			for cfile in $$(find "$(VM)" -maxdepth 1 -name "*.c" 2>/dev/null); do \
+				if [ -f "$$cfile" ]; then \
+					filename=$$(basename "$$cfile" .c); \
+					mcopy -i "$$img" -D o "$$cfile" ::/"$$filename" 2>/dev/null || true; \
+				fi; \
+			done; \
+		fi; \
+	done
+
+export_drives:
+	@mkdir -p $(VM)/exported_drives
+	@for entry in $$(echo "$(DRIVES)" | tr ',' ' '); do \
+		name=$$(echo $$entry | cut -d: -f1); \
+		img="$(DRIVE_DIR)/$$name.img"; \
+		export_dir="$(VM)/exported_drives/$$name"; \
+		if [ -f "$$img" ]; then \
+			mkdir -p "$$export_dir"; \
+			if minfo -i "$$img" :: 2>/dev/null; then \
+				mcopy -i "$$img" -snD o "::/*" "$$export_dir"/ 2>/dev/null || true; \
+			else \
+				mcopy -i "$$img"@@512 -snD o "::/*" "$$export_dir"/ 2>/dev/null || true; \
 			fi; \
 		fi; \
 	done
 
-run: configure prepare_vm
+run: all prepare_vm
+	@rm -f $(DRIVE_DIR)/*.bootable
 	cmake --build $(BUILD_DIR) --target run
+	$(MAKE) export_drives
 
-run_iso: configure prepare_vm
+run_iso: all iso prepare_vm
+	@rm -f $(DRIVE_DIR)/*.bootable
 	cmake --build $(BUILD_DIR) --target run_iso
+	$(MAKE) export_drives
 
-run_bochs: configure
-	cmake --build $(BUILD_DIR) --target run_bochs
+run_disk: _prepare_isodir
+	@boot_drive=$$(echo "$(DRIVES)" | tr ',' ' ' | head -n1 | cut -d: -f1); \
+	img="$(DRIVE_DIR)/$$boot_drive.img"; \
+	mkdir -p $(DRIVE_DIR); \
+	echo "--- Building Bootable Drive ($$img) ---"; \
+	grub-mkrescue -o "$$img" $(BUILD_DIR)/disk_isodir; \
+	touch "$$img.bootable"; \
+	$(MAKE) prepare_vm; \
+	cmake --build $(BUILD_DIR) --target run_disk; \
+	$(MAKE) export_drives
 
 debug_run: configure prepare_vm
 	cmake --build $(BUILD_DIR) --target debug_run
+	$(MAKE) export_drives
 
-debug_iso: configure prepare_vm
+debug_iso: iso prepare_vm
 	cmake --build $(BUILD_DIR) --target debug_iso
+	$(MAKE) export_drives
+
+# ------------------------------------------------------------------------------
+# Help & Cleanup
+# ------------------------------------------------------------------------------
 
 clean:
-	rm -rf $(BUILD_DIR)
-	@echo "Cleaning workspace: $(VM)..."
+	rm -rf $(BUILD_DIR) $(SYSROOT)
 	rm -rf $(VM)
 
 help:
-	@echo "TilekarOS Makefile Help"
-	@echo "======================="
-	@echo "Usage: make [target] VM=WorkspaceName DRIVES=name:size,..."
+	@echo "================================================================================"
+	@echo "🌌 TilekarOS Build System Help"
+	@echo "================================================================================"
 	@echo ""
-	@echo "Available commands:"
-	@echo "  make             - Build the kernel and libc"
-	@echo "  make run         - Run in QEMU (Workspace: $(VM))"
-	@echo "  make run_iso     - Run ISO in QEMU"
-	@echo "  make clean       - Remove build artifacts and the '$(VM)' folder"
+	@echo "🛠️  BUILD TARGETS:"
+	@echo "  make             - Default: Build kernel and populate development sysroot"
+	@echo "  make kernel      - Build only the kernel binary"
+	@echo "  make sysroot     - Create/update the userspace development environment"
+	@echo "  make iso         - Generate a bootable ISO image (build/myos.iso)"
+	@echo "  make disk_img    - Generate a standalone bootable disk image (build/tilekaros.img)"
+	@echo "  make full_build  - Build everything: Kernel, ISO, and Integrated Disk"
+	@echo "  make clean       - Remove all build artifacts, sysroot, and current VM folder"
+	@echo ""
+	@echo "🚀 EMULATION TARGETS:"
+	@echo "  make run         - Kernel Mode: Loads kernel directly (fastest for dev)"
+	@echo "  make run_disk    - Disk Mode: Boots from primary drive using GRUB (realistic)"
+	@echo "  make run_iso     - ISO Mode: Boots from virtual CD-ROM"
+	@echo "  make debug_run   - Run in Kernel Mode with GDB debugger attached"
+	@echo ""
+	@echo "💻 USERSPACE DEVELOPMENT:"
+	@echo "  make comp_exe FILE=src.c [OUT=bin]"
+	@echo "                   - Compile a C application using the TilekarOS sysroot."
+	@echo "                     Automatically links against LibC and sets entry point."
+	@echo ""
+	@echo "⚙️  VARIABLES (Can be passed to any 'make run' command):"
+	@echo "  VM=Name          - Specify the workspace folder (Default: VirtualMachine)"
+	@echo "  DRIVES=cfg       - Configure disk images (Default: boot:24:ide)"
+	@echo "                     Format: name:size_in_mb:interface (ide/ahci)"
+	@echo "                     Example: make run_disk VM=dump DRIVES=boot:32:ahci,data:10:ide"
+	@echo ""
+	@echo "📂 WORKSPACE FEATURES:"
+	@echo "  - Any .c files in your VM folder are automatically placed in the boot drive root."
+	@echo "  - Files written by the OS are exported to $(VM)/exported_drives/ on exit."
+	@echo "================================================================================"
