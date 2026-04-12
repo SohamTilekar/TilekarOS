@@ -338,13 +338,17 @@ int fat_read_file(fat_filesystem_t* fs, const char* path, uint8_t* buffer, uint3
     uint32_t current_cluster = entry.first_cluster_low;
     uint32_t total_read = 0;
     while (current_cluster >= 2 && current_cluster < 0xFF8 && total_read < max_size) {
-        buffer_t* buf = buffer_get(fs->dev, fs->data_start + (current_cluster - 2) * fs->bpb.sectors_per_cluster);
-        uint32_t to_copy = (entry.file_size - total_read);
-        if (to_copy > 512) to_copy = 512;
-        if (total_read + to_copy > max_size) to_copy = max_size - total_read;
-        memcpy(buffer + total_read, buf->data, to_copy);
-        buffer_release(buf);
-        total_read += to_copy;
+        uint32_t cluster_start_sector = fs->data_start + (current_cluster - 2) * fs->bpb.sectors_per_cluster;
+        for (uint32_t s = 0; s < fs->bpb.sectors_per_cluster && total_read < max_size; s++) {
+            buffer_t* buf = buffer_get(fs->dev, cluster_start_sector + s);
+            uint32_t to_copy = (entry.file_size - total_read);
+            if (to_copy > 512) to_copy = 512;
+            if (total_read + to_copy > max_size) to_copy = max_size - total_read;
+            memcpy(buffer + total_read, buf->data, to_copy);
+            buffer_release(buf);
+            total_read += to_copy;
+            if (total_read >= entry.file_size) break;
+        }
         if (total_read >= entry.file_size) break;
         current_cluster = fat_get_fat_entry(fs, current_cluster);
     }
@@ -366,19 +370,34 @@ static int fat_vfs_read(file_t* file, void* buffer, uint32_t size) {
     uint32_t offset = file->position;
     if (offset >= data->entry.file_size) return 0;
     if (offset + size > data->entry.file_size) size = data->entry.file_size - offset;
-    uint32_t skip_clusters = offset / 512;
+    
+    uint32_t cluster_size = 512 * data->fs->bpb.sectors_per_cluster;
+    uint32_t skip_clusters = offset / cluster_size;
     for (uint32_t i = 0; i < skip_clusters; i++) {
         current_cluster = fat_get_fat_entry(data->fs, current_cluster);
         if (current_cluster >= 0xFF8) return 0;
     }
-    uint32_t cluster_offset = offset % 512;
+    
+    uint32_t offset_in_cluster = offset % cluster_size;
+    uint32_t sector_in_cluster = offset_in_cluster / 512;
+    uint32_t offset_in_sector = offset_in_cluster % 512;
+
     while (total_read < size && current_cluster >= 2 && current_cluster < 0xFF8) {
-        buffer_t* buf = buffer_get(data->fs->dev, data->fs->data_start + (current_cluster - 2) * data->fs->bpb.sectors_per_cluster);
-        uint32_t to_copy = 512 - cluster_offset;
-        if (to_copy > (size - total_read)) to_copy = size - total_read;
-        memcpy((uint8_t*)buffer + total_read, buf->data + cluster_offset, to_copy);
-        buffer_release(buf);
-        total_read += to_copy; cluster_offset = 0;
+        uint32_t cluster_start_sector = data->fs->data_start + (current_cluster - 2) * data->fs->bpb.sectors_per_cluster;
+        
+        for (uint32_t s = sector_in_cluster; s < data->fs->bpb.sectors_per_cluster && total_read < size; s++) {
+            buffer_t* buf = buffer_get(data->fs->dev, cluster_start_sector + s);
+            uint32_t to_copy = 512 - offset_in_sector;
+            if (to_copy > (size - total_read)) to_copy = size - total_read;
+            
+            memcpy((uint8_t*)buffer + total_read, buf->data + offset_in_sector, to_copy);
+            buffer_release(buf);
+            
+            total_read += to_copy;
+            offset_in_sector = 0; // Only first sector read might have offset
+        }
+        
+        sector_in_cluster = 0; // Only first cluster read might start at non-zero sector
         current_cluster = fat_get_fat_entry(data->fs, current_cluster);
     }
     file->position += total_read;
