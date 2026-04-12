@@ -2,13 +2,20 @@
 #include <string.h>
 
 static device_t* device_list_head = NULL;
+static device_t* device_list_tail = NULL;
 
 int device_register(device_t* dev) {
     if (!dev) return -1;
 
-    // Add to dynamic linked list
-    dev->next = device_list_head;
-    device_list_head = dev;
+    dev->next = NULL;
+
+    // Append to tail of the list to act as FIFO
+    if (!device_list_head)
+        // First element in the list
+        device_list_head = dev;
+    else
+        device_list_tail->next = dev;
+    device_list_tail = dev;
 
     return 0;
 }

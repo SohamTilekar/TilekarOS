@@ -71,7 +71,7 @@ void kernel_main(uint32_t magic, void* boot_info) {
 
   if (primary_storage) {
       printf("Loading test program from disk...\n");
-      task_create_elf_from_file("/testprog", 3);
+      task_create_elf_from_file("/bin/usertask", 3);
   }
 
   printf("Main task (TID 0) entering infinite yield loop.\n");
