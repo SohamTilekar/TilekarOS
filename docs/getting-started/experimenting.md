@@ -40,7 +40,16 @@ User tasks use **System Calls** to interact with the kernel. See [user_process.a
 
 ??? example "Code Preview: `user_process.asm`"
     ```nasm
-    --8<-- "kernel/user_process.asm"
+    #include <stdio.h>
+
+    int main() {
+        printf("Jadu\n");
+        __asm__(
+            "movl $0, %eax;"  // SYS_EXIT for Linux 32-bit (legacy)
+            "int $0x80;"       // Interrupt to invoke system call
+        );
+        return 0;
+    }
     ```
 
 #### Step 2: Launch the Task
