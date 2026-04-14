@@ -7,14 +7,34 @@
 
 // --- Internal FAT Helpers ---
 
+static bool fat_is_eoc(const fat_filesystem_t* fs, uint32_t value) {
+    if (fs->type == FAT_TYPE_FAT16) return value >= 0xFFF8;
+    return value >= 0xFF8;
+}
+
+static uint16_t fat_eoc_value(const fat_filesystem_t* fs) {
+    return (fs->type == FAT_TYPE_FAT16) ? 0xFFFF : 0x0FFF;
+}
+
 static uint16_t fat_get_fat_entry(fat_filesystem_t* fs, uint32_t cluster) {
+    if (fs->type == FAT_TYPE_FAT16) {
+        uint32_t fat_offset = cluster * 2;
+        uint32_t fat_sector_lba = fs->fat_start + (fat_offset / fs->bpb.bytes_per_sector);
+        uint32_t ent_offset = fat_offset % fs->bpb.bytes_per_sector;
+        buffer_t* buf = buffer_get(fs->dev, fat_sector_lba);
+        if (!buf) return 0xFFFF;
+        uint16_t res = *(uint16_t*)&buf->data[ent_offset];
+        buffer_release(buf);
+        return res;
+    }
+
     uint32_t fat_offset = cluster + (cluster / 2);
-    uint32_t fat_sector_lba = fs->fat_start + (fat_offset / 512);
-    uint32_t ent_offset = fat_offset % 512;
+    uint32_t fat_sector_lba = fs->fat_start + (fat_offset / fs->bpb.bytes_per_sector);
+    uint32_t ent_offset = fat_offset % fs->bpb.bytes_per_sector;
     buffer_t* buf = buffer_get(fs->dev, fat_sector_lba);
     if (!buf) return 0xFFF;
     uint16_t table_value;
-    if (ent_offset == 511) {
+    if (ent_offset == fs->bpb.bytes_per_sector - 1) {
         table_value = buf->data[ent_offset];
         buffer_release(buf);
         buf = buffer_get(fs->dev, fat_sector_lba + 1);
@@ -29,29 +49,46 @@ static uint16_t fat_get_fat_entry(fat_filesystem_t* fs, uint32_t cluster) {
 }
 
 static void fat_set_fat_entry(fat_filesystem_t* fs, uint32_t cluster, uint16_t value) {
+    if (fs->type == FAT_TYPE_FAT16) {
+        uint32_t fat_offset = cluster * 2;
+        uint32_t fat_sector_lba = fs->fat_start + (fat_offset / fs->bpb.bytes_per_sector);
+        uint32_t ent_offset = fat_offset % fs->bpb.bytes_per_sector;
+        for (int i = 0; i < fs->bpb.num_fats; i++) {
+            uint32_t current_fat_sector = fat_sector_lba + (i * fs->bpb.fat_size_16);
+            buffer_t* buf = buffer_get(fs->dev, current_fat_sector);
+            if (!buf) continue;
+            *(uint16_t*)&buf->data[ent_offset] = value;
+            buf->dirty = 1;
+            buffer_release(buf);
+        }
+        return;
+    }
+
     uint32_t fat_offset = cluster + (cluster / 2);
-    uint32_t fat_sector_lba = fs->fat_start + (fat_offset / 512);
-    uint32_t ent_offset = fat_offset % 512;
+    uint32_t fat_sector_lba = fs->fat_start + (fat_offset / fs->bpb.bytes_per_sector);
+    uint32_t ent_offset = fat_offset % fs->bpb.bytes_per_sector;
     for (int i = 0; i < fs->bpb.num_fats; i++) {
         uint32_t current_fat_sector = fat_sector_lba + (i * fs->bpb.fat_size_16);
         buffer_t* buf = buffer_get(fs->dev, current_fat_sector);
         if (!buf) continue;
         if (cluster & 0x0001) {
             value <<= 4;
-            if (ent_offset == 511) {
+            if (ent_offset == fs->bpb.bytes_per_sector - 1) {
                 buf->data[ent_offset] = (buf->data[ent_offset] & 0x0F) | (value & 0xF0);
                 buf->dirty = 1; buffer_release(buf);
                 buf = buffer_get(fs->dev, current_fat_sector + 1);
+                if (!buf) continue;
                 buf->data[0] = (uint8_t)(value >> 8);
             } else {
                 *(uint16_t*)&buf->data[ent_offset] = (*(uint16_t*)&buf->data[ent_offset] & 0x000F) | value;
             }
         } else {
             value &= 0x0FFF;
-            if (ent_offset == 511) {
+            if (ent_offset == fs->bpb.bytes_per_sector - 1) {
                 buf->data[ent_offset] = (uint8_t)value;
                 buf->dirty = 1; buffer_release(buf);
                 buf = buffer_get(fs->dev, current_fat_sector + 1);
+                if (!buf) continue;
                 buf->data[0] = (buf->data[0] & 0xF0) | (uint8_t)(value >> 8);
             } else {
                 *(uint16_t*)&buf->data[ent_offset] = (*(uint16_t*)&buf->data[ent_offset] & 0xF000) | value;
@@ -141,7 +178,7 @@ static bool find_in_directory(fat_filesystem_t* fs, uint32_t cluster, const char
         }
         if (is_root) break;
         current_cluster = fat_get_fat_entry(fs, current_cluster);
-    } while (current_cluster < 0xFF8);
+    } while (!fat_is_eoc(fs, current_cluster));
     return false;
 }
 
@@ -208,7 +245,7 @@ void fat_list_dir(fat_filesystem_t* fs, const char* path) {
         }
         if (is_root) break;
         current_cluster = fat_get_fat_entry(fs, current_cluster);
-    } while (current_cluster < 0xFF8);
+    } while (!fat_is_eoc(fs, current_cluster));
 }
 
 void fat_list_root_dir(fat_filesystem_t* fs) { fat_list_dir(fs, "/"); }
@@ -245,9 +282,9 @@ static int create_entry(fat_filesystem_t* fs, uint32_t dir_cluster, const char* 
         }
         if (found || is_root) break;
         uint32_t next = fat_get_fat_entry(fs, current_cluster);
-        if (next >= 0xFF8) return -1;
+        if (fat_is_eoc(fs, next)) return -1;
         current_cluster = next;
-    } while (current_cluster < 0xFF8);
+    } while (!fat_is_eoc(fs, current_cluster));
     if (!found) return -1;
     buffer_t* buf = buffer_get(fs->dev, entry_sector);
     fat_directory_entry_t* entry = &((fat_directory_entry_t*)buf->data)[entry_idx];
@@ -276,9 +313,18 @@ int fat_mkdir(fat_filesystem_t* fs, const char* path) {
     }
     uint32_t new_cluster = fat_find_free_cluster(fs);
     if (!new_cluster) return -2;
-    fat_set_fat_entry(fs, new_cluster, 0xFFF);
-    buffer_t* buf = buffer_get(fs->dev, fs->data_start + (new_cluster - 2) * fs->bpb.sectors_per_cluster);
-    memset(buf->data, 0, 512);
+    fat_set_fat_entry(fs, new_cluster, fat_eoc_value(fs));
+    uint32_t cluster_start = fs->data_start + (new_cluster - 2) * fs->bpb.sectors_per_cluster;
+    buffer_t* buf = buffer_get(fs->dev, cluster_start);
+    if (!buf) return -3;
+    memset(buf->data, 0, fs->bpb.bytes_per_sector);
+    for (uint32_t s = 1; s < fs->bpb.sectors_per_cluster; s++) {
+        buffer_t* extra = buffer_get(fs->dev, cluster_start + s);
+        if (!extra) continue;
+        memset(extra->data, 0, fs->bpb.bytes_per_sector);
+        extra->dirty = 1;
+        buffer_release(extra);
+    }
     fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
     memset(entries[0].filename, ' ', 8); entries[0].filename[0] = '.';
     memset(entries[0].extension, ' ', 3);
@@ -310,20 +356,33 @@ int fat_create_file(fat_filesystem_t* fs, const char* path, const uint8_t* data,
     uint32_t first_cluster = 0;
     uint32_t original_size = size;
     if (size > 0) {
-        uint32_t needed = (size + 511) / 512;
+        uint32_t cluster_size = fs->bpb.bytes_per_sector * fs->bpb.sectors_per_cluster;
+        uint32_t needed = (size + cluster_size - 1) / cluster_size;
         uint32_t prev_cluster = 0;
         for (uint32_t i = 0; i < needed; i++) {
             uint32_t clus = fat_find_free_cluster(fs);
             if (!clus) return -2;
-            fat_set_fat_entry(fs, clus, 0xFFF);
+            fat_set_fat_entry(fs, clus, fat_eoc_value(fs));
             if (i == 0) first_cluster = clus;
             else fat_set_fat_entry(fs, prev_cluster, clus);
-            buffer_t* buf = buffer_get(fs->dev, fs->data_start + (clus - 2) * fs->bpb.sectors_per_cluster);
-            uint32_t to_copy = (size > 512) ? 512 : size;
-            memset(buf->data, 0, 512);
-            memcpy(buf->data, data + i * 512, to_copy);
-            buf->dirty = 1; buffer_release(buf);
-            size -= to_copy; prev_cluster = clus;
+            uint32_t cluster_start = fs->data_start + (clus - 2) * fs->bpb.sectors_per_cluster;
+            uint32_t bytes_in_cluster = (size > cluster_size) ? cluster_size : size;
+            uint32_t remaining_in_cluster = bytes_in_cluster;
+            uint32_t data_offset = i * cluster_size;
+            for (uint32_t s = 0; s < fs->bpb.sectors_per_cluster; s++) {
+                buffer_t* buf = buffer_get(fs->dev, cluster_start + s);
+                if (!buf) continue;
+                uint32_t to_copy = (remaining_in_cluster > fs->bpb.bytes_per_sector) ? fs->bpb.bytes_per_sector : remaining_in_cluster;
+                memset(buf->data, 0, fs->bpb.bytes_per_sector);
+                if (to_copy > 0) {
+                    memcpy(buf->data, data + data_offset + (s * fs->bpb.bytes_per_sector), to_copy);
+                    remaining_in_cluster -= to_copy;
+                }
+                buf->dirty = 1;
+                buffer_release(buf);
+            }
+            size -= bytes_in_cluster;
+            prev_cluster = clus;
         }
     }
     int res = create_entry(fs, parent_cluster, name, FAT_ATTR_ARCHIVE, first_cluster, original_size);
@@ -337,12 +396,13 @@ int fat_read_file(fat_filesystem_t* fs, const char* path, uint8_t* buffer, uint3
     if (entry.attributes & FAT_ATTR_DIRECTORY) return -2;
     uint32_t current_cluster = entry.first_cluster_low;
     uint32_t total_read = 0;
-    while (current_cluster >= 2 && current_cluster < 0xFF8 && total_read < max_size) {
+    while (current_cluster >= 2 && !fat_is_eoc(fs, current_cluster) && total_read < max_size) {
         uint32_t cluster_start_sector = fs->data_start + (current_cluster - 2) * fs->bpb.sectors_per_cluster;
         for (uint32_t s = 0; s < fs->bpb.sectors_per_cluster && total_read < max_size; s++) {
             buffer_t* buf = buffer_get(fs->dev, cluster_start_sector + s);
+            if (!buf) return total_read;
             uint32_t to_copy = (entry.file_size - total_read);
-            if (to_copy > 512) to_copy = 512;
+            if (to_copy > fs->bpb.bytes_per_sector) to_copy = fs->bpb.bytes_per_sector;
             if (total_read + to_copy > max_size) to_copy = max_size - total_read;
             memcpy(buffer + total_read, buf->data, to_copy);
             buffer_release(buf);
@@ -371,23 +431,24 @@ static int fat_vfs_read(file_t* file, void* buffer, uint32_t size) {
     if (offset >= data->entry.file_size) return 0;
     if (offset + size > data->entry.file_size) size = data->entry.file_size - offset;
     
-    uint32_t cluster_size = 512 * data->fs->bpb.sectors_per_cluster;
+    uint32_t cluster_size = data->fs->bpb.bytes_per_sector * data->fs->bpb.sectors_per_cluster;
     uint32_t skip_clusters = offset / cluster_size;
     for (uint32_t i = 0; i < skip_clusters; i++) {
         current_cluster = fat_get_fat_entry(data->fs, current_cluster);
-        if (current_cluster >= 0xFF8) return 0;
+        if (fat_is_eoc(data->fs, current_cluster)) return 0;
     }
     
     uint32_t offset_in_cluster = offset % cluster_size;
-    uint32_t sector_in_cluster = offset_in_cluster / 512;
-    uint32_t offset_in_sector = offset_in_cluster % 512;
+    uint32_t sector_in_cluster = offset_in_cluster / data->fs->bpb.bytes_per_sector;
+    uint32_t offset_in_sector = offset_in_cluster % data->fs->bpb.bytes_per_sector;
 
-    while (total_read < size && current_cluster >= 2 && current_cluster < 0xFF8) {
+    while (total_read < size && current_cluster >= 2 && !fat_is_eoc(data->fs, current_cluster)) {
         uint32_t cluster_start_sector = data->fs->data_start + (current_cluster - 2) * data->fs->bpb.sectors_per_cluster;
         
         for (uint32_t s = sector_in_cluster; s < data->fs->bpb.sectors_per_cluster && total_read < size; s++) {
             buffer_t* buf = buffer_get(data->fs->dev, cluster_start_sector + s);
-            uint32_t to_copy = 512 - offset_in_sector;
+            if (!buf) return total_read;
+            uint32_t to_copy = data->fs->bpb.bytes_per_sector - offset_in_sector;
             if (to_copy > (size - total_read)) to_copy = size - total_read;
             
             memcpy((uint8_t*)buffer + total_read, buf->data + offset_in_sector, to_copy);
@@ -428,9 +489,18 @@ static int fat_vfs_mkdir(vnode_t* parent, const char* name) {
     
     uint32_t new_cluster = fat_find_free_cluster(parent_data->fs);
     if (!new_cluster) return -2;
-    fat_set_fat_entry(parent_data->fs, new_cluster, 0xFFF);
-    buffer_t* buf = buffer_get(parent_data->fs->dev, parent_data->fs->data_start + (new_cluster - 2) * parent_data->fs->bpb.sectors_per_cluster);
-    memset(buf->data, 0, 512);
+    fat_set_fat_entry(parent_data->fs, new_cluster, fat_eoc_value(parent_data->fs));
+    uint32_t cluster_start = parent_data->fs->data_start + (new_cluster - 2) * parent_data->fs->bpb.sectors_per_cluster;
+    buffer_t* buf = buffer_get(parent_data->fs->dev, cluster_start);
+    if (!buf) return -3;
+    memset(buf->data, 0, parent_data->fs->bpb.bytes_per_sector);
+    for (uint32_t s = 1; s < parent_data->fs->bpb.sectors_per_cluster; s++) {
+        buffer_t* extra = buffer_get(parent_data->fs->dev, cluster_start + s);
+        if (!extra) continue;
+        memset(extra->data, 0, parent_data->fs->bpb.bytes_per_sector);
+        extra->dirty = 1;
+        buffer_release(extra);
+    }
     fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
     memset(entries[0].filename, ' ', 8); entries[0].filename[0] = '.';
     memset(entries[0].extension, ' ', 3); entries[0].attributes = FAT_ATTR_DIRECTORY;
@@ -458,7 +528,7 @@ static int fat_vfs_unlink(vnode_t* parent, const char* name) {
     buf->dirty = 1; buffer_release(buf);
     // Free cluster chain
     uint32_t curr = entry.first_cluster_low;
-    while (curr >= 2 && curr < 0xFF8) {
+    while (curr >= 2 && !fat_is_eoc(parent_data->fs, curr)) {
         uint32_t next = fat_get_fat_entry(parent_data->fs, curr);
         fat_set_fat_entry(parent_data->fs, curr, 0);
         curr = next;
@@ -485,6 +555,7 @@ static int fat_vfs_readdir(vnode_t* dir, uint32_t index, vfs_dirent_t* out) {
         }
         for (uint32_t s = 0; s < num_sectors; s++) {
             buffer_t* buf = buffer_get(data->fs->dev, start_sector + s);
+            if (!buf) return -1;
             fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
             for (uint32_t i = 0; i < 512 / sizeof(fat_directory_entry_t); i++) {
                 if (entries[i].filename[0] == 0) { buffer_release(buf); return -1; }
@@ -506,7 +577,7 @@ static int fat_vfs_readdir(vnode_t* dir, uint32_t index, vfs_dirent_t* out) {
         }
         if (is_root) break;
         current_cluster = fat_get_fat_entry(data->fs, current_cluster);
-    } while (current_cluster < 0xFF8);
+    } while (!fat_is_eoc(data->fs, current_cluster));
     return -1;
 }
 
@@ -537,13 +608,30 @@ void fat_format(device_t* dev, const char* label) {
     memset(&bpb, 0, sizeof(bpb));
     bpb.boot_jmp[0] = 0xEB; bpb.boot_jmp[1] = 0x3C; bpb.boot_jmp[2] = 0x90;
     memcpy(bpb.oem_name, "TILEKAR ", 8);
-    bpb.bytes_per_sector = 512; bpb.sectors_per_cluster = 1; bpb.reserved_sector_count = 1;
-    bpb.num_fats = 2; bpb.root_entry_count = 224;
+    bpb.bytes_per_sector = 512; bpb.reserved_sector_count = 1; bpb.num_fats = 2;
+    bool use_fat16 = dev->total_sectors > 8400; // FAT12 practical limit around 4K clusters with 1 sector/cluster
+    bpb.sectors_per_cluster = 1;
+    bpb.root_entry_count = use_fat16 ? 512 : 224;
     bpb.total_sectors_16 = dev->total_sectors;
-    bpb.media_type = 0xF0; bpb.fat_size_16 = 9; bpb.sectors_per_track = 18; bpb.num_heads = 2;
+    bpb.media_type = 0xF8; bpb.sectors_per_track = 18; bpb.num_heads = 2;
     bpb.drive_number = 0x00; bpb.boot_signature = 0x29; bpb.volume_id = 0x12345678;
     memset(bpb.volume_label, ' ', 11); memcpy(bpb.volume_label, label, strlen(label) > 11 ? 11 : strlen(label));
-    memcpy(bpb.file_system_type, "FAT12   ", 8);
+    if (use_fat16) {
+        uint32_t root_dir_sectors = (bpb.root_entry_count * sizeof(fat_directory_entry_t) + (bpb.bytes_per_sector - 1)) / bpb.bytes_per_sector;
+        uint32_t fat_size = 1;
+        while (1) {
+            uint32_t data_sectors = bpb.total_sectors_16 - (bpb.reserved_sector_count + (bpb.num_fats * fat_size) + root_dir_sectors);
+            uint32_t cluster_count = data_sectors / bpb.sectors_per_cluster;
+            uint32_t needed_fat_sectors = ((cluster_count + 2) * 2 + (bpb.bytes_per_sector - 1)) / bpb.bytes_per_sector;
+            if (needed_fat_sectors == fat_size) break;
+            fat_size = needed_fat_sectors;
+        }
+        bpb.fat_size_16 = fat_size;
+        memcpy(bpb.file_system_type, "FAT16   ", 8);
+    } else {
+        bpb.fat_size_16 = 9;
+        memcpy(bpb.file_system_type, "FAT12   ", 8);
+    }
     buffer_t* buf = buffer_get(dev, 0);
     memset(buf->data, 0, 512); memcpy(buf->data, &bpb, sizeof(bpb));
     buf->data[510] = 0x55; buf->data[511] = 0xAA;
@@ -551,7 +639,11 @@ void fat_format(device_t* dev, const char* label) {
     for (int f = 0; f < bpb.num_fats; f++) {
         uint32_t fat_start = bpb.reserved_sector_count + (f * bpb.fat_size_16);
         buf = buffer_get(dev, fat_start);
-        memset(buf->data, 0, 512); buf->data[0] = bpb.media_type; buf->data[1] = 0xFF; buf->data[2] = 0xFF;
+        memset(buf->data, 0, 512);
+        buf->data[0] = bpb.media_type;
+        buf->data[1] = 0xFF;
+        buf->data[2] = 0xFF;
+        if (use_fat16) buf->data[3] = 0xFF;
         buf->dirty = 1; buffer_release(buf);
         for (int i = 1; i < bpb.fat_size_16; i++) {
             buf = buffer_get(dev, fat_start + i);
