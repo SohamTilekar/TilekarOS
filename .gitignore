@@ -12,3 +12,4 @@ site/**
 **.elf
 **.log
 **.img
+**/__pycache__/**

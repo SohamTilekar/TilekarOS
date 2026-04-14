@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.15)
 
+# Build NASM objects as 32-bit by default for TilekarOS (i386).
+set(CMAKE_ASM_NASM_OBJECT_FORMAT elf32)
+
 # ==============================================================================
 # Project: TilekarOS
 # ==============================================================================
@@ -17,6 +20,10 @@ if(NOT DEFINED OS_ARCH)
     set(OS_ARCH "i386" CACHE STRING "Target architecture" FORCE)
 endif()
 
+if(NOT CMAKE_C_COMPILER_TARGET)
+    set(CMAKE_C_COMPILER_TARGET "${OS_ARCH}-elf")
+endif()
+
 # Generate compile_commands.json for clangd and other tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -30,7 +37,7 @@ message(STATUS "Building for architecture: ${OS_ARCH}")
 if(NOT CMAKE_TOOLCHAIN_FILE)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/${OS_ARCH}.cmake")
         set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cmake/toolchains/${OS_ARCH}.cmake")
-    else()
+    elseif(NOT CMAKE_C_COMPILER_TARGET)
         message(WARNING "No toolchain file found for architecture ${OS_ARCH}. Cross-compilation may fail.")
     endif()
 endif()

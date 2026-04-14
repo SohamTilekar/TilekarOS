@@ -85,10 +85,11 @@ You can compile your own C programs into OS-compatible binaries using the built-
 
 ```bash
 # Compile a source file into an executable
-make comp_exe FILE=./my_app.c OUT=./my_app
+make comp FILE=./my_app.c OUT=./my_app
 ```
 
 This uses the sysroot automatically to link against the correct standard library and headers for TilekarOS.
+The build pipeline is now: **make (wrapper) -> Python orchestrator -> CMake/Clang**.
 
 ### 💿 Workspace & Persistence
 TilekarOS manages disk images via **Workspaces** (Default: `VirtualMachine`).

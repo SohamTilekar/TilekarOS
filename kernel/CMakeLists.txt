@@ -73,6 +73,13 @@ add_dependencies(myos.kernel kernel_asm_headers)
 # ------------------------------------------------------------------------------
 # Compile Options
 # ------------------------------------------------------------------------------
+set(KERNEL_NASM_FORMAT_FLAG "")
+if(OS_ARCH STREQUAL "i386")
+    # Without the toolchain file, NASM may default to 64-bit objects on x86_64 hosts.
+    # Force elf32 so 32-bit boot/kernel assembly always builds correctly.
+    set(KERNEL_NASM_FORMAT_FLAG "-felf32")
+endif()
+
 target_compile_options(myos.kernel PRIVATE
     # C Compiler Flags
     $<$<COMPILE_LANGUAGE:C>:
@@ -89,6 +96,7 @@ target_compile_options(myos.kernel PRIVATE
     >
     # Assembler Flags (NASM)
     $<$<COMPILE_LANGUAGE:ASM_NASM>:
+        ${KERNEL_NASM_FORMAT_FLAG}
         ${CMAKE_ASM_NASM_FLAGS}
         -g                 # Generate debug info
         -F dwarf           # Debug format: DWARF
