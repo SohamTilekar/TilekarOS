@@ -8,12 +8,13 @@
 #include "fat.h"
 #include "vfs.h"
 #include "string.h"
+#include "test/test_runner.h"
 
 // Global to persist across tasks
 static device_t* primary_storage = NULL;
 
 void init_storage() {
-    printf("Probing storage devices...\n");
+    // printf("Probing storage devices...\n");
 
     // Scan all block devices
     device_t* dev = device_get_next(NULL);
@@ -68,9 +69,10 @@ void kernel_main(uint32_t magic, void* boot_info) {
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
   init_storage();
+  run_all_tests(primary_storage);
 
   if (primary_storage) {
-      printf("Loading test program from disk...\n");
+      // printf("Loading test program from disk...\n");
       task_create_elf_from_file("/bin/usertask", 3);
   }
 

@@ -30,10 +30,9 @@ static void cleanup_zombies() {
         zombie_list = z->next;
 
         if (z->stack_limit) {
-            printf("[Scheduler] Cleaning up stack for Task %d\n", z->id);
             kfree(z->stack_limit);
         }
-        printf("[Scheduler] Cleaning up task for Task %d\n", z->id);
+        // printf("[Scheduler] Cleaning up Task %d\n", z->id);
         kfree(z);
     }
 }
@@ -81,7 +80,7 @@ void task_init_scheduler() {
     current_task = main_task;
     scheduler_trigger_index = insert_triger(100, &task_yield, 0); // Use local ticks
 
-    printf("Scheduler initialized. Main task TID: %d\n", main_task->id);
+    // printf("Scheduler initialized. Main task TID: %d\n", main_task->id);
 }
 
 #include "memory.h"
@@ -328,7 +327,7 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     task->next = current_task->next;
     current_task->next = task;
 
-    printf("ELF Task created. TID: %d, Entry: %p, Privilege: %d, ESP: %x\n", 
+    printf("ELF Task created. TID: %d, Entry: %p, Privilege: %d, ESP: %x\n",
            task->id, entry, task->privilege_level, (uint32_t)task->kernel_stack);
 
     interrupt_restore(flags);
@@ -366,10 +365,10 @@ task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level) {
     }
 
     task_t* task = task_create_elf(elf_data, privilege_level);
-    
+
     // We can free elf_data because task_create_elf copies data into the new process pages
     kfree(elf_data);
-    
+
     return task;
 }
 

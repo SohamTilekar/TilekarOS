@@ -202,7 +202,7 @@ static void ata_identify(uint16_t base, uint16_t bmide, uint8_t slave, int chann
     dev->type = DEVICE_TYPE_BLOCK;
     dev->sector_size = 512;
     dev->total_sectors = sectors;
-    
+
     ata_private_t* priv = kmalloc(sizeof(ata_private_t));
     memset(priv, 0, sizeof(ata_private_t));
     priv->base_port = base;
@@ -222,7 +222,7 @@ static void ata_identify(uint16_t base, uint16_t bmide, uint8_t slave, int chann
     dev->write_sector = ata_write_sector;
 
     device_register(dev);
-    printf("ATA: Detected %s, %d MB %s\n", dev->name, sectors * 512 / 1024 / 1024, bmide ? "(DMA enabled)" : "(PIO only)");
+    // printf("ATA: Detected %s, %d MB %s\n", dev->name, sectors * 512 / 1024 / 1024, bmide ? "(DMA enabled)" : "(PIO only)");
 }
 
 static int controller_count = 0;
@@ -254,7 +254,7 @@ static void ata_pci_callback(pci_device_t* pci_dev) {
 }
 
 void init_ata() {
-    printf("Probing ATA controllers via PCI...\n");
+    // printf("Probing ATA controllers via PCI...\n");
     irq_install_handler(14, ata_irq_handler_primary);
     irq_install_handler(15, ata_irq_handler_secondary);
     pci_scan(ata_pci_callback);

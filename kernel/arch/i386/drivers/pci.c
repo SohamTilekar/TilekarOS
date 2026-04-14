@@ -73,6 +73,6 @@ static void pci_debug_callback(pci_device_t* dev) {
 }
 
 void pci_init() {
-    printf("Scanning PCI bus...\n");
-    pci_scan(pci_debug_callback);
+    // printf("Scanning PCI bus...\n");
+    // pci_scan(pci_debug_callback);
 }
