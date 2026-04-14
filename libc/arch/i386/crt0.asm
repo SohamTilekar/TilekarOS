@@ -4,12 +4,13 @@ global _start
 extern main
 
 _start:
-    ; Set up environment if needed (argc, argv, etc.)
+    ; Call main. main returns in eax.
     call main
 
-    ; Exit syscall (assuming syscall 1 is exit)
-    mov ebx, eax ; return value from main
-    mov eax, 1   ; exit syscall number
+    ; Move main's return value into ebx (second argument for the syscall) which will be the status code
+    mov ebx, eax
+    ; Place the syscall number (SYS_EXIT) into eax and invoke int 0x80
+    mov eax, 0       ; user's SYS_EXIT value (per request)
     int 0x80
 
     ; Fallback loop if exit fails
