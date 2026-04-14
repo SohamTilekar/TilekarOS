@@ -51,6 +51,10 @@ typedef struct file {
 void vfs_init();
 vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_t*));
 vnode_t* vfs_device_node_create(device_t* dev);
+int vfs_task_file_table_init(file_t** file_table);
+int vfs_task_file_table_copy(file_t** dst_file_table, file_t* const* src_file_table);
+int vfs_task_file_table_set(file_t** file_table, int fd, const file_t* src_file);
+void vfs_task_file_table_destroy(file_t** file_table);
 
 int vfs_open(const char* path, int flags);
 uint32_t vfs_get_size(int fd);

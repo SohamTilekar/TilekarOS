@@ -4,12 +4,14 @@
 #include <stdio.h>
 #include "devices.h"
 #include "fat_test.h"
+#include "fd_table_test.h"
 
 static inline bool run_all_tests(device_t* primary_storage) {
-    test_stats_t stats = {0, 0};
+    test_stats_t stats = {0, 0, NULL};
 
     printf("[TEST] Running kernel test suite...\n");
     run_fat_tests(primary_storage, &stats);
+    run_fd_table_tests(primary_storage, &stats);
     printf("[TEST] Summary: %u passed, %u failed\n", stats.passed, stats.failed);
     printf("[TEST] Overall: %s\n", (stats.failed == 0) ? "PASS" : "FAIL");
 

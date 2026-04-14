@@ -4,9 +4,9 @@
 #include "kmalloc.h"
 #include <stdio.h>
 #include "kernel/tty.h"
+#include "../task/task.h"
 
 static vnode_t* root_vnode = NULL;
-static file_t* global_file_table[MAX_FILES_PER_PROCESS];
 
 // --- Mount Point Table ---
 
@@ -17,6 +17,21 @@ typedef struct vfs_mount_entry {
 } vfs_mount_entry_t;
 
 static vfs_mount_entry_t* mount_list = NULL;
+
+static file_t* vfs_clone_file_entry(const file_t* src) {
+    if (!src) return NULL;
+    file_t* file = kmalloc(sizeof(file_t));
+    if (!file) return NULL;
+    file->node = src->node;
+    file->position = src->position;
+    file->flags = src->flags;
+    return file;
+}
+
+static file_t** vfs_get_active_file_table(void) {
+    if (!current_task) return NULL;
+    return current_task->file_table;
+}
 
 static vnode_t* vfs_get_mount_root(const char* path) {
     vfs_mount_entry_t* curr = mount_list;
@@ -161,8 +176,12 @@ vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_
 }
 
 void vfs_init() {
+}
+
+int vfs_task_file_table_init(file_t** file_table) {
+    if (!file_table) return -1;
     for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
-        global_file_table[i] = NULL;
+        file_table[i] = NULL;
     }
 
     // Pre-populate 0, 1, 2 with devices
@@ -171,27 +190,89 @@ void vfs_init() {
 
     if (kbd) {
         file_t* f = kmalloc(sizeof(file_t));
+        if (!f) {
+            vfs_task_file_table_destroy(file_table);
+            return -2;
+        }
         f->node = vfs_device_node_create(kbd);
+        if (!f->node) {
+            kfree(f);
+            vfs_task_file_table_destroy(file_table);
+            return -2;
+        }
         f->position = 0;
         f->flags = 0;
-        global_file_table[0] = f; // stdin
+        file_table[0] = f; // stdin
     }
 
     if (tty) {
         // Shared node for stdout/stderr
         vnode_t* tty_node = vfs_device_node_create(tty);
+        if (!tty_node) {
+            vfs_task_file_table_destroy(file_table);
+            return -2;
+        }
 
         file_t* f1 = kmalloc(sizeof(file_t));
+        if (!f1) {
+            vfs_task_file_table_destroy(file_table);
+            return -2;
+        }
         f1->node = tty_node;
         f1->position = 0;
         f1->flags = 0;
-        global_file_table[1] = f1; // stdout
+        file_table[1] = f1; // stdout
 
         file_t* f2 = kmalloc(sizeof(file_t));
+        if (!f2) {
+            kfree(f1);
+            file_table[1] = NULL;
+            vfs_task_file_table_destroy(file_table);
+            return -2;
+        }
         f2->node = tty_node;
         f2->position = 0;
         f2->flags = 0;
-        global_file_table[2] = f2; // stderr
+        file_table[2] = f2; // stderr
+    }
+
+    return 0;
+}
+
+int vfs_task_file_table_copy(file_t** dst_file_table, file_t* const* src_file_table) {
+    if (!dst_file_table || !src_file_table) return -1;
+    for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+        dst_file_table[i] = NULL;
+    }
+    for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+        if (!src_file_table[i]) continue;
+        dst_file_table[i] = vfs_clone_file_entry(src_file_table[i]);
+        if (!dst_file_table[i]) {
+            vfs_task_file_table_destroy(dst_file_table);
+            return -2;
+        }
+    }
+    return 0;
+}
+
+int vfs_task_file_table_set(file_t** file_table, int fd, const file_t* src_file) {
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS) return -1;
+    if (file_table[fd]) {
+        kfree(file_table[fd]);
+        file_table[fd] = NULL;
+    }
+    if (!src_file) return 0;
+    file_table[fd] = vfs_clone_file_entry(src_file);
+    if (!file_table[fd]) return -2;
+    return 0;
+}
+
+void vfs_task_file_table_destroy(file_t** file_table) {
+    if (!file_table) return;
+    for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+        if (!file_table[i]) continue;
+        kfree(file_table[i]);
+        file_table[i] = NULL;
     }
 }
 
@@ -210,53 +291,51 @@ static int split_path(const char* path, char* parent_path, char* child_name) {
 }
 
 int vfs_open(const char* path, int flags) {
+    file_t** file_table = vfs_get_active_file_table();
+    if (!file_table) return -3;
     vnode_t* node = resolve_path(path);
     if (!node) return -1;
     int fd = -1;
     for (int i = 3; i < MAX_FILES_PER_PROCESS; i++) {
-        if (!global_file_table[i]) { fd = i; break; }
+        if (!file_table[i]) { fd = i; break; }
     }
     if (fd == -1) return -2;
     file_t* file = kmalloc(sizeof(file_t));
+    if (!file) return -2;
     file->node = node;
     file->position = 0;
     file->flags = flags;
-    global_file_table[fd] = file;
+    file_table[fd] = file;
     return fd;
 }
 
 uint32_t vfs_get_size(int fd) {
-    if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) return 0;
-    return global_file_table[fd]->node->size;
+    file_t** file_table = vfs_get_active_file_table();
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS || !file_table[fd]) return 0;
+    return file_table[fd]->node->size;
 }
 
 int vfs_read(int fd, void* buffer, uint32_t size) {
-    if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) return -1;
-    file_t* file = global_file_table[fd];
+    file_t** file_table = vfs_get_active_file_table();
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS || !file_table[fd]) return -1;
+    file_t* file = file_table[fd];
     if (!file->node->ops->read) return -2;
     return file->node->ops->read(file, buffer, size);
 }
 
 int vfs_write(int fd, const void* buffer, uint32_t size) {
-    if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) {
-        // Immediate fallback for stdout/stderr even if table entry is missing
-        if (fd == 1 || fd == 2) {
-            const char* data = (const char*)buffer;
-            for (uint32_t i = 0; i < size; i++) terminal_putchar(data[i]);
-            return size;
-        }
-        return -1;
-    }
-    file_t* file = global_file_table[fd];
+    file_t** file_table = vfs_get_active_file_table();
+    file_t* file = file_table[fd];
     if (!file->node->ops->write) return -2;
     return file->node->ops->write(file, buffer, size);
 }
 
 void vfs_close(int fd) {
-    if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) return;
-    file_t* file = global_file_table[fd];
+    file_t** file_table = vfs_get_active_file_table();
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS || !file_table[fd]) return;
+    file_t* file = file_table[fd];
     kfree(file);
-    global_file_table[fd] = NULL;
+    file_table[fd] = NULL;
 }
 
 int vfs_mkdir(const char* path) {
@@ -288,8 +367,9 @@ int vfs_unlink(const char* path) {
 }
 
 int vfs_readdir(int fd, uint32_t index, vfs_dirent_t* out) {
-    if (fd < 0 || fd >= MAX_FILES_PER_PROCESS || !global_file_table[fd]) return -1;
-    file_t* file = global_file_table[fd];
+    file_t** file_table = vfs_get_active_file_table();
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS || !file_table[fd]) return -1;
+    file_t* file = file_table[fd];
     if (file->node->type != VFS_TYPE_DIRECTORY || !file->node->ops->readdir) return -2;
     return file->node->ops->readdir(file->node, index, out);
 }

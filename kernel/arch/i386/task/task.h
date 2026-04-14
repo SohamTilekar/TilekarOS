@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "../utils/utils.h"
+#include "../fs/vfs.h"
 
 typedef enum {
     TASK_READY,
@@ -26,6 +27,7 @@ typedef struct task {
     task_state_t state;
     uint32_t page_directory; // physical address of CR3
     uint8_t privilege_level; // 0 or 3
+    file_t* file_table[MAX_FILES_PER_PROCESS];
 
     // Internal scheduler fields
     struct task* next;      // Next task in the ready queue
@@ -84,5 +86,8 @@ void task_yield(InteruptReg *regs);
  * task_exit - Terminates the current task.
  */
 void task_exit();
+
+int task_file_table_copy(task_t* dst, const task_t* src);
+int task_file_table_set(task_t* task, int fd, const file_t* src_file);
 
 #endif // ARCH_I386_TASK_H

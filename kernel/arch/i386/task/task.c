@@ -21,6 +21,10 @@ task_t* current_task = NULL;
 static task_t* zombie_list = NULL;
 static int32_t scheduler_trigger_index = -1;
 
+static int task_init_file_table(task_t* task) {
+    return vfs_task_file_table_init(task->file_table);
+}
+
 /**
  * cleanup_zombies - Frees memory of tasks that have exited.
  */
@@ -32,6 +36,7 @@ static void cleanup_zombies() {
         if (z->stack_limit) {
             kfree(z->stack_limit);
         }
+        vfs_task_file_table_destroy(z->file_table);
         // printf("[Scheduler] Cleaning up Task %d\n", z->id);
         kfree(z);
     }
@@ -77,6 +82,10 @@ void task_init_scheduler() {
     main_task->page_directory = get_cr3();
     main_task->next = main_task;
     main_task->privilege_level = 0;
+    if (task_init_file_table(main_task) < 0) {
+        kfree(main_task);
+        return;
+    }
     current_task = main_task;
     scheduler_trigger_index = insert_triger(100, &task_yield, 0); // Use local ticks
 
@@ -110,6 +119,12 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     task->state = TASK_READY;
     task->privilege_level = privilege_level;
     task->page_directory = get_cr3(); // Inherit current page directory
+    if (task_init_file_table(task) < 0) {
+        kfree(stack);
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
 
     // Set up the initial stack frame
     // The stack grows downwards, so start at the top
@@ -181,6 +196,12 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
     task->id = next_tid++;
     task->state = TASK_READY;
     task->privilege_level = 3;
+    if (task_init_file_table(task) < 0) {
+        kfree(stack);
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
 
     uint32_t* pd_virt = memory_create_user_pagedir();
     uint32_t pd_phys = (uint32_t)pd_virt - KERNEL_START;
@@ -269,6 +290,12 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     task->id = next_tid++;
     task->state = TASK_READY;
     task->privilege_level = privilege_level;
+    if (task_init_file_table(task) < 0) {
+        kfree(stack);
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
 
     uint32_t* pd_virt = memory_create_user_pagedir();
     uint32_t pd_phys = (uint32_t)pd_virt - KERNEL_START;
@@ -370,6 +397,17 @@ task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level) {
     kfree(elf_data);
 
     return task;
+}
+
+int task_file_table_copy(task_t* dst, const task_t* src) {
+    if (!dst || !src) return -1;
+    vfs_task_file_table_destroy(dst->file_table);
+    return vfs_task_file_table_copy(dst->file_table, src->file_table);
+}
+
+int task_file_table_set(task_t* task, int fd, const file_t* src_file) {
+    if (!task) return -1;
+    return vfs_task_file_table_set(task->file_table, fd, src_file);
 }
 
 void task_yield(InteruptReg *regs) {
