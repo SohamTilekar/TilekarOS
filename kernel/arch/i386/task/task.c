@@ -415,9 +415,12 @@ void task_yield(InteruptReg *regs) {
     cleanup_zombies();
 
     task_t* last = current_task;
-    current_task = current_task->next;
+    task_t* next = last->next;
+    while (next != last && next->state != TASK_READY) {
+        next = next->next;
+    }
 
-    if (last == current_task) {
+    if (next == last && next->state != TASK_READY) {
         if (regs && regs->intr_num >= 32) {
             pic_send_eoi(regs->intr_num);
             regs->intr_num = 0;
@@ -425,12 +428,15 @@ void task_yield(InteruptReg *regs) {
         interrupt_restore(flags);
         return;
     }
+    current_task = next;
 
     if (scheduler_trigger_index != -1) {
         set_triger_ticks(scheduler_trigger_index, 0);
     }
 
-    last->state = TASK_READY;
+    if (last->state == TASK_RUNNING) {
+        last->state = TASK_READY;
+    }
     current_task->state = TASK_RUNNING;
 
     uint32_t intr_num = 0;
@@ -446,6 +452,26 @@ void task_yield(InteruptReg *regs) {
 
     context_switch(&last->kernel_stack, current_task->kernel_stack, current_task->page_directory, intr_num);
 
+    interrupt_restore(flags);
+}
+
+void task_block_current() {
+    if (!current_task) return;
+
+    uint32_t flags = interrupt_save();
+    current_task->state = TASK_BLOCKED;
+    interrupt_restore(flags);
+
+    task_yield(NULL);
+}
+
+void task_unblock(task_t* task) {
+    if (!task) return;
+
+    uint32_t flags = interrupt_save();
+    if (task->state == TASK_BLOCKED) {
+        task->state = TASK_READY;
+    }
     interrupt_restore(flags);
 }
 

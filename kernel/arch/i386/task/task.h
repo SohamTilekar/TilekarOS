@@ -81,6 +81,8 @@ task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level);
  * task_yield - Yields the CPU to the next ready task.
  */
 void task_yield(InteruptReg *regs);
+void task_block_current();
+void task_unblock(task_t* task);
 
 /**
  * task_exit - Terminates the current task.
