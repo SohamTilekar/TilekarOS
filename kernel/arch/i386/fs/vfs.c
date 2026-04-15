@@ -3,7 +3,7 @@
 #include <string.h>
 #include "kmalloc.h"
 #include <stdio.h>
-#include "kernel/tty.h"
+#include "devfs.h"
 #include "../task/task.h"
 
 static vnode_t* root_vnode = NULL;
@@ -17,7 +17,6 @@ typedef struct vfs_mount_entry {
 } vfs_mount_entry_t;
 
 static vfs_mount_entry_t* mount_list = NULL;
-
 static file_t* vfs_clone_file_entry(const file_t* src) {
     if (!src) return NULL;
     file_t* file = kmalloc(sizeof(file_t));
@@ -51,51 +50,6 @@ static void vfs_add_mount(const char* path, vnode_t* root) {
     mount_list = entry;
 }
 
-// --- Device Node Support ---
-
-static int dev_vfs_read(file_t* file, void* buffer, uint32_t size) {
-    if (file->node->dev && file->node->dev->read) {
-        return file->node->dev->read(file->node->dev, buffer, size);
-    }
-    return -1;
-}
-
-static int dev_vfs_write(file_t* file, const void* buffer, uint32_t size) {
-    if (file->node->dev && file->node->dev->write) {
-        return file->node->dev->write(file->node->dev, buffer, size);
-    }
-
-    // Safety Fallback: If this is stdout/stderr and dev write fails, use terminal directly
-    // This handles the case where printf is called before devices are fully registered.
-    const char* data = (const char*)buffer;
-    for (uint32_t i = 0; i < size; i++) {
-        terminal_putchar(data[i]);
-    }
-    return size;
-}
-
-static vfs_ops_t device_vfs_ops = {
-    .read = dev_vfs_read,
-    .write = dev_vfs_write,
-    .lookup = NULL,
-    .mkdir = NULL,
-    .readdir = NULL,
-    .unlink = NULL,
-    .rmdir = NULL
-};
-
-vnode_t* vfs_device_node_create(device_t* dev) {
-    vnode_t* node = kmalloc(sizeof(vnode_t));
-    node->type = VFS_TYPE_FILE;
-    node->size = 0;
-    node->ops = &device_vfs_ops;
-    node->dev = dev;
-    node->fs_data = NULL;
-    node->refcount = 1;
-    node->mounted_vnode = NULL;
-    return node;
-}
-
 static void vfs_strcat(char* dest, const char* src) {
     while (*dest) dest++;
     while ((*dest++ = *src++));
@@ -127,16 +81,14 @@ static vnode_t* resolve_path_ext(const char* path, bool follow_last_mount) {
         }
         vfs_strcat(current_full_path, component);
 
-        if (!curr->ops->lookup) return NULL;
-        vnode_t* next = curr->ops->lookup(curr, component);
-        if (!next) return NULL;
-
         // Check mount table for redirection
         vnode_t* mounted = vfs_get_mount_root(current_full_path);
-
         if (mounted && (follow_last_mount || *p != '\0')) {
             curr = mounted;
         } else {
+            if (!curr->ops->lookup) return NULL;
+            vnode_t* next = curr->ops->lookup(curr, component);
+            if (!next) return NULL;
             curr = next;
         }
 
@@ -162,6 +114,10 @@ vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_
     if (strcmp(path, "/") == 0) {
         root_vnode = mount_fn(dev);
         vfs_add_mount("/", root_vnode);
+        vnode_t* devfs_root = devfs_get_root();
+        if (devfs_root) {
+            vfs_add_mount("/dev", devfs_root);
+        }
         return root_vnode;
     }
 
@@ -176,6 +132,7 @@ vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_
 }
 
 void vfs_init() {
+    devfs_init();
 }
 
 int vfs_task_file_table_init(file_t** file_table) {
@@ -184,56 +141,22 @@ int vfs_task_file_table_init(file_t** file_table) {
         file_table[i] = NULL;
     }
 
-    // Pre-populate 0, 1, 2 with devices
-    device_t* kbd = device_get("kbd0");
-    device_t* tty = device_get("tty0");
-
-    if (kbd) {
+    static const char* stdio_paths[3] = {"/dev/kbd0", "/dev/tty0", "/dev/tty0"};
+    for (int fd = 0; fd < 3; fd++) {
+        vnode_t* node = resolve_path(stdio_paths[fd]);
+        if (!node) {
+            vfs_task_file_table_destroy(file_table);
+            return -2;
+        }
         file_t* f = kmalloc(sizeof(file_t));
         if (!f) {
             vfs_task_file_table_destroy(file_table);
             return -2;
         }
-        f->node = vfs_device_node_create(kbd);
-        if (!f->node) {
-            kfree(f);
-            vfs_task_file_table_destroy(file_table);
-            return -2;
-        }
+        f->node = node;
         f->position = 0;
         f->flags = 0;
-        file_table[0] = f; // stdin
-    }
-
-    if (tty) {
-        // Shared node for stdout/stderr
-        vnode_t* tty_node = vfs_device_node_create(tty);
-        if (!tty_node) {
-            vfs_task_file_table_destroy(file_table);
-            return -2;
-        }
-
-        file_t* f1 = kmalloc(sizeof(file_t));
-        if (!f1) {
-            vfs_task_file_table_destroy(file_table);
-            return -2;
-        }
-        f1->node = tty_node;
-        f1->position = 0;
-        f1->flags = 0;
-        file_table[1] = f1; // stdout
-
-        file_t* f2 = kmalloc(sizeof(file_t));
-        if (!f2) {
-            kfree(f1);
-            file_table[1] = NULL;
-            vfs_task_file_table_destroy(file_table);
-            return -2;
-        }
-        f2->node = tty_node;
-        f2->position = 0;
-        f2->flags = 0;
-        file_table[2] = f2; // stderr
+        file_table[fd] = f;
     }
 
     return 0;
@@ -325,6 +248,7 @@ int vfs_read(int fd, void* buffer, uint32_t size) {
 
 int vfs_write(int fd, const void* buffer, uint32_t size) {
     file_t** file_table = vfs_get_active_file_table();
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS || !file_table[fd]) return -1;
     file_t* file = file_table[fd];
     if (!file->node->ops->write) return -2;
     return file->node->ops->write(file, buffer, size);

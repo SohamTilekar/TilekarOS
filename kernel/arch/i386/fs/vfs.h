@@ -7,7 +7,9 @@
 
 typedef enum {
     VFS_TYPE_FILE,
-    VFS_TYPE_DIRECTORY
+    VFS_TYPE_DIRECTORY,
+    VFS_TYPE_CHAR,
+    VFS_TYPE_BLOCK
 } vnode_type_t;
 
 typedef struct {
@@ -50,7 +52,6 @@ typedef struct file {
 // VFS API
 void vfs_init();
 vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_t*));
-vnode_t* vfs_device_node_create(device_t* dev);
 int vfs_task_file_table_init(file_t** file_table);
 int vfs_task_file_table_copy(file_t** dst_file_table, file_t* const* src_file_table);
 int vfs_task_file_table_set(file_t** file_table, int fd, const file_t* src_file);

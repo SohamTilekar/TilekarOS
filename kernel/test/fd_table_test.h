@@ -26,6 +26,30 @@ static inline void run_fd_table_tests(device_t* primary_storage, test_stats_t* s
         current_task->file_table[2] != NULL,
         "main task has stdin/stdout/stderr initialized");
 
+    int dev_dir_fd = vfs_open("/dev", 0);
+    test_record(stats, dev_dir_fd >= 3, "open /dev virtual directory");
+    if (dev_dir_fd >= 3) {
+        bool found_kbd0 = false;
+        bool found_tty0 = false;
+        vfs_dirent_t ent;
+        for (uint32_t i = 0; ; i++) {
+            if (vfs_readdir(dev_dir_fd, i, &ent) != 0) break;
+            if (strcmp(ent.name, "kbd0") == 0 && ent.type == VFS_TYPE_CHAR) found_kbd0 = true;
+            if (strcmp(ent.name, "tty0") == 0 && ent.type == VFS_TYPE_CHAR) found_tty0 = true;
+        }
+        test_record(stats, found_kbd0, "/dev readdir reports kbd0 as CHAR");
+        test_record(stats, found_tty0, "/dev readdir reports tty0 as CHAR");
+        vfs_close(dev_dir_fd);
+    }
+
+    int kbd_fd = vfs_open("/dev/kbd0", 0);
+    test_record(stats, kbd_fd >= 3, "open /dev/kbd0 via VFS");
+    if (kbd_fd >= 3) vfs_close(kbd_fd);
+
+    int tty_fd = vfs_open("/dev/tty0", 0);
+    test_record(stats, tty_fd >= 3, "open /dev/tty0 via VFS");
+    if (tty_fd >= 3) vfs_close(tty_fd);
+
     task_t* created = task_create(fd_table_test_idle_task, 0);
     test_record(stats, created != NULL, "task_create returns a task");
     if (!created) return;

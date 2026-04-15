@@ -69,6 +69,7 @@ void kernel_main(uint32_t magic, void* boot_info) {
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
   init_storage();
+  task_init_scheduler();
   run_all_tests(primary_storage);
 
   if (primary_storage) {

@@ -1,11 +1,14 @@
 #include "devices.h"
 #include <string.h>
+#include "devfs.h"
 
 static device_t* device_list_head = NULL;
 static device_t* device_list_tail = NULL;
 
 int device_register(device_t* dev) {
     if (!dev) return -1;
+    if (dev->name[0] == '\0') return -1;
+    if (device_get(dev->name)) return -2;
 
     dev->next = NULL;
 
@@ -16,6 +19,7 @@ int device_register(device_t* dev) {
     else
         device_list_tail->next = dev;
     device_list_tail = dev;
+    devfs_on_device_registered(dev);
 
     return 0;
 }

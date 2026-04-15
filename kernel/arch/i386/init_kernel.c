@@ -78,9 +78,5 @@ void init_kernel(uint32_t magic, MultiBootInfo* boot_info) {
     init_ahci();
     vfs_init();
 
-    // 5. init Kernel Task Scheduler
-    // printf("\nInitializing Multitasking...\n");
-    task_init_scheduler();
-
     // printf("Memory allocation initialized.\n");
 }
