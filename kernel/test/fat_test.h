@@ -8,37 +8,7 @@
 #include "fat.h"
 #include "vfs.h"
 #include "string.h"
-
-typedef struct {
-    uint32_t passed;
-    uint32_t failed;
-    const char* current_category;
-} test_stats_t;
-
-static inline void test_print_border() {
-    printf("+------------------------------------------------------------+\n");
-}
-
-static inline void test_print_header(const char* title) {
-    test_print_border();
-    printf("| %-58s |\n", title);
-    test_print_border();
-}
-
-static inline void test_print_category(test_stats_t* stats, const char* category) {
-    stats->current_category = category;
-    printf("| [ ] CATEGORY: %-44s |\n", category);
-}
-
-static inline void test_record(test_stats_t* stats, bool ok, const char* name) {
-    if (ok) {
-        stats->passed++;
-        printf("|  [+] PASS: %-47s |\n", name);
-    } else {
-        stats->failed++;
-        printf("|  [!] FAIL: %-47s |\n", name);
-    }
-}
+#include "test_utils.h"
 
 static inline bool fat_test_find_entry(const char* dir_path, const char* name) {
     int dirfd = vfs_open(dir_path, 0);
@@ -59,8 +29,6 @@ static inline bool fat_test_find_entry(const char* dir_path, const char* name) {
 }
 
 static inline void run_fat_tests(device_t* primary_storage, test_stats_t* stats) {
-    test_print_header("TILEKAR OS FAT FILESYSTEM TEST SUITE");
-
     // --- Core Initialization ---
     test_print_category(stats, "CORE INITIALIZATION");
     if (!primary_storage) {
@@ -139,13 +107,11 @@ static inline void run_fat_tests(device_t* primary_storage, test_stats_t* stats)
      * // vfs_rmdir("/AUTOTEST");
      */
 
-    test_print_border();
-    printf("| [!] PERSISTENT ARTIFACTS LEFT FOR MANUAL CHECK            |\n");
-    printf("|  -> /AUTOTEST/PERSIST/CHECK.TXT                           |\n");
-    printf("|  -> /AUTOTEST/TEMP/ (Empty Directory)                     |\n");
-    test_print_border();
-    printf("| SUMMARY: %2u Passed, %2u Failed                            |\n", stats->passed, stats->failed);
-    test_print_border();
+    test_print_divider(62);
+    printf("| PERSISTENT ARTIFACTS LEFT FOR MANUAL CHECK                 |\n");
+    printf("|  -> /AUTOTEST/PERSIST/CHECK.TXT                            |\n");
+    printf("|  -> /AUTOTEST/TEMP/ (Empty Directory)                      |\n");
+    test_print_divider(62);
 }
 
 #endif
