@@ -10,6 +10,7 @@
 typedef struct block_header {
     size_t size;            // Payload size (excluding header)
     bool is_free;
+    bool is_fake;           // True if this is a fake header for an aligned block
     struct block_header *next;
     struct block_header *prev;
 } block_header_t;
@@ -32,6 +33,7 @@ void kmalloc_init(size_t initial_size) {
             head = (block_header_t*)initial_block;
             head->size = initial_size - HEADER_SIZE;
             head->is_free = true;
+            head->is_fake = false;
             head->next = NULL;
             head->prev = NULL;
         }
@@ -83,6 +85,7 @@ void* kmalloc(size_t size) {
                 block_header_t *new_block = (block_header_t*)((uint8_t*)current + HEADER_SIZE + size);
                 new_block->size = current->size - size - HEADER_SIZE;
                 new_block->is_free = true;
+                new_block->is_fake = false;
                 new_block->next = current->next;
                 new_block->prev = current;
 
@@ -126,6 +129,7 @@ void* kmalloc(size_t size) {
 
     new_block->size = size;
     new_block->is_free = false;
+    new_block->is_fake = false;
     new_block->next = NULL;
     new_block->prev = last;
 
@@ -148,15 +152,14 @@ void* kmalloc_aligned(size_t size, size_t align) {
     void* ptr = kmalloc(total_size);
     if (!ptr) return NULL;
 
-    uintptr_t addr = (uintptr_t)ptr;
+    uintptr_t addr = (uintptr_t)ptr + HEADER_SIZE;
     uintptr_t aligned_addr = ALIGN(addr, align);
 
-    if (aligned_addr == addr) return ptr;
+    // Create a fake header just before the aligned address
+    block_header_t *fake = (block_header_t*)aligned_addr - 1;
+    fake->is_fake = true;
+    fake->prev = (block_header_t*)ptr - 1; // Store real header pointer here
 
-    // This is a simplified aligned allocator. It doesn't allow kfree on the aligned pointer directly
-    // unless we store the original pointer somewhere.
-    // For now, let's just return the aligned pointer and assume it's for long-lived kernel structures.
-    // TODO: Implement a proper aligned allocator that supports kfree.
     return (void*)aligned_addr;
 }
 
@@ -166,6 +169,9 @@ void kfree(void* ptr) {
     uint32_t flags = interrupt_save();
 
     block_header_t *block = (block_header_t*)ptr - 1;
+    if (block->is_fake) {
+        block = block->prev; // get real header
+    }
     block->is_free = true;
 
     // Coalesce with next block
@@ -210,6 +216,12 @@ void* krealloc(void* ptr, size_t size) {
     }
 
     block_header_t *block = (block_header_t*)ptr - 1;
+    size_t copy_size = block->size;
+    if (block->is_fake) {
+        block = block->prev;
+        copy_size = block->size - ((uintptr_t)ptr - (uintptr_t)(block + 1));
+    }
+
     if (block->size >= size) {
         // We could split here if the new size is much smaller, but for now just return same ptr
         return ptr;
@@ -217,7 +229,7 @@ void* krealloc(void* ptr, size_t size) {
 
     void *new_ptr = kmalloc(size);
     if (new_ptr) {
-        memcpy(new_ptr, ptr, block->size);
+        memcpy(new_ptr, ptr, copy_size < size ? copy_size : size);
         kfree(ptr);
     }
     return new_ptr;
