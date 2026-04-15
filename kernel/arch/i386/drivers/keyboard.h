@@ -149,8 +149,10 @@ void keyboard_set_callback(keyboard_callback_t callback);
 const char* keycode_to_string(enum KeyCode code);
 char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock);
 
+struct file;
+
 // New Buffer API
 char keyboard_getchar();
-int keyboard_read(void* buffer, uint32_t size);
+int keyboard_read(struct file* file, void* buffer, uint32_t size);
 
 #endif

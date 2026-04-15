@@ -29,21 +29,27 @@ static void kbd_push(char c) {
     }
 }
 
-char keyboard_getchar() {
-    while (kbd_head == kbd_tail) {
-        // Halt or yield until interrupt? For now just busy wait
-        __asm__ volatile("hlt");
-    }
-    char c = kbd_buffer[kbd_tail];
+static bool kbd_try_pop(char* out) {
+    if (!out || kbd_head == kbd_tail) return false;
+    *out = kbd_buffer[kbd_tail];
     kbd_tail = (kbd_tail + 1) % KBD_BUF_SIZE;
-    return c;
+    return true;
 }
 
-int keyboard_read(void* buffer, uint32_t size) {
+char keyboard_getchar() {
+    char c;
+    return kbd_try_pop(&c) ? c : 0;
+}
+
+int keyboard_read(struct file* file, void* buffer, uint32_t size) {
+    (void)file;
+    if (!buffer || size == 0) return 0;
+
     char* ptr = (char*)buffer;
     uint32_t count = 0;
     while (count < size) {
-        char c = keyboard_getchar();
+        char c;
+        if (!kbd_try_pop(&c)) break;
         if (c == 0) continue;
         ptr[count++] = c;
         if (c == '\n') break;
@@ -224,7 +230,7 @@ void keyboard_handler(InteruptReg *r) {
 
 static int keyboard_device_read(device_t* dev, void* buffer, uint32_t size) {
     (void)dev;
-    return keyboard_read(buffer, size);
+    return keyboard_read(NULL, buffer, size);
 }
 
 void keyboard_register(void) {
