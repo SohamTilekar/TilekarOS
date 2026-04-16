@@ -71,7 +71,7 @@ flowchart TD
     subgraph IDT_Scope ["idt.c: init_idt"]
         direction LR
         I_PIC["Remap PIC (0x20 / 0x28)"]:::c_func --> I_Fill[Fill Gates]:::c_func
-        I_Fill --> I_Ld[Load IDTR]:::c_func
+        I_Fill --> I_Ld[Load IDTR_t]:::c_func
     end
     InitHub -- 3 --> IDT_Scope
 

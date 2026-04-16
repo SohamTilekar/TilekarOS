@@ -50,7 +50,7 @@ typedef struct {
     uint32_t phys_addr;
     uint16_t size;
     uint16_t end_of_table;
-} __attribute__((packed)) prd_t;
+} __attribute__((packed)) Prd_t;
 
 void init_ata();
 

@@ -13,3 +13,5 @@ site/**
 **.log
 **.img
 **/__pycache__/**
+**.meta
+**/BIN/**

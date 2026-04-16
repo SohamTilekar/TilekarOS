@@ -12,8 +12,8 @@ static void ahci_stop_cmd(hba_port_t* port);
 static void ahci_start_cmd(hba_port_t* port);
 static int ahci_identify(ahci_device_t* ahci_dev, uint32_t* out_sector_count);
 
-static int ahci_read_sector(device_t* dev, uint32_t lba, uint8_t* buffer);
-static int ahci_write_sector(device_t* dev, uint32_t lba, const uint8_t* buffer);
+static int ahci_read_sector(Device_t* dev, uint32_t lba, uint8_t* buffer);
+static int ahci_write_sector(Device_t* dev, uint32_t lba, const uint8_t* buffer);
 
 static void ahci_pci_callback(pci_device_t* pci_dev) {
     if (pci_dev->class_code != AHCI_PCI_CLASS   ||
@@ -108,7 +108,7 @@ static void ahci_pci_callback(pci_device_t* pci_dev) {
         printf("AHCI port %d: %u sectors (%u MB)\n",
                i, sector_count, sector_count / 2048);
 
-        device_t* dev = kcalloc(1, sizeof(device_t));
+        Device_t* dev = kcalloc(1, sizeof(Device_t));
         strcpy(dev->name, ahci_dev->name);
         dev->type          = DEVICE_TYPE_BLOCK;
         dev->sector_size   = 512;
@@ -282,7 +282,7 @@ static int ahci_identify(ahci_device_t* ahci_dev, uint32_t* out_sector_count) {
 
 /* ------------------------------------------------------------------ */
 
-static int ahci_read_sector(device_t* dev, uint32_t lba, uint8_t* buffer) {
+static int ahci_read_sector(Device_t* dev, uint32_t lba, uint8_t* buffer) {
     ahci_device_t* ahci_dev = (ahci_device_t*)dev->private_data;
     hba_port_t*    port     = ahci_dev->port;
 
@@ -340,7 +340,7 @@ static int ahci_read_sector(device_t* dev, uint32_t lba, uint8_t* buffer) {
     return err;
 }
 
-static int ahci_write_sector(device_t* dev, uint32_t lba, const uint8_t* buffer) {
+static int ahci_write_sector(Device_t* dev, uint32_t lba, const uint8_t* buffer) {
     ahci_device_t* ahci_dev = (ahci_device_t*)dev->private_data;
     hba_port_t*    port     = ahci_dev->port;
 

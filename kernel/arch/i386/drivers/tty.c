@@ -40,7 +40,7 @@ void terminal_update_cursor(void)
 #include "devices.h"
 #include "kmalloc.h"
 
-static int tty_device_write(device_t* dev, const void* buffer, uint32_t size) {
+static int tty_device_write(Device_t* dev, const void* buffer, uint32_t size) {
     (void)dev;
     const char* data = (const char*)buffer;
     for (uint32_t i = 0; i < size; i++) {
@@ -50,8 +50,8 @@ static int tty_device_write(device_t* dev, const void* buffer, uint32_t size) {
 }
 
 void tty_register(void) {
-    device_t* dev = kmalloc(sizeof(device_t));
-    memset(dev, 0, sizeof(device_t));
+    Device_t* dev = kmalloc(sizeof(Device_t));
+    memset(dev, 0, sizeof(Device_t));
     strcpy(dev->name, "tty0");
     dev->type = DEVICE_TYPE_CHAR;
     dev->write = tty_device_write;

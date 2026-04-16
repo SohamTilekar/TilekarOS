@@ -184,7 +184,7 @@ GDTEntry gdt[] = {
     [GDT_TSS_INDEX] = {/* Set by `gdt_install_tss` in `init_gdt` */},
 };
 
-GDTDescriptor gdt_discriptor = {sizeof(gdt) - 1, gdt};
+GDTDescriptor gdt_descriptor = {sizeof(gdt) - 1, gdt};
 
 // Assembly functions
 // These functions are expected to be defined in an assembly file.
@@ -226,7 +226,7 @@ static void gdt_install_tss(void) {
  * @brief Setups the GDT and TSS.
  */
 void init_gdt() {
-  gdt_load_register(&gdt_discriptor);
+  gdt_load_register(&gdt_descriptor);
   gdt_install_tss();
   tss_load_register();
 }

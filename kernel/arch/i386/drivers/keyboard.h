@@ -153,6 +153,7 @@ struct file;
 
 // New Buffer API
 char keyboard_getchar();
+void keyboard_clear_buffer();
 int keyboard_read(struct file* file, void* buffer, uint32_t size);
 
 #endif

@@ -2,10 +2,10 @@
 #include <string.h>
 #include "devfs.h"
 
-static device_t* device_list_head = NULL;
-static device_t* device_list_tail = NULL;
+static Device_t* device_list_head = NULL;
+static Device_t* device_list_tail = NULL;
 
-int device_register(device_t* dev) {
+int device_register(Device_t* dev) {
     if (!dev) return -1;
     if (dev->name[0] == '\0') return -1;
     if (device_get(dev->name)) return -2;
@@ -24,8 +24,8 @@ int device_register(device_t* dev) {
     return 0;
 }
 
-device_t* device_get(const char* name) {
-    device_t* curr = device_list_head;
+Device_t* device_get(const char* name) {
+    Device_t* curr = device_list_head;
     while (curr) {
         if (strcmp(curr->name, name) == 0) return curr;
         curr = curr->next;
@@ -33,18 +33,18 @@ device_t* device_get(const char* name) {
     return NULL;
 }
 
-device_t* device_get_next(device_t* current) {
+Device_t* device_get_next(Device_t* current) {
     if (!current) return device_list_head;
     return current->next;
 }
 
-int device_read(device_t* dev, uint32_t lba, uint8_t* buffer) {
+int device_read(Device_t* dev, uint32_t lba, uint8_t* buffer) {
     if (!dev || dev->type != DEVICE_TYPE_BLOCK || !dev->read_sector) return -1;
     if (lba >= dev->total_sectors) return -2;
     return dev->read_sector(dev, lba, buffer);
 }
 
-int device_write(device_t* dev, uint32_t lba, const uint8_t* buffer) {
+int device_write(Device_t* dev, uint32_t lba, const uint8_t* buffer) {
     if (!dev || dev->type != DEVICE_TYPE_BLOCK || !dev->write_sector) return -1;
     if (lba >= dev->total_sectors) return -2;
     return dev->write_sector(dev, lba, buffer);

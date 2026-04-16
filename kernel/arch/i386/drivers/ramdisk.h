@@ -10,6 +10,6 @@ typedef struct {
     uint32_t size; // in bytes
 } ramdisk_private_t;
 
-device_t* ramdisk_create(const char* name, uint8_t* buffer, uint32_t size);
+Device_t* ramdisk_create(const char* name, uint8_t* buffer, uint32_t size);
 
 #endif // RAMDISK_H

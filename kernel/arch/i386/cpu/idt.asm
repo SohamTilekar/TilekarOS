@@ -1,7 +1,7 @@
 ; -----------------------------------------------------------------------------
 ; IDT.ASM
 ; This file contains the low-level assembly wrappers for interrupt handling.
-; It sets up the stack to match the 'InteruptReg' struct in C, switches
+; It sets up the stack to match the 'InterruptReg_t' struct in C, switches
 ; to kernel segments, and calls the C functions.
 ; -----------------------------------------------------------------------------
 
@@ -131,7 +131,7 @@ IRQ  15, 47 ; Secondary HDD
 ; Description: The shared code that saves the full CPU state, calls the C function,
 ; and restores the state.
 ;
-; Stack Layout when calling C handler (InteruptReg struct):
+; Stack Layout when calling C handler (InterruptReg_t struct):
 ; [ESP]    -> GS
 ; [ESP+4]  -> FS
 ; [ESP+8]  -> ES
@@ -164,7 +164,7 @@ IRQ  15, 47 ; Secondary HDD
     mov gs, ax
 
     ; 4. Call C Handler
-    push esp                ; Pass pointer to stack (InteruptReg*) as argument
+    push esp                ; Pass pointer to stack (InterruptReg_t*) as argument
     call %2                 ; Call the C function (isr_handler or irq_handler)
     add esp, 4              ; Clean up the argument (pointer) pushed above
 

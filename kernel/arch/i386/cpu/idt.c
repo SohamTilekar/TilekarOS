@@ -19,11 +19,11 @@ typedef struct
     uint8_t reserved;               // Must be set to zero (reserved by Intel)
     uint8_t attributes;             // Type and attributes (Present, DPL, Gate Type)
     uint16_t isr_high;              // The higher 16 bits of the ISR's address
-} __attribute__((packed)) IDTEntry; // 'packed' prevents compiler padding, ensuring exact hardware alignment
+} __attribute__((packed)) IDTEntry_t; // 'packed' prevents compiler padding, ensuring exact hardware alignment
 
 /*
  * IDT Flags
- * Constants to set the 'attributes' byte in the IDTEntry.
+ * Constants to set the 'attributes' byte in the IDTEntry_t.
  */
 enum IDT_FLAGS
 {
@@ -38,21 +38,21 @@ enum IDT_FLAGS
 };
 
 /*
- * IDT Register (IDTR)
+ * IDT Register (IDTR_t)
  * The structure pointer required by the 'lidt' assembly instruction.
  */
 typedef struct
 {
     uint16_t limit; // Size of the IDT in bytes - 1
     uint32_t base;  // Linear address where the IDT array starts
-} __attribute__((packed)) IDTR;
+} __attribute__((packed)) IDTR_t;
 
 // The actual Interrupt Descriptor Table array (256 entries).
 // Aligned to 0x10 for potential performance optimization on some CPUs.
-__attribute__((aligned(0x10))) static IDTEntry idt[256];
+__attribute__((aligned(0x10))) static IDTEntry_t idt[256];
 
-// The IDTR structure telling the CPU the size of our table.
-static IDTR idtr = {
+// The IDTR_t structure telling the CPU the size of our table.
+static IDTR_t idtr = {
     .limit = sizeof(idt) - 1,
 };
 
@@ -280,7 +280,7 @@ const char *exception_messages[] = {
  * This is the main handler for CPU Exceptions (0-31).
  * It is called by the assembly stub when a fault occurs.
  */
-void isr_handler(InteruptReg *regs)
+void isr_handler(InterruptReg_t *regs)
 {
     // If it is a known CPU exception
     if (regs->intr_num < 32)
@@ -297,7 +297,7 @@ void isr_handler(InteruptReg *regs)
 
         // Check if exception occurred in user land (Ring 3)
         // or if it's a kernel task other than PID 0
-        if ((regs->csm & 0x3) == 3) {
+        if ((regs->cs & 0x3) == 3) {
             printf("TERMINATING USER PROCESS (PID %d) due to exception.\n", pid);
             task_exit();
         } else if (pid != 0) {
@@ -319,7 +319,7 @@ void *irq_routines[16] = {0};
  * Allows other parts of the kernel (like the keyboard driver) to register a function
  * to be called when a specific IRQ fires.
  */
-void irq_install_handler(int irq, void (*handler)(InteruptReg *r))
+void irq_install_handler(int irq, void (*handler)(InterruptReg_t *r))
 {
     irq_routines[irq] = handler;
 }
@@ -345,10 +345,10 @@ void pic_send_eoi(uint32_t intr_num) {
  * This is the main handler for Hardware Interrupts (32-47).
  * It finds the registered handler function and manages the PIC.
  */
-void irq_handler(InteruptReg *regs)
+void irq_handler(InterruptReg_t *regs)
 {
     // Function pointer for the specific handler
-    void (*handler)(InteruptReg *regs) = irq_routines[regs->intr_num - 32];
+    void (*handler)(InterruptReg_t *regs) = irq_routines[regs->intr_num - 32];
 
     // If a custom handler exists, execute it.
     // The handler is responsible for sending EOI (either manually or via context switch).

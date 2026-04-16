@@ -12,23 +12,23 @@ typedef struct {
     uint16_t ctrl_port;
     uint16_t bmide_port;
     uint8_t slave;
-    prd_t* prdt;         // PRD Table (virtual)
+    Prd_t* prdt;         // PRD Table (virtual)
     uint32_t prdt_phys;  // PRD Table (physical)
     void* dma_buffer;    // DMA Buffer (virtual)
     uint32_t dma_phys;   // DMA Buffer (physical)
     int channel;         // 0 for Primary, 1 for Secondary
-} ata_private_t;
+} AtaPrivate_t;
 
 static volatile uint8_t ata_irq_fired[2] = {0, 0};
 
-static void ata_irq_handler_primary(InteruptReg* r) {
+static void ata_irq_handler_primary(InterruptReg_t* r) {
     (void)r;
     ata_irq_fired[0] = 1;
     // Reading status clears interrupt bit on some controllers
     // but we should read it from the port anyway
 }
 
-static void ata_irq_handler_secondary(InteruptReg* r) {
+static void ata_irq_handler_secondary(InterruptReg_t* r) {
     (void)r;
     ata_irq_fired[1] = 1;
 }
@@ -49,8 +49,8 @@ static void ata_wait_drq(uint16_t base) {
     while (!(in_port_b(base + ATA_REG_STATUS) & ATA_SR_DRQ));
 }
 
-static int ata_dma_transfer(device_t* dev, uint32_t lba, void* buffer, int is_write) {
-    ata_private_t* priv = (ata_private_t*)dev->private_data;
+static int ata_dma_transfer(Device_t* dev, uint32_t lba, void* buffer, int is_write) {
+    AtaPrivate_t* priv = (AtaPrivate_t*)dev->private_data;
     uint16_t base = priv->base_port;
     uint16_t bmide = priv->bmide_port;
 
@@ -115,8 +115,8 @@ static int ata_dma_transfer(device_t* dev, uint32_t lba, void* buffer, int is_wr
     return 0;
 }
 
-int ata_read_sector(device_t* dev, uint32_t lba, uint8_t* buffer) {
-    ata_private_t* priv = (ata_private_t*)dev->private_data;
+int ata_read_sector(Device_t* dev, uint32_t lba, uint8_t* buffer) {
+    AtaPrivate_t* priv = (AtaPrivate_t*)dev->private_data;
     if (priv->bmide_port) {
         return ata_dma_transfer(dev, lba, buffer, 0);
     }
@@ -141,8 +141,8 @@ int ata_read_sector(device_t* dev, uint32_t lba, uint8_t* buffer) {
     return 0;
 }
 
-int ata_write_sector(device_t* dev, uint32_t lba, const uint8_t* buffer) {
-    ata_private_t* priv = (ata_private_t*)dev->private_data;
+int ata_write_sector(Device_t* dev, uint32_t lba, const uint8_t* buffer) {
+    AtaPrivate_t* priv = (AtaPrivate_t*)dev->private_data;
     if (priv->bmide_port) {
         return ata_dma_transfer(dev, lba, (void*)buffer, 1);
     }
@@ -196,15 +196,15 @@ static void ata_identify(uint16_t base, uint16_t bmide, uint8_t slave, int chann
 
     uint32_t sectors = *((uint32_t*)(info + 60));
 
-    device_t* dev = kmalloc(sizeof(device_t));
-    memset(dev, 0, sizeof(device_t));
+    Device_t* dev = kmalloc(sizeof(Device_t));
+    memset(dev, 0, sizeof(Device_t));
     sprintf(dev->name, "ata%d%c", dev_idx, (slave ? 's' : 'm'));
     dev->type = DEVICE_TYPE_BLOCK;
     dev->sector_size = 512;
     dev->total_sectors = sectors;
 
-    ata_private_t* priv = kmalloc(sizeof(ata_private_t));
-    memset(priv, 0, sizeof(ata_private_t));
+    AtaPrivate_t* priv = kmalloc(sizeof(AtaPrivate_t));
+    memset(priv, 0, sizeof(AtaPrivate_t));
     priv->base_port = base;
     priv->bmide_port = bmide;
     priv->slave = slave;

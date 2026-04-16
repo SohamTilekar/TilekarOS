@@ -41,6 +41,11 @@ char keyboard_getchar() {
     return kbd_try_pop(&c) ? c : 0;
 }
 
+void keyboard_clear_buffer() {
+    kbd_head = 0;
+    kbd_tail = 0;
+}
+
 int keyboard_read(struct file* file, void* buffer, uint32_t size) {
     (void)file;
     if (!buffer || size == 0) return 0;
@@ -196,7 +201,7 @@ char keycode_to_char(enum KeyCode code, bool shift, bool caps, bool numlock) {
     }
 }
 
-void keyboard_handler(InteruptReg *r) {
+void keyboard_handler(InterruptReg_t *r) {
     (void)r;
     uint8_t scancode = in_port_b(0x60);
     if (scancode == 0xE0) { is_extended = true; return; }
@@ -228,15 +233,15 @@ void keyboard_handler(InteruptReg *r) {
 #include "devices.h"
 #include "kmalloc.h"
 
-static int keyboard_device_read(device_t* dev, void* buffer, uint32_t size) {
+static int keyboard_device_read(Device_t* dev, void* buffer, uint32_t size) {
     (void)dev;
     return keyboard_read(NULL, buffer, size);
 }
 
 void keyboard_register(void) {
     // Register as system device
-    device_t* dev = kmalloc(sizeof(device_t));
-    memset(dev, 0, sizeof(device_t));
+    Device_t* dev = kmalloc(sizeof(Device_t));
+    memset(dev, 0, sizeof(Device_t));
     strcpy(dev->name, "kbd0");
     dev->type = DEVICE_TYPE_CHAR;
     dev->read = keyboard_device_read;

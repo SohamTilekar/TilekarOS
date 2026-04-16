@@ -26,89 +26,101 @@ void set_ticks(uint32_t new_ticks) {
 typedef struct {
     uint32_t tick_mod;
     uint32_t current_ticks;
-    void (*func)(InteruptReg *regs); // send EOI if going to change context
+    void (*func)(InterruptReg_t *regs); // send EOI if going to change context
     uint8_t flags;
-} Triger;
+} Trigger;
 
 typedef struct {
     uint32_t len;
-    Triger trigers[];
-} Trigers;
-Trigers* trigers = NULL;
+    Trigger triggers[];
+} Triggers;
+Triggers* triggers = NULL;
 
-int32_t insert_triger(uint32_t tick_mod, void (*func)(InteruptReg *regs), uint8_t flags) {
+int32_t insert_trigger(uint32_t tick_mod, void (*func)(InterruptReg_t *regs), uint8_t flags) {
     if (tick_mod == 0) return -1;
 
     uint32_t int_flags = interrupt_save();
 
-    if (trigers == NULL) {
+    if (triggers == NULL) {
         init_timer();
     }
 
     int32_t index = -1;
     // Search for available slot
-    for (uint32_t i = 0; i < trigers->len; i++) {
-        if (!(trigers->trigers[i].flags & TIMER_TRIGGER_ACTIVE)) {
+    for (uint32_t i = 0; i < triggers->len; i++) {
+        if (!(triggers->triggers[i].flags & TIMER_TRIGGER_ACTIVE)) {
             index = i;
             break;
         }
     }
 
     if (index == -1) {
-        uint32_t new_len = trigers->len + 1;
-        size_t new_size = sizeof(Trigers) + new_len * sizeof(Triger);
+        uint32_t new_len = triggers->len + 1;
+        size_t new_size = sizeof(Triggers) + new_len * sizeof(Trigger);
 
-        Trigers* new_trigers = krealloc(trigers, new_size);
-        if (!new_trigers) {
+        Triggers* new_triggers = krealloc(triggers, new_size);
+        if (!new_triggers) {
             interrupt_restore(int_flags);
             return -1;
         }
-        trigers = new_trigers;
-        index = trigers->len;
-        trigers->len = new_len;
+        triggers = new_triggers;
+        index = triggers->len;
+        triggers->len = new_len;
     }
 
-    trigers->trigers[index].tick_mod = tick_mod;
-    trigers->trigers[index].current_ticks = 0;
-    trigers->trigers[index].func = func;
-    trigers->trigers[index].flags = flags | TIMER_TRIGGER_ACTIVE;
+    triggers->triggers[index].tick_mod = tick_mod;
+    triggers->triggers[index].current_ticks = 0;
+    triggers->triggers[index].func = func;
+    triggers->triggers[index].flags = flags | TIMER_TRIGGER_ACTIVE;
 
     interrupt_restore(int_flags);
     return index;
 };
 
-void remove_triger(int32_t index) {
-    if (trigers == NULL || index < 0 || (uint32_t)index >= trigers->len) return;
+void remove_trigger(int32_t index) {
+    if (triggers == NULL || index < 0 || (uint32_t)index >= triggers->len) return;
 
     uint32_t int_flags = interrupt_save();
-    trigers->trigers[index].tick_mod = 0;
-    trigers->trigers[index].current_ticks = 0;
-    trigers->trigers[index].func = NULL;
-    trigers->trigers[index].flags = 0;
+    triggers->triggers[index].tick_mod = 0;
+    triggers->triggers[index].current_ticks = 0;
+    triggers->triggers[index].func = NULL;
+    triggers->triggers[index].flags = 0;
     interrupt_restore(int_flags);
 }
 
-void set_triger_mod(int32_t index, uint32_t tick_mod) {
-    if (trigers == NULL || index < 0 || (uint32_t)index >= trigers->len) return;
+void set_trigger_mod(int32_t index, uint32_t tick_mod) {
+    if (triggers == NULL || index < 0 || (uint32_t)index >= triggers->len) return;
     uint32_t int_flags = interrupt_save();
-    trigers->trigers[index].tick_mod = tick_mod;
+    triggers->triggers[index].tick_mod = tick_mod;
     interrupt_restore(int_flags);
 }
 
-void set_triger_ticks(int32_t index, uint32_t current_ticks) {
-    if (trigers == NULL || index < 0 || (uint32_t)index >= trigers->len) return;
+void set_trigger_ticks(int32_t index, uint32_t current_ticks) {
+    if (triggers == NULL || index < 0 || (uint32_t)index >= triggers->len) return;
     uint32_t int_flags = interrupt_save();
-    trigers->trigers[index].current_ticks = current_ticks;
+    triggers->triggers[index].current_ticks = current_ticks;
     interrupt_restore(int_flags);
 }
 
-void onIrq0(InteruptReg *regs){
+void set_trigger_flags(int32_t index, uint8_t flags) {
+    if (triggers == NULL || index < 0 || (uint32_t)index >= triggers->len) return;
+    uint32_t int_flags = interrupt_save();
+    triggers->triggers[index].flags = flags;
+    interrupt_restore(int_flags);
+}
+
+uint8_t get_trigger_flags(int32_t index) {
+    if (triggers == NULL || index < 0 || (uint32_t)index >= triggers->len) return 0;
+    return triggers->triggers[index].flags;
+}
+
+void onIrq0(InterruptReg_t *regs){
     ticks += 1;
 
-    if (trigers == NULL) return;
+    if (triggers == NULL) return;
 
-    for (uint32_t i = 0; i < trigers->len; i++) {
-        Triger* t = &trigers->trigers[i];
+    for (uint32_t i = 0; i < triggers->len; i++) {
+        Trigger* t = &triggers->triggers[i];
         if (!(t->flags & TIMER_TRIGGER_ACTIVE)) continue;
 
         if (t->flags & TIMER_TRIGGER_USE_GLOBAL) {
@@ -128,12 +140,12 @@ void onIrq0(InteruptReg *regs){
 
 void init_timer(){
     uint32_t flags = interrupt_save();
-    if (trigers != NULL) {
+    if (triggers != NULL) {
         interrupt_restore(flags);
         return;
     }
-    trigers = kmalloc(sizeof(Trigers));
-    trigers->len = 0;
+    triggers = kmalloc(sizeof(Triggers));
+    triggers->len = 0;
     ticks = 0;
 
     irq_install_handler(0,&onIrq0);
