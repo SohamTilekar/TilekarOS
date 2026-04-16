@@ -12,9 +12,9 @@ typedef struct
 {
     uint32_t gs, fs, es, ds;                         // Pushed by segment registers
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pushad
-    uint32_t intr_num, err_cod;                      // Interrupt number and error code (if applicable)
-    uint32_t eip, csm, eflags, useresp, ss;          // Pushed by the processor automatically
-} InteruptReg;
+    uint32_t intr_num, err_code;                     // Interrupt number and error code (if applicable)
+    uint32_t eip, cs, eflags, useresp, ss;           // Pushed by the processor automatically
+} InterruptReg_t;
 
 /**
  * out_port_b - Writes a byte to an I/O port.
