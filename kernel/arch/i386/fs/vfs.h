@@ -24,6 +24,7 @@ struct file;
 typedef struct vfs_ops {
     int (*read)(struct file* file, void* buffer, uint32_t size);
     int (*write)(struct file* file, const void* buffer, uint32_t size);
+    int (*create)(struct vnode* parent, const char* name);
     struct vnode* (*lookup)(struct vnode* parent, const char* name);
     int (*mkdir)(struct vnode* parent, const char* name);
     int (*rmdir)(struct vnode* parent, const char* name);
@@ -48,6 +49,7 @@ typedef struct file {
 } file_t;
 
 #define MAX_FILES_PER_PROCESS 16
+#define VFS_O_CREAT 0x01
 
 // VFS API
 void vfs_init();

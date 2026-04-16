@@ -632,6 +632,140 @@ static int fat_vfs_read(file_t* file, void* buffer, uint32_t size) {
     return total_read;
 }
 
+static int fat_find_entry_slot(fat_filesystem_t* fs, uint32_t dir_cluster, const fat_directory_entry_t* target, uint32_t* out_sector, uint32_t* out_idx) {
+    bool is_root = (dir_cluster == 0);
+    uint32_t current_cluster = dir_cluster;
+    do {
+        uint32_t start_sector, num_sectors;
+        if (is_root) {
+            start_sector = fs->root_dir_start;
+            num_sectors = (fs->bpb.root_entry_count * sizeof(fat_directory_entry_t) + 511) / 512;
+        } else {
+            start_sector = fs->data_start + (current_cluster - 2) * fs->bpb.sectors_per_cluster;
+            num_sectors = fs->bpb.sectors_per_cluster;
+        }
+        for (uint32_t s = 0; s < num_sectors; s++) {
+            buffer_t* buf = buffer_get(fs->dev, start_sector + s);
+            if (!buf) return -1;
+            fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
+            for (uint32_t i = 0; i < 512 / sizeof(fat_directory_entry_t); i++) {
+                if (entries[i].filename[0] == 0) {
+                    buffer_release(buf);
+                    return -1;
+                }
+                if (entries[i].filename[0] == 0xE5 || entries[i].attributes == FAT_ATTR_LFN) continue;
+                if (memcmp(entries[i].filename, target->filename, 8) == 0 &&
+                    memcmp(entries[i].extension, target->extension, 3) == 0) {
+                    if (out_sector) *out_sector = start_sector + s;
+                    if (out_idx) *out_idx = i;
+                    buffer_release(buf);
+                    return 0;
+                }
+            }
+            buffer_release(buf);
+        }
+        if (is_root) break;
+        current_cluster = fat_get_fat_entry(fs, current_cluster);
+    } while (!fat_is_eoc(fs, current_cluster));
+    return -1;
+}
+
+static int fat_vfs_create(vnode_t* parent, const char* name) {
+    fat_node_data_t* parent_data = (fat_node_data_t*)parent->fs_data;
+    uint32_t parent_cluster = parent_data->entry.first_cluster_low;
+    if (parent_data->parent_cluster == 0xFFFFFFFF) parent_cluster = 0;
+
+    fat_directory_entry_t existing;
+    if (find_in_directory(parent_data->fs, parent_cluster, name, &existing, NULL, NULL)) return -17;
+
+    int res = create_entry(parent_data->fs, parent_cluster, name, FAT_ATTR_ARCHIVE, 0, 0);
+    if (res == 0) buffer_flush_all(parent_data->fs->dev);
+    return res;
+}
+
+static int fat_vfs_write(file_t* file, const void* buffer, uint32_t size) {
+    fat_node_data_t* data = (fat_node_data_t*)file->node->fs_data;
+    if (file->node->type != VFS_TYPE_FILE) return -2;
+    if (size == 0) return 0;
+
+    uint32_t cluster_size = data->fs->bpb.bytes_per_sector * data->fs->bpb.sectors_per_cluster;
+    uint32_t current_cluster = data->entry.first_cluster_low;
+    if (current_cluster < 2) {
+        current_cluster = fat_find_free_cluster(data->fs);
+        if (!current_cluster) return -2;
+        fat_set_fat_entry(data->fs, current_cluster, fat_eoc_value(data->fs));
+        data->entry.first_cluster_low = (uint16_t)current_cluster;
+    }
+
+    uint32_t skip_clusters = file->position / cluster_size;
+    for (uint32_t i = 0; i < skip_clusters; i++) {
+        uint32_t next = fat_get_fat_entry(data->fs, current_cluster);
+        if (fat_is_eoc(data->fs, next)) {
+            uint32_t new_cluster = fat_find_free_cluster(data->fs);
+            if (!new_cluster) return -2;
+            fat_set_fat_entry(data->fs, current_cluster, (uint16_t)new_cluster);
+            fat_set_fat_entry(data->fs, new_cluster, fat_eoc_value(data->fs));
+            next = new_cluster;
+        }
+        current_cluster = next;
+    }
+
+    uint32_t offset_in_cluster = file->position % cluster_size;
+    uint32_t sector_in_cluster = offset_in_cluster / data->fs->bpb.bytes_per_sector;
+    uint32_t offset_in_sector = offset_in_cluster % data->fs->bpb.bytes_per_sector;
+    uint32_t total_written = 0;
+
+    while (total_written < size) {
+        uint32_t cluster_start_sector = data->fs->data_start + (current_cluster - 2) * data->fs->bpb.sectors_per_cluster;
+        for (uint32_t s = sector_in_cluster; s < data->fs->bpb.sectors_per_cluster && total_written < size; s++) {
+            buffer_t* buf = buffer_get(data->fs->dev, cluster_start_sector + s);
+            if (!buf) goto finalize_write;
+
+            uint32_t to_copy = data->fs->bpb.bytes_per_sector - offset_in_sector;
+            if (to_copy > (size - total_written)) to_copy = size - total_written;
+            memcpy(buf->data + offset_in_sector, (const uint8_t*)buffer + total_written, to_copy);
+            buf->dirty = 1;
+            buffer_release(buf);
+
+            total_written += to_copy;
+            offset_in_sector = 0;
+        }
+
+        if (total_written >= size) break;
+        sector_in_cluster = 0;
+        uint32_t next = fat_get_fat_entry(data->fs, current_cluster);
+        if (fat_is_eoc(data->fs, next)) {
+            uint32_t new_cluster = fat_find_free_cluster(data->fs);
+            if (!new_cluster) break;
+            fat_set_fat_entry(data->fs, current_cluster, (uint16_t)new_cluster);
+            fat_set_fat_entry(data->fs, new_cluster, fat_eoc_value(data->fs));
+            next = new_cluster;
+        }
+        current_cluster = next;
+    }
+
+finalize_write:
+    file->position += total_written;
+    if (file->position > data->entry.file_size) data->entry.file_size = file->position;
+    file->node->size = data->entry.file_size;
+
+    uint32_t parent_cluster = data->parent_cluster;
+    if (parent_cluster == 0xFFFFFFFF) parent_cluster = 0;
+    uint32_t sector_lba = 0, idx = 0;
+    if (fat_find_entry_slot(data->fs, parent_cluster, &data->entry, &sector_lba, &idx) == 0) {
+        buffer_t* dir_buf = buffer_get(data->fs->dev, sector_lba);
+        if (dir_buf) {
+            ((fat_directory_entry_t*)dir_buf->data)[idx].first_cluster_low = data->entry.first_cluster_low;
+            ((fat_directory_entry_t*)dir_buf->data)[idx].file_size = data->entry.file_size;
+            dir_buf->dirty = 1;
+            buffer_release(dir_buf);
+        }
+    }
+
+    buffer_flush_all(data->fs->dev);
+    return total_written;
+}
+
 static vnode_t* fat_vfs_lookup(vnode_t* parent, const char* name) {
     fat_node_data_t* parent_data = (fat_node_data_t*)parent->fs_data;
     uint32_t cluster = parent_data->entry.first_cluster_low;
@@ -700,6 +834,70 @@ static int fat_vfs_unlink(vnode_t* parent, const char* name) {
         fat_set_fat_entry(parent_data->fs, curr, 0);
         curr = next;
     }
+    buffer_flush_all(parent_data->fs->dev);
+    return 0;
+}
+
+static bool fat_is_dot_or_dotdot(const fat_directory_entry_t* entry) {
+    if (!(entry->attributes & FAT_ATTR_DIRECTORY)) return false;
+    if (entry->filename[0] != '.') return false;
+    if (entry->filename[1] == ' ') return true;
+    return entry->filename[1] == '.' && entry->filename[2] == ' ';
+}
+
+static int fat_dir_is_empty(fat_filesystem_t* fs, uint32_t dir_cluster) {
+    if (dir_cluster < 2) return 0;
+    uint32_t current_cluster = dir_cluster;
+    do {
+        uint32_t start_sector = fs->data_start + (current_cluster - 2) * fs->bpb.sectors_per_cluster;
+        for (uint32_t s = 0; s < fs->bpb.sectors_per_cluster; s++) {
+            buffer_t* buf = buffer_get(fs->dev, start_sector + s);
+            if (!buf) return -1;
+            fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
+            for (uint32_t i = 0; i < 512 / sizeof(fat_directory_entry_t); i++) {
+                if (entries[i].filename[0] == 0) {
+                    buffer_release(buf);
+                    return 1;
+                }
+                if (entries[i].filename[0] == 0xE5 || entries[i].attributes == FAT_ATTR_LFN) continue;
+                if (fat_is_dot_or_dotdot(&entries[i])) continue;
+                buffer_release(buf);
+                return 0;
+            }
+            buffer_release(buf);
+        }
+        current_cluster = fat_get_fat_entry(fs, current_cluster);
+    } while (!fat_is_eoc(fs, current_cluster));
+    return 1;
+}
+
+static int fat_vfs_rmdir(vnode_t* parent, const char* name) {
+    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) return -2;
+    fat_node_data_t* parent_data = (fat_node_data_t*)parent->fs_data;
+    uint32_t parent_cluster = parent_data->entry.first_cluster_low;
+    if (parent_data->parent_cluster == 0xFFFFFFFF) parent_cluster = 0;
+
+    fat_directory_entry_t entry;
+    uint32_t sector_lba, idx;
+    if (!find_in_directory(parent_data->fs, parent_cluster, name, &entry, &sector_lba, &idx)) return -1;
+    if (!(entry.attributes & FAT_ATTR_DIRECTORY)) return -2;
+
+    int empty = fat_dir_is_empty(parent_data->fs, entry.first_cluster_low);
+    if (empty <= 0) return -2;
+
+    buffer_t* buf = buffer_get(parent_data->fs->dev, sector_lba);
+    if (!buf) return -1;
+    ((fat_directory_entry_t*)buf->data)[idx].filename[0] = 0xE5;
+    buf->dirty = 1;
+    buffer_release(buf);
+
+    uint32_t curr = entry.first_cluster_low;
+    while (curr >= 2 && !fat_is_eoc(parent_data->fs, curr)) {
+        uint32_t next = fat_get_fat_entry(parent_data->fs, curr);
+        fat_set_fat_entry(parent_data->fs, curr, 0);
+        curr = next;
+    }
+
     buffer_flush_all(parent_data->fs->dev);
     return 0;
 }
@@ -799,10 +997,11 @@ static int fat_vfs_readdir(vnode_t* dir, uint32_t index, vfs_dirent_t* out) {
 
 static vfs_ops_t fat_vfs_ops = {
     .read = fat_vfs_read,
-    .write = NULL,
+    .write = fat_vfs_write,
+    .create = fat_vfs_create,
     .lookup = fat_vfs_lookup,
     .mkdir = fat_vfs_mkdir,
-    .rmdir = NULL, // Similar to unlink
+    .rmdir = fat_vfs_rmdir,
     .unlink = fat_vfs_unlink,
     .readdir = fat_vfs_readdir
 };

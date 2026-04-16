@@ -217,7 +217,17 @@ int vfs_open(const char* path, int flags) {
     file_t** file_table = vfs_get_active_file_table();
     if (!file_table) return -3;
     vnode_t* node = resolve_path(path);
-    if (!node) return -1;
+    if (!node) {
+        if (!(flags & VFS_O_CREAT)) return -1;
+        char parent_p[256], name[256];
+        if (split_path(path, parent_p, name) != 0 || name[0] == '\0') return -1;
+        vnode_t* parent = resolve_path(parent_p);
+        if (!parent || parent->type != VFS_TYPE_DIRECTORY || !parent->ops->create) return -2;
+        int create_res = parent->ops->create(parent, name);
+        if (create_res != 0) return create_res;
+        node = resolve_path(path);
+        if (!node) return -1;
+    }
     int fd = -1;
     for (int i = 3; i < MAX_FILES_PER_PROCESS; i++) {
         if (!file_table[i]) { fd = i; break; }
