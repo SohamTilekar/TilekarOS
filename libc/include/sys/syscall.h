@@ -14,6 +14,9 @@ enum  {
     SYS_RMDIR,
     SYS_UNLINK,
     SYS_READDIR,
+    SYS_FORK,
+    SYS_EXECVE,
+    SYS_YIELD,
     SYS_MAX
 };
 

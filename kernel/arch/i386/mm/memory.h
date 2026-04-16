@@ -89,6 +89,11 @@ uint32_t* memory_get_current_pagedir(void);
 uint32_t* memory_create_user_pagedir(void);
 
 /**
+ * memory_clone_pagedir - Create a copy of the current page directory.
+ */
+uint32_t* memory_clone_pagedir(void);
+
+/**
  * memory_set_pagedir - Switch to a new page directory.
  * @pd: The physical address of the new page directory.
  */

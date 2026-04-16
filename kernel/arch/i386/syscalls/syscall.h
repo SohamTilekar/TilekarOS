@@ -15,6 +15,9 @@ enum  {
     SYS_RMDIR,
     SYS_UNLINK,
     SYS_READDIR,
+    SYS_FORK,
+    SYS_EXECVE,
+    SYS_YIELD,
     SYS_MAX
 };
 
@@ -31,7 +34,7 @@ uint32_t sys_rmdir(uint32_t path, uint32_t b, uint32_t c, uint32_t d, uint32_t e
 uint32_t sys_unlink(uint32_t path, uint32_t b, uint32_t c, uint32_t d, uint32_t e);
 uint32_t sys_readdir(uint32_t fd, uint32_t index, uint32_t out, uint32_t d, uint32_t e);
 
-uint32_t syscall_dispatch(uint32_t intr_num, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e);
-void syscall_handler(InteruptReg* r);
+uint32_t syscall_dispatch(InterruptReg_t* r);
+void syscall_handler(InterruptReg_t* r);
 
 #endif

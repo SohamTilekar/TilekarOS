@@ -66,7 +66,7 @@ typedef enum {
 } fat_type_t;
 
 typedef struct {
-    device_t* dev;
+    Device_t* dev;
     fat_boot_record_t bpb;
     uint32_t root_dir_start;
     uint32_t data_start;
@@ -75,13 +75,13 @@ typedef struct {
 } fat_filesystem_t;
 
 // VFS integration
-vnode_t* fat_mount(device_t* dev);
+vnode_t* fat_mount(Device_t* dev);
 
 // Existing API
-int fat_init(fat_filesystem_t* fs, device_t* dev);
+int fat_init(fat_filesystem_t* fs, Device_t* dev);
 void fat_list_root_dir(fat_filesystem_t* fs);
 void fat_list_dir(fat_filesystem_t* fs, const char* path);
-void fat_format(device_t* dev, const char* label);
+void fat_format(Device_t* dev, const char* label);
 int fat_mkdir(fat_filesystem_t* fs, const char* path);
 int fat_create_file(fat_filesystem_t* fs, const char* path, const uint8_t* data, uint32_t size);
 int fat_read_file(fat_filesystem_t* fs, const char* path, uint8_t* buffer, uint32_t max_size);

@@ -1,0 +1,1 @@
+This file persists after kernel exit for manual check.

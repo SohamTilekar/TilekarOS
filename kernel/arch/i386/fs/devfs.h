@@ -6,6 +6,6 @@
 
 void devfs_init(void);
 vnode_t* devfs_get_root(void);
-void devfs_on_device_registered(device_t* dev);
+void devfs_on_device_registered(Device_t* dev);
 
 #endif // DEVFS_H

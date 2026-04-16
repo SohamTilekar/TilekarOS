@@ -78,6 +78,7 @@ void task_init_scheduler() {
     main_task->id = next_tid++;
     main_task->stack_limit = NULL; // Main kernel stack is already allocated
     main_task->state = TASK_RUNNING;
+    main_task->preempt_count = 0;
     main_task->regs = NULL;
     main_task->page_directory = get_cr3();
     main_task->next = main_task;
@@ -87,7 +88,7 @@ void task_init_scheduler() {
         return;
     }
     current_task = main_task;
-    scheduler_trigger_index = insert_triger(100, &task_yield, 0); // Use local ticks
+    scheduler_trigger_index = insert_trigger(100, &task_yield, 0); // Use local ticks
 
     // printf("Scheduler initialized. Main task TID: %d\n", main_task->id);
 }
@@ -117,6 +118,7 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     task->stack_limit = stack;
     task->id = next_tid++;
     task->state = TASK_READY;
+    task->preempt_count = 0;
     task->privilege_level = privilege_level;
     task->page_directory = get_cr3(); // Inherit current page directory
     if (task_init_file_table(task) < 0) {
@@ -165,7 +167,7 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     task->next = current_task->next;
     current_task->next = task;
 
-    printf("Task created. TID: %d, Privilege: %d, ESP: %x\n", task->id, task->privilege_level, (uint32_t)task->kernel_stack);
+    // printf("Task created. TID: %d, Privilege: %d, ESP: %x\n", task->id, task->privilege_level, (uint32_t)task->kernel_stack);
 
     // We restore interrupts for THIS currently running task that just created a new one
     interrupt_restore(flags);
@@ -195,6 +197,7 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
     task->stack_limit = stack;
     task->id = next_tid++;
     task->state = TASK_READY;
+    task->preempt_count = 0;
     task->privilege_level = 3;
     if (task_init_file_table(task) < 0) {
         kfree(stack);
@@ -256,7 +259,7 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
     task->next = current_task->next;
     current_task->next = task;
 
-    printf("User Task created. TID: %d, Size: %d, ESP: %x\n", task->id, size, (uint32_t)task->kernel_stack);
+    // printf("User Task created. TID: %d, Size: %d, ESP: %x\n", task->id, size, (uint32_t)task->kernel_stack);
 
     interrupt_restore(flags);
     return task;
@@ -289,6 +292,7 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     task->stack_limit = stack;
     task->id = next_tid++;
     task->state = TASK_READY;
+    task->preempt_count = 0;
     task->privilege_level = privilege_level;
     if (task_init_file_table(task) < 0) {
         kfree(stack);
@@ -354,8 +358,8 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     task->next = current_task->next;
     current_task->next = task;
 
-    printf("ELF Task created. TID: %d, Entry: %p, Privilege: %d, ESP: %x\n",
-           task->id, entry, task->privilege_level, (uint32_t)task->kernel_stack);
+    // printf("ELF Task created. TID: %d, Entry: %p, Privilege: %d, ESP: %x\n",
+    //        task->id, entry, task->privilege_level, (uint32_t)task->kernel_stack);
 
     interrupt_restore(flags);
     return task;
@@ -410,9 +414,192 @@ int task_file_table_set(task_t* task, int fd, const file_t* src_file) {
     return vfs_task_file_table_set(task->file_table, fd, src_file);
 }
 
-void task_yield(InteruptReg *regs) {
+void task_preempt_disable(void) {
+    uint32_t flags = interrupt_save();
+    if (current_task) {
+        current_task->preempt_count++;
+    }
+    interrupt_restore(flags);
+}
+
+void task_preempt_enable(void) {
+    uint32_t flags = interrupt_save();
+    if (current_task && current_task->preempt_count > 0) {
+        current_task->preempt_count--;
+    }
+    interrupt_restore(flags);
+}
+
+task_t* task_fork(InterruptReg_t *regs) {
     uint32_t flags = interrupt_save();
     cleanup_zombies();
+
+    task_t* parent = current_task;
+    task_t* child = kmalloc(sizeof(task_t));
+    if (!child) {
+        interrupt_restore(flags);
+        return NULL;
+    }
+
+    child->id = next_tid++;
+    child->state = TASK_READY;
+    child->preempt_count = 0;
+    child->privilege_level = parent->privilege_level;
+
+    // Clone the page directory
+    uint32_t* child_pd_virt = memory_clone_pagedir();
+    if (!child_pd_virt) {
+        kfree(child);
+        interrupt_restore(flags);
+        return NULL;
+    }
+    child->page_directory = (uint32_t)child_pd_virt - KERNEL_START;
+
+    // Allocate kernel stack for the child
+    uint32_t stack_size = 4096;
+    void* stack = kmalloc(stack_size);
+    if (!stack) {
+        // memory_destroy_pagedir(child_pd_virt); // Not implemented yet
+        kfree(child);
+        interrupt_restore(flags);
+        return NULL;
+    }
+    child->stack_limit = stack;
+
+    // Initialize file table and copy from parent
+    if (task_init_file_table(child) < 0) {
+        kfree(stack);
+        kfree(child);
+        interrupt_restore(flags);
+        return NULL;
+    }
+    task_file_table_copy(child, parent);
+
+    // Set up the child's kernel stack to return to the same point as the parent
+    uint32_t* stack_ptr = (uint32_t*)((uint32_t)stack + stack_size);
+
+    // iret frame for user mode if necessary
+    if (child->privilege_level == 3) {
+        *(--stack_ptr) = regs->ss;
+        *(--stack_ptr) = regs->useresp;
+    }
+
+    *(--stack_ptr) = regs->eflags;
+    *(--stack_ptr) = regs->cs; // CS
+    *(--stack_ptr) = regs->eip;
+
+    // pushad frame
+    *(--stack_ptr) = 0; // EAX: Return value for the child is 0
+    *(--stack_ptr) = regs->ecx;
+    *(--stack_ptr) = regs->edx;
+    *(--stack_ptr) = regs->ebx;
+    *(--stack_ptr) = (uint32_t)stack_ptr; // ESP (dummy)
+    *(--stack_ptr) = regs->ebp;
+    *(--stack_ptr) = regs->esi;
+    *(--stack_ptr) = regs->edi;
+
+    // segment registers
+    *(--stack_ptr) = regs->ds;
+    *(--stack_ptr) = regs->es;
+    *(--stack_ptr) = regs->fs;
+    *(--stack_ptr) = regs->gs;
+
+    child->kernel_stack = stack_ptr;
+    child->regs = (registers_t*)stack_ptr;
+
+    // Add to the ready queue
+    child->next = current_task->next;
+    current_task->next = child;
+
+    interrupt_restore(flags);
+    return child;
+}
+
+int task_execve(const char* path, InterruptReg_t *regs) {
+    int fd = vfs_open(path, 0);
+    if (fd < 0) return -1;
+
+    uint32_t size = vfs_get_size(fd);
+    void* elf_data = kmalloc(size);
+    if (!elf_data) {
+        vfs_close(fd);
+        return -1;
+    }
+
+    vfs_read(fd, elf_data, size);
+    vfs_close(fd);
+
+    Elf32_Ehdr *hdr = (Elf32_Ehdr *)elf_data;
+    if (!elf_check_supported(hdr)) {
+        kfree(elf_data);
+        return -1;
+    }
+
+    uint32_t flags = interrupt_save();
+
+    // Create a new page directory for the new process image
+    uint32_t* new_pd_virt = memory_create_user_pagedir();
+    if (!new_pd_virt) {
+        kfree(elf_data);
+        interrupt_restore(flags);
+        return -1;
+    }
+    uint32_t new_pd_phys = (uint32_t)new_pd_virt - KERNEL_START;
+
+    // Switch to the new page directory temporarily to load segments
+    uint32_t old_pd_phys = current_task->page_directory;
+    memory_set_pagedir(new_pd_virt);
+
+    if (current_task->privilege_level == 3) {
+        // Map user stack at 0xB0000000
+        uint32_t ustack_phys = pmm_alloc_page_frame();
+        memory_map_page(0xB0000000, ustack_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+    }
+
+    // Load segments into the new page directory
+    void* entry = elf_load_segments(hdr, elf_data, current_task->privilege_level);
+    kfree(elf_data);
+
+    if (!entry) {
+        // Restore old page directory before returning error
+        memory_set_pagedir((uint32_t*)(old_pd_phys + KERNEL_START));
+        // memory_destroy_pagedir(new_pd_virt); // Not implemented yet
+        interrupt_restore(flags);
+        return -1;
+    }
+
+    // Update the task's page directory address
+    current_task->page_directory = new_pd_phys;
+
+    // Modify the interrupt frame to return to the new entry point
+    regs->eip = (uint32_t)entry;
+    regs->ebx = 0;
+    regs->ecx = 0;
+    regs->edx = 0;
+    regs->esi = 0;
+    regs->edi = 0;
+    regs->ebp = 0;
+    // Keep EAX as 0 (for success) or whatever syscall return value is expected.
+    // Usually execve only returns on failure, so for child it will start at entry.
+
+    if (current_task->privilege_level == 3) {
+        regs->useresp = 0xB0000000 + 4096;
+    }
+
+    interrupt_restore(flags);
+    return 0;
+}
+
+void task_yield(InterruptReg_t *regs) {
+    uint32_t flags = interrupt_save();
+    cleanup_zombies();
+
+    if (regs && regs->intr_num == 32 && current_task && current_task->preempt_count > 0) {
+        pic_send_eoi(regs->intr_num);
+        regs->intr_num = 0;
+        interrupt_restore(flags);
+        return;
+    }
 
     task_t* last = current_task;
     task_t* next = last->next;
@@ -431,7 +618,7 @@ void task_yield(InteruptReg *regs) {
     current_task = next;
 
     if (scheduler_trigger_index != -1) {
-        set_triger_ticks(scheduler_trigger_index, 0);
+        set_trigger_ticks(scheduler_trigger_index, 0);
     }
 
     if (last->state == TASK_RUNNING) {
@@ -477,19 +664,28 @@ void task_unblock(task_t* task) {
 
 void task_exit() {
     uint32_t flags = interrupt_save();
-    printf("Task %d exiting...\n", current_task->id);
+    // printf("Task %d exiting...\n", current_task->id);
 
     // Remove current_task from the circular list
     task_t* prev = current_task;
+    uint32_t guard = 0;
     while (prev->next != current_task) {
         prev = prev->next;
+        if (++guard > next_tid) {
+            printf("Task list corruption detected during exit of PID %d.\n", current_task ? current_task->id : 0);
+            interrupt_restore(flags);
+            for (;;) {
+                __asm__ volatile("sti; hlt");
+            }
+        }
     }
 
     if (prev == current_task) {
         // Last task exiting
         printf("No more tasks. Halting system.\n");
+        interrupt_restore(flags);
         while(1) {
-            __asm__ volatile("hlt");
+            __asm__ volatile("sti; hlt");
         }
     }
 
@@ -512,5 +708,45 @@ void task_exit() {
     context_switch(&dummy_esp, current_task->kernel_stack, current_task->page_directory, 0);
 
     // We should never reach here, but in case we do somehow
+    interrupt_restore(flags);
+}
+
+void task_stop_scheduler() {
+    if (scheduler_trigger_index != -1) {
+        set_trigger_flags(scheduler_trigger_index, get_trigger_flags(scheduler_trigger_index) & ~TIMER_TRIGGER_ACTIVE);
+    }
+}
+
+void task_start_scheduler() {
+    if (scheduler_trigger_index != -1) {
+        set_trigger_ticks(scheduler_trigger_index, 0);
+        set_trigger_flags(scheduler_trigger_index, get_trigger_flags(scheduler_trigger_index) | TIMER_TRIGGER_ACTIVE);
+    }
+}
+
+void task_switch_to(task_t* next) {
+    if (!next || next == current_task) return;
+
+    uint32_t flags = interrupt_save();
+    
+    task_t* last = current_task;
+    current_task = next;
+
+    if (last->state == TASK_RUNNING) {
+        last->state = TASK_READY;
+    }
+    current_task->state = TASK_RUNNING;
+
+    if (current_task->stack_limit) {
+        tss_set_kernel_stack((uint32_t)current_task->stack_limit + 4096);
+    }
+
+    // Reset scheduler trigger so it doesn't fire immediately after re-enable
+    if (scheduler_trigger_index != -1) {
+        set_trigger_ticks(scheduler_trigger_index, 0);
+    }
+
+    context_switch(&last->kernel_stack, current_task->kernel_stack, current_task->page_directory, 0);
+
     interrupt_restore(flags);
 }

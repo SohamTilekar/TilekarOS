@@ -36,7 +36,7 @@ typedef struct vnode {
     uint32_t size;
     vfs_ops_t* ops;
     void* fs_data;
-    device_t* dev;
+    Device_t* dev;
     int refcount;
     struct vnode* mounted_vnode; // Redirection for mount points
 } vnode_t;
@@ -51,7 +51,7 @@ typedef struct file {
 
 // VFS API
 void vfs_init();
-vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_t*));
+vnode_t* vfs_mount(const char* path, Device_t* dev, vnode_t* (*mount_fn)(Device_t*));
 int vfs_task_file_table_init(file_t** file_table);
 int vfs_task_file_table_copy(file_t** dst_file_table, file_t* const* src_file_table);
 int vfs_task_file_table_set(file_t** file_table, int fd, const file_t* src_file);

@@ -28,7 +28,7 @@ static inline bool fat_test_find_entry(const char* dir_path, const char* name) {
     return found;
 }
 
-static inline void run_fat_tests(device_t* primary_storage, test_stats_t* stats) {
+static inline void run_fat_tests(Device_t* primary_storage, test_stats_t* stats) {
     // --- Core Initialization ---
     test_print_category(stats, "CORE INITIALIZATION");
     if (!primary_storage) {

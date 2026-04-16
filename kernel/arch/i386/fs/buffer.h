@@ -6,7 +6,7 @@
 #include "devices.h"
 
 typedef struct buffer {
-    device_t* dev;
+    Device_t* dev;
     uint32_t lba;
 
     uint8_t* data;      // sector data (usually 512 bytes)
@@ -17,9 +17,9 @@ typedef struct buffer {
 } buffer_t;
 
 // Core Buffer Cache API
-buffer_t* buffer_get(device_t* dev, uint32_t lba);
+buffer_t* buffer_get(Device_t* dev, uint32_t lba);
 void buffer_release(buffer_t* buf);
 void buffer_flush(buffer_t* buf);
-void buffer_flush_all(device_t* dev);
+void buffer_flush_all(Device_t* dev);
 
 #endif // BUFFER_H

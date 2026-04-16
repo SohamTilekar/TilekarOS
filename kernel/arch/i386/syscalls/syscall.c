@@ -1,5 +1,7 @@
 #include "syscall.h"
+#include "task.h"
 #include <stdint.h>
+#include <stddef.h>
 
 typedef uint32_t (*syscall_t)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
 
@@ -23,24 +25,38 @@ syscall_t syscall_table[] = {
     sys_mkdir,
     sys_rmdir,
     sys_unlink,
-    sys_readdir
+    sys_readdir,
+    NULL, // SYS_FORK
+    NULL, // SYS_EXECVE
+    NULL, // SYS_YIELD
+    NULL  // SYS_MAX
 };
 
-uint32_t syscall_dispatch(uint32_t num, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e) {
-    if (num >= SYS_MAX)
-        return -1;
+uint32_t syscall_dispatch(InterruptReg_t* r) {
+    uint32_t num = r->eax;
+    if (num >= SYS_MAX) return -1;
 
-    return syscall_table[num](a, b, c, d, e);}
+    if (num == SYS_FORK) {
+        task_t* child = task_fork(r);
+        return child ? child->id : -1;
+    }
 
-void syscall_handler(InteruptReg* r) {
-    uint32_t ret = syscall_dispatch(
-        r->eax,
-        r->ebx,
-        r->ecx,
-        r->edx,
-        r->esi,
-        r->edi
-    );
+    if (num == SYS_EXECVE) {
+        return (uint32_t)task_execve((const char*)r->ebx, r);
+    }
 
-    r->eax = ret;
+    if (num == SYS_YIELD) {
+        task_yield(r);
+        return 0;
+    }
+
+    if (syscall_table[num] == NULL) return -1;
+
+    return syscall_table[num](r->ebx, r->ecx, r->edx, r->esi, r->edi);
+}
+
+void syscall_handler(InterruptReg_t* r) {
+    task_preempt_disable();
+    r->eax = syscall_dispatch(r);
+    task_preempt_enable();
 }

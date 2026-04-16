@@ -11,13 +11,13 @@
 #include "test/test_runner.h"
 
 // Global to persist across tasks
-static device_t* primary_storage = NULL;
+static Device_t* primary_storage = NULL;
 
 void init_storage() {
     // printf("Probing storage devices...\n");
 
     // Scan all block devices
-    device_t* dev = device_get_next(NULL);
+    Device_t* dev = device_get_next(NULL);
     while (dev) {
         if (dev->type == DEVICE_TYPE_BLOCK) {
             if (!primary_storage) {
@@ -71,11 +71,6 @@ void kernel_main(uint32_t magic, void* boot_info) {
   init_storage();
   task_init_scheduler();
   run_all_tests(primary_storage);
-
-  if (primary_storage) {
-      // printf("Loading test program from disk...\n");
-      task_create_elf_from_file("/bin/usertask", 3);
-  }
 
   printf("Main task (TID 0) entering infinite yield loop.\n");
   while (true) {

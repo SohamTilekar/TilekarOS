@@ -18,6 +18,7 @@ typedef struct {
     uint32_t gs, fs, es, ds;
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
     uint32_t eip, cs, eflags;
+    uint32_t useresp, ss; // Only if privilege_level == 3
 } registers_t;
 
 typedef struct task {
@@ -25,6 +26,7 @@ typedef struct task {
     uint32_t *kernel_stack;
     registers_t *regs;      // saved context
     task_state_t state;
+    uint32_t preempt_count;  // scheduler preemption disable nesting
     uint32_t page_directory; // physical address of CR3
     uint8_t privilege_level; // 0 or 3
     file_t* file_table[MAX_FILES_PER_PROCESS];
@@ -78,9 +80,22 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level);
 task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level);
 
 /**
+ * task_fork - Creates a copy of the current process.
+ * @regs: The register state of the parent at the time of fork.
+ */
+task_t* task_fork(InterruptReg_t *regs);
+
+/**
+ * task_execve - Replaces the current process with a new one from an ELF.
+ * @path: Path to the ELF file.
+ * @regs: The register state to be modified for the new process.
+ */
+int task_execve(const char* path, InterruptReg_t *regs);
+
+/**
  * task_yield - Yields the CPU to the next ready task.
  */
-void task_yield(InteruptReg *regs);
+void task_yield(InterruptReg_t *regs);
 void task_block_current();
 void task_unblock(task_t* task);
 
@@ -88,6 +103,12 @@ void task_unblock(task_t* task);
  * task_exit - Terminates the current task.
  */
 void task_exit();
+
+void task_stop_scheduler();
+void task_start_scheduler();
+void task_switch_to(task_t* task);
+void task_preempt_disable(void);
+void task_preempt_enable(void);
 
 int task_file_table_copy(task_t* dst, const task_t* src);
 int task_file_table_set(task_t* task, int fd, const file_t* src_file);

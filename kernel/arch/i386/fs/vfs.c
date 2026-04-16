@@ -110,7 +110,7 @@ static vnode_t* resolve_path_no_mount(const char* path) {
     return resolve_path_ext(path, false);
 }
 
-vnode_t* vfs_mount(const char* path, device_t* dev, vnode_t* (*mount_fn)(device_t*)) {
+vnode_t* vfs_mount(const char* path, Device_t* dev, vnode_t* (*mount_fn)(Device_t*)) {
     if (strcmp(path, "/") == 0) {
         root_vnode = mount_fn(dev);
         vfs_add_mount("/", root_vnode);

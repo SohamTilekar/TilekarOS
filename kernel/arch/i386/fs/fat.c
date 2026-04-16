@@ -126,7 +126,7 @@ static void to_fat_name(const char* name, uint8_t* out_name, uint8_t* out_ext) {
 
 // --- API Implementation ---
 
-int fat_init(fat_filesystem_t* fs, device_t* dev) {
+int fat_init(fat_filesystem_t* fs, Device_t* dev) {
     fs->dev = dev;
     buffer_t* buf = buffer_get(dev, 0);
     if (!buf) return -1;
@@ -591,7 +591,7 @@ static vfs_ops_t fat_vfs_ops = {
     .readdir = fat_vfs_readdir
 };
 
-vnode_t* fat_mount(device_t* dev) {
+vnode_t* fat_mount(Device_t* dev) {
     fat_filesystem_t* fs = kmalloc(sizeof(fat_filesystem_t));
     if (fat_init(fs, dev) != 0) { kfree(fs); return NULL; }
     vnode_t* root = kmalloc(sizeof(vnode_t));
@@ -603,7 +603,7 @@ vnode_t* fat_mount(device_t* dev) {
     return root;
 }
 
-void fat_format(device_t* dev, const char* label) {
+void fat_format(Device_t* dev, const char* label) {
     fat_boot_record_t bpb;
     memset(&bpb, 0, sizeof(bpb));
     bpb.boot_jmp[0] = 0xEB; bpb.boot_jmp[1] = 0x3C; bpb.boot_jmp[2] = 0x90;

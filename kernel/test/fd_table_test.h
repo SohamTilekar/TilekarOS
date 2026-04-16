@@ -14,7 +14,7 @@
 static inline void fd_table_test_idle_task(void) {
 }
 
-static inline void run_fd_table_tests(device_t* primary_storage, test_stats_t* stats) {
+static inline void run_fd_table_tests(Device_t* primary_storage, test_stats_t* stats) {
     test_print_category(stats, "PER-TASK FILE TABLE");
 
     test_record(stats, current_task != NULL, "current_task exists");

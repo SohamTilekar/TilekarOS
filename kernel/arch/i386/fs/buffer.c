@@ -5,7 +5,7 @@
 
 static buffer_t* buffer_list = NULL;
 
-static buffer_t* find_buffer(device_t* dev, uint32_t lba) {
+static buffer_t* find_buffer(Device_t* dev, uint32_t lba) {
     buffer_t* curr = buffer_list;
     while (curr) {
         if (curr->dev == dev && curr->lba == lba) {
@@ -16,7 +16,7 @@ static buffer_t* find_buffer(device_t* dev, uint32_t lba) {
     return NULL;
 }
 
-static buffer_t* create_buffer(device_t* dev, uint32_t lba) {
+static buffer_t* create_buffer(Device_t* dev, uint32_t lba) {
     buffer_t* buf = kmalloc(sizeof(buffer_t));
     if (!buf) return NULL;
 
@@ -34,7 +34,7 @@ static buffer_t* create_buffer(device_t* dev, uint32_t lba) {
     return buf;
 }
 
-buffer_t* buffer_get(device_t* dev, uint32_t lba) {
+buffer_t* buffer_get(Device_t* dev, uint32_t lba) {
     buffer_t* buf = find_buffer(dev, lba);
     if (buf) {
         buf->refcount++;
@@ -68,7 +68,7 @@ void buffer_flush(buffer_t* buf) {
     }
 }
 
-void buffer_flush_all(device_t* dev) {
+void buffer_flush_all(Device_t* dev) {
     buffer_t* curr = buffer_list;
     while (curr) {
         if (curr->dev == dev || dev == NULL) {

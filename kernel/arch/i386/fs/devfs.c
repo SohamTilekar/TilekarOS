@@ -4,7 +4,7 @@
 #include "kernel/tty.h"
 
 typedef struct devfs_node_cache {
-    device_t* dev;
+    Device_t* dev;
     vnode_t* node;
     struct devfs_node_cache* next;
 } devfs_node_cache_t;
@@ -13,7 +13,7 @@ static vnode_t* devfs_root = NULL;
 static devfs_node_cache_t* devfs_nodes = NULL;
 static uint32_t devfs_generation = 0;
 
-static vnode_type_t devfs_device_type_to_vnode(device_type_t type) {
+static vnode_type_t devfs_device_type_to_vnode(DeviceType_t type) {
     if (type == DEVICE_TYPE_CHAR) return VFS_TYPE_CHAR;
     if (type == DEVICE_TYPE_BLOCK) return VFS_TYPE_BLOCK;
     return VFS_TYPE_FILE;
@@ -49,7 +49,7 @@ static vfs_ops_t device_vfs_ops = {
     .readdir = NULL
 };
 
-static vnode_t* devfs_create_device_node(device_t* dev) {
+static vnode_t* devfs_create_device_node(Device_t* dev) {
     if (!dev) return NULL;
     vnode_t* node = kmalloc(sizeof(vnode_t));
     if (!node) return NULL;
@@ -63,7 +63,7 @@ static vnode_t* devfs_create_device_node(device_t* dev) {
     return node;
 }
 
-static vnode_t* devfs_get_cached_node(device_t* dev) {
+static vnode_t* devfs_get_cached_node(Device_t* dev) {
     devfs_node_cache_t* curr = devfs_nodes;
     while (curr) {
         if (curr->dev == dev) return curr->node;
@@ -84,7 +84,7 @@ static vnode_t* devfs_get_cached_node(device_t* dev) {
 
 static vnode_t* devfs_lookup(vnode_t* parent, const char* name) {
     (void)parent;
-    device_t* dev = device_get(name);
+    Device_t* dev = device_get(name);
     if (!dev) return NULL;
     return devfs_get_cached_node(dev);
 }
@@ -93,7 +93,7 @@ static int devfs_readdir(vnode_t* dir, uint32_t index, vfs_dirent_t* out) {
     (void)dir;
     if (!out) return -1;
 
-    device_t* dev = device_get_next(NULL);
+    Device_t* dev = device_get_next(NULL);
     uint32_t i = 0;
     while (dev) {
         if (i == index) {
@@ -119,7 +119,7 @@ static vfs_ops_t devfs_dir_ops = {
     .readdir = devfs_readdir
 };
 
-void devfs_on_device_registered(device_t* dev) {
+void devfs_on_device_registered(Device_t* dev) {
     if (!dev) return;
     devfs_generation++;
     (void)devfs_generation;

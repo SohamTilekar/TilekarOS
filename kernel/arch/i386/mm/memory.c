@@ -113,6 +113,63 @@ uint32_t* memory_create_user_pagedir(void) {
     return (uint32_t*)(pd_phys + KERNEL_START);
 }
 
+uint32_t* memory_clone_pagedir(void) {
+    uint32_t* new_pd = memory_create_user_pagedir();
+    if (!new_pd) return NULL;
+
+    uint32_t* current_pd = RECURSIVE_PAGE_DIR;
+
+    for (int i = 0; i < 768; i++) {
+        if (current_pd[i] & PAGE_FLAG_PRESENT) {
+            // Physical address of the new page table
+            uint32_t pt_phys = pmm_alloc_page_frame();
+            if (!pt_phys) return NULL; // Should handle failure better
+
+            // Map it temporarily to initialize it
+            memory_map_page(0xE0001000, pt_phys, PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+            uint32_t* new_pt = (uint32_t*)0xE0001000;
+            memset(new_pt, 0, PAGE_SIZE);
+
+            uint32_t* old_pt = RECURSIVE_PAGE_TABLE(i);
+            for (int j = 0; j < 1024; j++) {
+                if (old_pt[j] & PAGE_FLAG_PRESENT) {
+                    uint32_t flags = old_pt[j] & 0xFFF;
+
+                    uint32_t new_frame_phys = pmm_alloc_page_frame();
+                    if (!new_frame_phys) return NULL;
+
+                    // Map new frame temporarily to copy data
+                    memory_map_page(0xE0002000, new_frame_phys, PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+                    
+                    void* old_frame_virt = (void*)((i << 22) | (j << 12));
+                    memcpy((void*)0xE0002000, old_frame_virt, PAGE_SIZE);
+                    
+                    new_pt[j] = new_frame_phys | flags;
+                }
+            }
+
+            // Unmap temporary PT mapping
+            uint32_t pt_pd_idx = 0xE0001000 >> 22;
+            uint32_t pt_pt_idx = (0xE0001000 >> 12) & 0x3FF;
+            uint32_t* pt_pt = RECURSIVE_PAGE_TABLE(pt_pd_idx);
+            pt_pt[pt_pt_idx] = 0;
+            flush_tlb_entry(0xE0001000);
+
+            // Unmap temporary frame mapping
+            uint32_t f_pd_idx = 0xE0002000 >> 22;
+            uint32_t f_pt_idx = (0xE0002000 >> 12) & 0x3FF;
+            uint32_t* f_pt = RECURSIVE_PAGE_TABLE(f_pd_idx);
+            f_pt[f_pt_idx] = 0;
+            flush_tlb_entry(0xE0002000);
+
+            // Map new page table to new page directory
+            new_pd[i] = pt_phys | (current_pd[i] & 0xFFF);
+        }
+    }
+
+    return new_pd;
+}
+
 static void memory_sync_pagedirs(void) {
     uint32_t flags = interrupt_save();
     
