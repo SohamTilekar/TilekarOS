@@ -17,6 +17,7 @@ enum  {
     SYS_FORK,
     SYS_EXECVE,
     SYS_YIELD,
+    SYS_BRK,
     SYS_MAX
 };
 

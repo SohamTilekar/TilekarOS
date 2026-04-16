@@ -74,6 +74,6 @@ typedef struct {
 #define PF_R 4
 
 bool elf_check_supported(Elf32_Ehdr *hdr);
-void* elf_load_segments(Elf32_Ehdr *hdr, void* elf_data, uint8_t privilege_level);
+void* elf_load_segments(Elf32_Ehdr *hdr, void* elf_data, uint8_t privilege_level, uint32_t* heap_start_out);
 
 #endif // ARCH_I386_ELF_H

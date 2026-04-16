@@ -29,6 +29,7 @@ syscall_t syscall_table[] = {
     NULL, // SYS_FORK
     NULL, // SYS_EXECVE
     NULL, // SYS_YIELD
+    sys_brk,
     NULL  // SYS_MAX
 };
 

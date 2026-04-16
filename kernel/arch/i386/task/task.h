@@ -29,6 +29,9 @@ typedef struct task {
     uint32_t preempt_count;  // scheduler preemption disable nesting
     uint32_t page_directory; // physical address of CR3
     uint8_t privilege_level; // 0 or 3
+    uint32_t heap_start;     // lowest valid heap address in userspace
+    uint32_t heap_break;     // current program break
+    uint32_t heap_mapped_end;// end (exclusive) of heap pages already mapped
     file_t* file_table[MAX_FILES_PER_PROCESS];
 
     // Internal scheduler fields

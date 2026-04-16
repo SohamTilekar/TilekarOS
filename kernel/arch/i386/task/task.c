@@ -9,6 +9,7 @@
 #include "../fs/vfs.h"
 #include <stdio.h>
 #include <string.h>
+#include "memory.h"
 
 extern void context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t next_cr3, uint32_t intr_num);
 
@@ -20,6 +21,35 @@ static uint32_t next_tid = 0;
 task_t* current_task = NULL;
 static task_t* zombie_list = NULL;
 static int32_t scheduler_trigger_index = -1;
+
+static uint32_t align_up_page(uint32_t value) {
+    return (value + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+}
+
+static int task_init_user_heap(task_t* task, uint32_t heap_start, bool map_initial_page) {
+    if (!task) return -1;
+
+    uint32_t aligned_heap_start = align_up_page(heap_start);
+    if (aligned_heap_start >= 0xB0000000) {
+        return -1;
+    }
+
+    task->heap_start = aligned_heap_start;
+    task->heap_break = aligned_heap_start;
+    task->heap_mapped_end = aligned_heap_start;
+
+    if (!map_initial_page) {
+        return 0;
+    }
+
+    uint32_t heap_page_phys = pmm_alloc_page_frame();
+    if (!heap_page_phys) {
+        return -1;
+    }
+    memory_map_page(aligned_heap_start, heap_page_phys, PAGE_FLAG_USER | PAGE_FLAG_WRITE | PAGE_FLAG_PRESENT);
+    task->heap_mapped_end = aligned_heap_start + PAGE_SIZE;
+    return 0;
+}
 
 static int task_init_file_table(task_t* task) {
     return vfs_task_file_table_init(task->file_table);
@@ -47,6 +77,7 @@ static void cleanup_zombies() {
  * and ensures task_exit is called when the entry point returns.
  */
 static void task_wrapper(void (*entry)(void)) {
+    uint32_t status = 0;
     if (current_task && current_task->privilege_level == 3) {
         // Switch to user mode via iret
         // User stack is mapped at 0xB0000000
@@ -66,7 +97,8 @@ static void task_wrapper(void (*entry)(void)) {
             "iret"
             : : "r"(user_esp), "r"(entry) : "memory", "eax"
         );
-        // We will never return here
+        // We will never return here from user mode.
+        // The exit status will be passed via SYS_EXIT.
     } else {
         entry();
     }
@@ -83,6 +115,9 @@ void task_init_scheduler() {
     main_task->page_directory = get_cr3();
     main_task->next = main_task;
     main_task->privilege_level = 0;
+    main_task->heap_start = 0;
+    main_task->heap_break = 0;
+    main_task->heap_mapped_end = 0;
     if (task_init_file_table(main_task) < 0) {
         kfree(main_task);
         return;
@@ -92,8 +127,6 @@ void task_init_scheduler() {
 
     // printf("Scheduler initialized. Main task TID: %d\n", main_task->id);
 }
-
-#include "memory.h"
 
 task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     // Disable interrupts to prevent scheduler from ticking while we modify the ready queue
@@ -121,6 +154,9 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     task->preempt_count = 0;
     task->privilege_level = privilege_level;
     task->page_directory = get_cr3(); // Inherit current page directory
+    task->heap_start = 0;
+    task->heap_break = 0;
+    task->heap_mapped_end = 0;
     if (task_init_file_table(task) < 0) {
         kfree(stack);
         kfree(task);
@@ -226,6 +262,15 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
 
     memcpy((void*)0x08048000, start_addr, size);
 
+    uint32_t heap_start = align_up_page(0x08048000 + size);
+    if (task_init_user_heap(task, heap_start, true) < 0) {
+        memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
+        kfree(stack);
+        kfree(task);
+        interrupt_restore(flags);
+        return NULL;
+    }
+
     memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
 
     uint32_t* stack_ptr = (uint32_t*)((uint32_t)stack + stack_size);
@@ -315,7 +360,8 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     }
 
     // Load ELF segments
-    void* entry = elf_load_segments(hdr, elf_data, privilege_level);
+    uint32_t heap_start = 0;
+    void* entry = elf_load_segments(hdr, elf_data, privilege_level, &heap_start);
     if (!entry) {
         // Switch back before failing
         memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
@@ -323,6 +369,20 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
         kfree(task);
         interrupt_restore(flags);
         return NULL;
+    }
+
+    if (privilege_level == 3) {
+        if (task_init_user_heap(task, heap_start, true) < 0) {
+            memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
+            kfree(stack);
+            kfree(task);
+            interrupt_restore(flags);
+            return NULL;
+        }
+    } else {
+        task->heap_start = 0;
+        task->heap_break = 0;
+        task->heap_mapped_end = 0;
     }
 
     memory_set_pagedir((uint32_t*)(current_pd + KERNEL_START));
@@ -445,6 +505,9 @@ task_t* task_fork(InterruptReg_t *regs) {
     child->state = TASK_READY;
     child->preempt_count = 0;
     child->privilege_level = parent->privilege_level;
+    child->heap_start = parent->heap_start;
+    child->heap_break = parent->heap_break;
+    child->heap_mapped_end = parent->heap_mapped_end;
 
     // Clone the page directory
     uint32_t* child_pd_virt = memory_clone_pagedir();
@@ -557,7 +620,8 @@ int task_execve(const char* path, InterruptReg_t *regs) {
     }
 
     // Load segments into the new page directory
-    void* entry = elf_load_segments(hdr, elf_data, current_task->privilege_level);
+    uint32_t heap_start = 0;
+    void* entry = elf_load_segments(hdr, elf_data, current_task->privilege_level, &heap_start);
     kfree(elf_data);
 
     if (!entry) {
@@ -570,6 +634,18 @@ int task_execve(const char* path, InterruptReg_t *regs) {
 
     // Update the task's page directory address
     current_task->page_directory = new_pd_phys;
+
+    if (current_task->privilege_level == 3) {
+        if (task_init_user_heap(current_task, heap_start, true) < 0) {
+            memory_set_pagedir((uint32_t*)(old_pd_phys + KERNEL_START));
+            interrupt_restore(flags);
+            return -1;
+        }
+    } else {
+        current_task->heap_start = 0;
+        current_task->heap_break = 0;
+        current_task->heap_mapped_end = 0;
+    }
 
     // Modify the interrupt frame to return to the new entry point
     regs->eip = (uint32_t)entry;
@@ -728,7 +804,7 @@ void task_switch_to(task_t* next) {
     if (!next || next == current_task) return;
 
     uint32_t flags = interrupt_save();
-    
+
     task_t* last = current_task;
     current_task = next;
 
