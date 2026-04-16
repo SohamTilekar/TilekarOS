@@ -7,6 +7,65 @@
 
 // --- Internal FAT Helpers ---
 
+typedef struct __attribute__((packed)) {
+    uint8_t order;
+    uint16_t name1[5];
+    uint8_t attributes;
+    uint8_t type;
+    uint8_t checksum;
+    uint16_t name2[6];
+    uint16_t first_cluster_low;
+    uint16_t name3[2];
+} fat_lfn_entry_t;
+
+static void fat_reset_lfn_state(char parts[21][14], bool seen[21], uint8_t* max_ord, bool* active) {
+    (void)parts;
+    memset(seen, 0, 21 * sizeof(bool));
+    *max_ord = 0;
+    *active = false;
+}
+
+static void fat_decode_lfn_part(const fat_lfn_entry_t* lfn, char out[14]) {
+    uint16_t raw[13];
+    memcpy(&raw[0], lfn->name1, sizeof(lfn->name1));
+    memcpy(&raw[5], lfn->name2, sizeof(lfn->name2));
+    memcpy(&raw[11], lfn->name3, sizeof(lfn->name3));
+    for (int i = 0; i < 13; i++) {
+        uint16_t ch = raw[i];
+        if (ch == 0x0000 || ch == 0xFFFF) {
+            out[i] = '\0';
+            return;
+        }
+        out[i] = (ch <= 0x007F) ? (char)ch : '?';
+    }
+    out[13] = '\0';
+}
+
+static bool fat_name_equals_ci(const char* a, const char* b) {
+    while (*a && *b) {
+        char ca = *a;
+        char cb = *b;
+        if (ca >= 'a' && ca <= 'z') ca -= 32;
+        if (cb >= 'a' && cb <= 'z') cb -= 32;
+        if (ca != cb) return false;
+        a++;
+        b++;
+    }
+    return *a == '\0' && *b == '\0';
+}
+
+static void fat_entry_short_name(const fat_directory_entry_t* entry, char* out, size_t out_size) {
+    char name[9], ext[4];
+    memcpy(name, entry->filename, 8);
+    name[8] = 0;
+    memcpy(ext, entry->extension, 3);
+    ext[3] = 0;
+    for (int k = 7; k >= 0 && name[k] == ' '; k--) name[k] = 0;
+    for (int k = 2; k >= 0 && ext[k] == ' '; k--) ext[k] = 0;
+    if (ext[0]) snprintf(out, out_size, "%s.%s", name, ext);
+    else snprintf(out, out_size, "%s", name);
+}
+
 static bool fat_is_eoc(const fat_filesystem_t* fs, uint32_t value) {
     if (fs->type == FAT_TYPE_FAT16) return value >= 0xFFF8;
     return value >= 0xFF8;
@@ -148,6 +207,11 @@ int fat_init(fat_filesystem_t* fs, Device_t* dev) {
 static bool find_in_directory(fat_filesystem_t* fs, uint32_t cluster, const char* component, fat_directory_entry_t* out_entry, uint32_t* out_sector, uint32_t* out_idx) {
     uint8_t fat_name[8], fat_ext[3];
     to_fat_name(component, fat_name, fat_ext);
+    char lfn_parts[21][14];
+    bool lfn_seen[21];
+    uint8_t lfn_max_ord;
+    bool lfn_active;
+    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
     bool is_root = (cluster == 0);
     uint32_t current_cluster = cluster;
     do {
@@ -165,9 +229,62 @@ static bool find_in_directory(fat_filesystem_t* fs, uint32_t cluster, const char
             fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
             for (uint32_t i = 0; i < 512 / sizeof(fat_directory_entry_t); i++) {
                 if (entries[i].filename[0] == 0) { buffer_release(buf); return false; }
-                if (entries[i].filename[0] == 0xE5) continue;
-                if (entries[i].attributes == FAT_ATTR_LFN) continue;
-                if (memcmp(entries[i].filename, fat_name, 8) == 0 && memcmp(entries[i].extension, fat_ext, 3) == 0) {
+                if (entries[i].filename[0] == 0xE5) {
+                    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                    continue;
+                }
+                if (entries[i].attributes == FAT_ATTR_LFN) {
+                    const fat_lfn_entry_t* lfn = (const fat_lfn_entry_t*)&entries[i];
+                    uint8_t ord = lfn->order & 0x1F;
+                    bool last = (lfn->order & 0x40) != 0;
+                    if (ord == 0 || ord > 20) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        continue;
+                    }
+                    if (last) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        lfn_active = true;
+                        lfn_max_ord = ord;
+                    }
+                    if (!lfn_active || ord > lfn_max_ord) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        continue;
+                    }
+                    fat_decode_lfn_part(lfn, lfn_parts[ord]);
+                    lfn_seen[ord] = true;
+                    continue;
+                }
+
+                bool short_match = (memcmp(entries[i].filename, fat_name, 8) == 0 && memcmp(entries[i].extension, fat_ext, 3) == 0);
+                bool long_match = false;
+                if (lfn_active) {
+                    char long_name[256];
+                    size_t pos = 0;
+                    bool ok = true;
+                    for (uint8_t ord = 1; ord <= lfn_max_ord; ord++) {
+                        if (!lfn_seen[ord]) {
+                            ok = false;
+                            break;
+                        }
+                        for (int c = 0; c < 13; c++) {
+                            char ch = lfn_parts[ord][c];
+                            if (ch == '\0') break;
+                            if (pos + 1 >= sizeof(long_name)) {
+                                ok = false;
+                                break;
+                            }
+                            long_name[pos++] = ch;
+                        }
+                        if (!ok || lfn_parts[ord][12] == '\0') break;
+                    }
+                    if (ok && pos > 0) {
+                        long_name[pos] = '\0';
+                        long_match = fat_name_equals_ci(component, long_name);
+                    }
+                }
+
+                fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                if (short_match || long_match) {
                     if (out_entry) *out_entry = entries[i];
                     if (out_sector) *out_sector = start_sector + s;
                     if (out_idx) *out_idx = i;
@@ -217,6 +334,11 @@ void fat_list_dir(fat_filesystem_t* fs, const char* path) {
     printf("Listing directory %s:\n", path);
     bool is_root = (cluster == 0);
     uint32_t current_cluster = cluster;
+    char lfn_parts[21][14];
+    bool lfn_seen[21];
+    uint8_t lfn_max_ord;
+    bool lfn_active;
+    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
     do {
         uint32_t start_sector, num_sectors;
         if (is_root) {
@@ -232,14 +354,59 @@ void fat_list_dir(fat_filesystem_t* fs, const char* path) {
             fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
             for (uint32_t i = 0; i < 512 / sizeof(fat_directory_entry_t); i++) {
                 if (entries[i].filename[0] == 0) { buffer_release(buf); return; }
-                if (entries[i].filename[0] == 0xE5) continue;
-                if (entries[i].attributes == FAT_ATTR_LFN) continue;
-                char name[9], ext[4];
-                memcpy(name, entries[i].filename, 8); name[8] = 0;
-                memcpy(ext, entries[i].extension, 3); ext[3] = 0;
-                for (int k = 7; k >= 0 && name[k] == ' '; k--) name[k] = 0;
-                for (int k = 2; k >= 0 && ext[k] == ' '; k--) ext[k] = 0;
-                printf("  %s%s%s  %u bytes (attr: %x)\n", name, ext[0] ? "." : "", ext, entries[i].file_size, entries[i].attributes);
+                if (entries[i].filename[0] == 0xE5) {
+                    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                    continue;
+                }
+                if (entries[i].attributes == FAT_ATTR_LFN) {
+                    const fat_lfn_entry_t* lfn = (const fat_lfn_entry_t*)&entries[i];
+                    uint8_t ord = lfn->order & 0x1F;
+                    bool last = (lfn->order & 0x40) != 0;
+                    if (ord == 0 || ord > 20) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        continue;
+                    }
+                    if (last) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        lfn_active = true;
+                        lfn_max_ord = ord;
+                    }
+                    if (!lfn_active || ord > lfn_max_ord) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        continue;
+                    }
+                    fat_decode_lfn_part(lfn, lfn_parts[ord]);
+                    lfn_seen[ord] = true;
+                    continue;
+                }
+
+                char entry_name[256];
+                bool long_ok = false;
+                if (lfn_active) {
+                    size_t pos = 0;
+                    long_ok = true;
+                    for (uint8_t ord = 1; ord <= lfn_max_ord; ord++) {
+                        if (!lfn_seen[ord]) {
+                            long_ok = false;
+                            break;
+                        }
+                        for (int c = 0; c < 13; c++) {
+                            char ch = lfn_parts[ord][c];
+                            if (ch == '\0') break;
+                            if (pos + 1 >= sizeof(entry_name)) {
+                                long_ok = false;
+                                break;
+                            }
+                            entry_name[pos++] = ch;
+                        }
+                        if (!long_ok || lfn_parts[ord][12] == '\0') break;
+                    }
+                    if (long_ok && pos > 0) entry_name[pos] = '\0';
+                    else long_ok = false;
+                }
+                if (!long_ok) fat_entry_short_name(&entries[i], entry_name, sizeof(entry_name));
+                fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                printf("  %s  %u bytes (attr: %x)\n", entry_name, entries[i].file_size, entries[i].attributes);
             }
             buffer_release(buf);
         }
@@ -544,6 +711,11 @@ static int fat_vfs_readdir(vnode_t* dir, uint32_t index, vfs_dirent_t* out) {
     bool is_root = (cluster == 0);
     uint32_t current_cluster = cluster;
     uint32_t count = 0;
+    char lfn_parts[21][14];
+    bool lfn_seen[21];
+    uint8_t lfn_max_ord;
+    bool lfn_active;
+    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
     do {
         uint32_t start_sector, num_sectors;
         if (is_root) {
@@ -559,18 +731,62 @@ static int fat_vfs_readdir(vnode_t* dir, uint32_t index, vfs_dirent_t* out) {
             fat_directory_entry_t* entries = (fat_directory_entry_t*)buf->data;
             for (uint32_t i = 0; i < 512 / sizeof(fat_directory_entry_t); i++) {
                 if (entries[i].filename[0] == 0) { buffer_release(buf); return -1; }
-                if (entries[i].filename[0] == 0xE5 || entries[i].attributes == FAT_ATTR_LFN) continue;
+                if (entries[i].filename[0] == 0xE5) {
+                    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                    continue;
+                }
+                if (entries[i].attributes == FAT_ATTR_LFN) {
+                    const fat_lfn_entry_t* lfn = (const fat_lfn_entry_t*)&entries[i];
+                    uint8_t ord = lfn->order & 0x1F;
+                    bool last = (lfn->order & 0x40) != 0;
+                    if (ord == 0 || ord > 20) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        continue;
+                    }
+                    if (last) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        lfn_active = true;
+                        lfn_max_ord = ord;
+                    }
+                    if (!lfn_active || ord > lfn_max_ord) {
+                        fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
+                        continue;
+                    }
+                    fat_decode_lfn_part(lfn, lfn_parts[ord]);
+                    lfn_seen[ord] = true;
+                    continue;
+                }
                 if (count == index) {
-                    char name[9], ext[4];
-                    memcpy(name, entries[i].filename, 8); name[8] = 0;
-                    memcpy(ext, entries[i].extension, 3); ext[3] = 0;
-                    for (int k = 7; k >= 0 && name[k] == ' '; k--) name[k] = 0;
-                    for (int k = 2; k >= 0 && ext[k] == ' '; k--) ext[k] = 0;
-                    if (ext[0]) sprintf(out->name, "%s.%s", name, ext); else strcpy(out->name, name);
+                    bool long_ok = false;
+                    if (lfn_active) {
+                        size_t pos = 0;
+                        long_ok = true;
+                        for (uint8_t ord = 1; ord <= lfn_max_ord; ord++) {
+                            if (!lfn_seen[ord]) {
+                                long_ok = false;
+                                break;
+                            }
+                            for (int c = 0; c < 13; c++) {
+                                char ch = lfn_parts[ord][c];
+                                if (ch == '\0') break;
+                                if (pos + 1 >= sizeof(out->name)) {
+                                    long_ok = false;
+                                    break;
+                                }
+                                out->name[pos++] = ch;
+                            }
+                            if (!long_ok || lfn_parts[ord][12] == '\0') break;
+                        }
+                        if (long_ok && pos > 0) out->name[pos] = '\0';
+                        else long_ok = false;
+                    }
+                    if (!long_ok) fat_entry_short_name(&entries[i], out->name, sizeof(out->name));
                     out->size = entries[i].file_size;
                     out->type = (entries[i].attributes & FAT_ATTR_DIRECTORY) ? VFS_TYPE_DIRECTORY : VFS_TYPE_FILE;
+                    fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
                     buffer_release(buf); return 0;
                 }
+                fat_reset_lfn_state(lfn_parts, lfn_seen, &lfn_max_ord, &lfn_active);
                 count++;
             }
             buffer_release(buf);
