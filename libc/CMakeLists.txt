@@ -7,7 +7,7 @@
 # 1. Generic Sources (stdio, stdlib, string, etc.)
 # We explicitly list subdirectories to avoid accidentally including 'arch' via GLOB_RECURSE.
 file(GLOB LIBC_STDIO_SOURCES "stdio/*.c")
-file(GLOB LIBC_STDLIB_SOURCES "stdlib/*.c")
+file(GLOB LIBC_STDLIB_SOURCES CONFIGURE_DEPENDS "stdlib/*.c")
 file(GLOB LIBC_STRING_SOURCES "string/*.c")
 
 # 2. Architecture Specific Sources
