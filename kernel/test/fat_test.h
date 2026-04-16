@@ -28,8 +28,27 @@ static inline bool fat_test_find_entry(const char* dir_path, const char* name) {
     return found;
 }
 
+static inline bool fat_test_write_file(const char* path, const char* data) {
+    int fd = vfs_open(path, VFS_O_CREAT);
+    if (fd < 0) return false;
+    uint32_t len = (uint32_t)strlen(data);
+    int written = vfs_write(fd, data, len);
+    vfs_close(fd);
+    return written == (int)len;
+}
+
+static inline bool fat_test_readback_matches(const char* path, const char* expected) {
+    uint8_t readback[256];
+    memset(readback, 0, sizeof(readback));
+    int fd = vfs_open(path, 0);
+    if (fd < 0) return false;
+    int read_bytes = vfs_read(fd, readback, sizeof(readback));
+    vfs_close(fd);
+    uint32_t expected_len = (uint32_t)strlen(expected);
+    return (read_bytes == (int)expected_len && memcmp(readback, expected, expected_len) == 0);
+}
+
 static inline void run_fat_tests(Device_t* primary_storage, test_stats_t* stats) {
-    // --- Core Initialization ---
     test_print_category(stats, "CORE INITIALIZATION");
     if (!primary_storage) {
         test_record(stats, false, "Primary storage device availability");
@@ -40,10 +59,7 @@ static inline void run_fat_tests(Device_t* primary_storage, test_stats_t* stats)
     fat_filesystem_t fs;
     test_record(stats, fat_init(&fs, primary_storage) == 0, "FAT filesystem metadata initialization");
 
-    // --- Directory Operations ---
     test_print_category(stats, "DIRECTORY OPERATIONS");
-
-    // We use /AUTOTEST as our root for tests
     int mk_root_res = vfs_mkdir("/AUTOTEST");
     test_record(stats, mk_root_res == 0 || mk_root_res == -2, "Create /AUTOTEST mount point");
 
@@ -53,65 +69,47 @@ static inline void run_fat_tests(Device_t* primary_storage, test_stats_t* stats)
     int mk_temp_res = vfs_mkdir("/AUTOTEST/TEMP");
     test_record(stats, mk_temp_res == 0 || mk_temp_res == -2, "Create /AUTOTEST/TEMP (To delete)");
 
-    // --- File Operations ---
-    test_print_category(stats, "FILE OPERATIONS");
+    test_print_category(stats, "VFS CREATE/WRITE/READ");
+    const char* p_data = "Persistent write path check via VFS.";
+    const char* t_data = "Temporary write path check via VFS.";
 
-    const char* p_data = "This file persists after kernel exit for manual check.";
-    uint32_t p_len = (uint32_t)strlen(p_data);
-    int p_res = fat_create_file(&fs, "/AUTOTEST/PERSIST/CHECK.TXT", (const uint8_t*)p_data, p_len);
-    test_record(stats, p_res == 0, "Create /AUTOTEST/PERSIST/CHECK.TXT");
+    // Ensure deterministic content for repeated test runs.
+    vfs_unlink("/AUTOTEST/PERSIST/CHECK.TXT");
+    vfs_unlink("/AUTOTEST/TEMP/UNLINK.TXT");
 
-    const char* t_data = "TilekarOS FAT self-test temporary payload.";
-    uint32_t t_len = (uint32_t)strlen(t_data);
-    int t_res = fat_create_file(&fs, "/AUTOTEST/TEMP/UNLINK.TXT", (const uint8_t*)t_data, t_len);
-    test_record(stats, t_res == 0, "Create /AUTOTEST/TEMP/UNLINK.TXT");
-
-    // --- VFS Integration ---
-    test_print_category(stats, "VFS INTEGRATION & READBACK");
-
-    uint8_t readback[128];
-    memset(readback, 0, sizeof(readback));
-    int fd = vfs_open("/AUTOTEST/TEMP/UNLINK.TXT", 0);
-    test_record(stats, fd >= 0, "vfs_open temporary file");
-
-    if (fd >= 0) {
-        int read_bytes = vfs_read(fd, readback, sizeof(readback));
-        vfs_close(fd);
-        bool match = (read_bytes == (int)t_len && memcmp(readback, t_data, t_len) == 0);
-        test_record(stats, match, "vfs_read payload verification");
-    } else {
-        test_record(stats, false, "vfs_read payload verification (FD invalid)");
-    }
+    test_record(stats, fat_test_write_file("/AUTOTEST/PERSIST/CHECK.TXT", p_data), "vfs_open(O_CREAT)+vfs_write persistent file");
+    test_record(stats, fat_test_write_file("/AUTOTEST/TEMP/UNLINK.TXT", t_data), "vfs_open(O_CREAT)+vfs_write temp file");
+    test_record(stats, fat_test_readback_matches("/AUTOTEST/PERSIST/CHECK.TXT", p_data), "vfs_read persistent file payload");
+    test_record(stats, fat_test_readback_matches("/AUTOTEST/TEMP/UNLINK.TXT", t_data), "vfs_read temp file payload");
 
     test_record(stats, fat_test_find_entry("/AUTOTEST/TEMP", "UNLINK.TXT"), "vfs_readdir finds UNLINK.TXT");
     test_record(stats, fat_test_find_entry("/AUTOTEST", "PERSIST"), "vfs_readdir finds PERSIST directory");
 
-    // --- Cleanup & Persistence ---
-    test_print_category(stats, "CLEANUP & PERSISTENCE");
-
-    // We only unlink the temporary file to leave others for manual check
+    test_print_category(stats, "UNLINK + RMDIR");
     int unlink_res = vfs_unlink("/AUTOTEST/TEMP/UNLINK.TXT");
     test_record(stats, unlink_res == 0, "vfs_unlink /AUTOTEST/TEMP/UNLINK.TXT");
+    test_record(stats, !fat_test_find_entry("/AUTOTEST/TEMP", "UNLINK.TXT"), "Verify UNLINK.TXT was successfully removed");
 
-    bool still_there = fat_test_find_entry("/AUTOTEST/TEMP", "UNLINK.TXT");
-    test_record(stats, !still_there, "Verify UNLINK.TXT was successfully removed");
+    // rmdir should reject non-empty directory.
+    vfs_unlink("/AUTOTEST/TEMP/RMDIR_CASE/KEEP.TXT");
+    vfs_rmdir("/AUTOTEST/TEMP/RMDIR_CASE");
 
-    /*
-     * CLEANUP SECTION (Commented out for manual verification)
-     * To fully clean up the disk, you would uncomment these:
-     *
-     * vfs_unlink("/AUTOTEST/PERSIST/CHECK.TXT");
-     * // vfs_rmdir is not yet implemented for FAT
-     * // vfs_rmdir("/AUTOTEST/PERSIST");
-     * // vfs_rmdir("/AUTOTEST/TEMP");
-     * // vfs_rmdir("/AUTOTEST");
-     */
+    int mk_case = vfs_mkdir("/AUTOTEST/TEMP/RMDIR_CASE");
+    test_record(stats, mk_case == 0 || mk_case == -2, "Create /AUTOTEST/TEMP/RMDIR_CASE");
+    test_record(stats, fat_test_write_file("/AUTOTEST/TEMP/RMDIR_CASE/KEEP.TXT", "rmdir-non-empty-check"), "Create file inside RMDIR_CASE");
 
-    test_print_divider(62);
-    printf("| PERSISTENT ARTIFACTS LEFT FOR MANUAL CHECK                 |\n");
-    printf("|  -> /AUTOTEST/PERSIST/CHECK.TXT                            |\n");
-    printf("|  -> /AUTOTEST/TEMP/ (Empty Directory)                      |\n");
-    test_print_divider(62);
+    int non_empty_rmdir = vfs_rmdir("/AUTOTEST/TEMP/RMDIR_CASE");
+    test_record(stats, non_empty_rmdir != 0, "vfs_rmdir rejects non-empty directory");
+
+    int cleanup_file = vfs_unlink("/AUTOTEST/TEMP/RMDIR_CASE/KEEP.TXT");
+    test_record(stats, cleanup_file == 0, "Cleanup file inside RMDIR_CASE");
+
+    int empty_rmdir = vfs_rmdir("/AUTOTEST/TEMP/RMDIR_CASE");
+    test_record(stats, empty_rmdir == 0, "vfs_rmdir removes empty directory");
+    test_record(stats, !fat_test_find_entry("/AUTOTEST/TEMP", "RMDIR_CASE"), "vfs_readdir confirms RMDIR_CASE removal");
+
+    test_print_category(stats, "PERSISTENCE ARTIFACT");
+    test_record(stats, fat_test_find_entry("/AUTOTEST/PERSIST", "CHECK.TXT"), "Persistent artifact remains for manual inspection");
 }
 
 #endif

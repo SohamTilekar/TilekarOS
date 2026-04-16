@@ -1,1 +1,1 @@
-This file persists after kernel exit for manual check.
+Persistent write path check via VFS.
