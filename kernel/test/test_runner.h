@@ -6,6 +6,7 @@
 #include "fat_test.h"
 #include "fd_table_test.h"
 #include "kmalloc_test.h"
+#include "malloc_test.h"
 #include "process_test.h"
 
 static inline bool run_all_tests(Device_t* primary_storage) {
@@ -14,6 +15,7 @@ static inline bool run_all_tests(Device_t* primary_storage) {
     test_print_header("TILEKAR OS KERNEL TEST SUITE");
     
     run_kmalloc_tests(&stats);
+    run_malloc_tests(&stats);
     run_fat_tests(primary_storage, &stats);
     run_fd_table_tests(primary_storage, &stats);
     run_process_tests(&stats);

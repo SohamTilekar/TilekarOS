@@ -120,6 +120,20 @@ void abort(void);
 ```
 Causes abnormal program termination. In the kernel, this typically triggers a panic.
 
+### `brk` / `sbrk`
+```c
+int brk(void* addr);
+void* sbrk(intptr_t increment);
+```
+Manipulates the process break through `SYS_BRK`. `sbrk` returns the previous break on success and `(void*)-1` on failure.
+
+### `malloc` / `free`
+```c
+void* malloc(size_t size);
+void free(void* ptr);
+```
+Simple first-fit heap allocator backed by `sbrk`.
+
 ---
 
 ## 4. Test/Example: Using LibC in Kernel

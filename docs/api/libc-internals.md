@@ -45,9 +45,10 @@ TilekarOS prioritizes correctness and simplicity in its string implementation.
 ---
 
 ## 3. Standard Library (`stdlib.h`)
-**Source Files**: [abort.c](https://github.com/SohamTilekar/TilekarOS/blob/main/libc/stdlib/abort.c){: target="_blank" }
+**Source Files**: [abort.c](https://github.com/SohamTilekar/TilekarOS/blob/main/libc/stdlib/abort.c){: target="_blank" }, [malloc.c](https://github.com/SohamTilekar/TilekarOS/blob/main/libc/stdlib/malloc.c){: target="_blank" }, [free.c](https://github.com/SohamTilekar/TilekarOS/blob/main/libc/stdlib/free.c){: target="_blank" }
 
 - **`abort()`**: In the kernel, this triggers a **Kernel Panic** message and halts the CPU. In user mode, it would eventually send a signal to terminate the process.
+- **`malloc()/free()`**: First-fit allocator backed by `SYS_BRK` (`sbrk`) for userspace heap growth.
 
 ??? example "Code Preview: `abort.c`"
     ```c

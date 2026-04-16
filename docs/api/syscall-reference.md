@@ -143,6 +143,23 @@ Reads directory entries.
 
 **Returns**: 0 on success, negative error code on failure.
 
+### SYS_FORK (10)
+Creates a child task by cloning the current process image.
+
+### SYS_EXECVE (11)
+Replaces the current process image with a new ELF binary.
+
+### SYS_YIELD (12)
+Yields CPU time to the scheduler.
+
+### SYS_BRK (13)
+Gets or sets the current process break (userspace heap end).
+
+- **EAX**: 13
+- **EBX**: Requested break address (`0` to query current break)
+
+**Returns**: New/current break on success, `-1` on failure.
+
 ---
 
 ## 4. Test/Example: User-mode File Creation
