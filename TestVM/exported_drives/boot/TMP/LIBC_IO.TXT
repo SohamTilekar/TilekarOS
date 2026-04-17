@@ -1,0 +1,1 @@
+Testing fprintf: 123 success

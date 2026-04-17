@@ -1,0 +1,1 @@
+Persistent write path check via VFS.
