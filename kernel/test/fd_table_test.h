@@ -77,14 +77,14 @@ static inline void run_fd_table_tests(Device_t* primary_storage, test_stats_t* s
         return;
     }
 
-    int mk_autotest = vfs_mkdir("/AUTOTEST");
-    test_record(stats, mk_autotest == 0 || mk_autotest == -2, "ensure /AUTOTEST exists");
+    int mk_tmp = vfs_mkdir("/tmp");
+    test_record(stats, mk_tmp == 0 || mk_tmp == -2, "ensure /tmp exists");
 
     const char* data = "fd-table-isolation";
-    int create_res = fat_create_file(&fs, "/AUTOTEST/FDTABLE.TXT", (const uint8_t*)data, (uint32_t)strlen(data));
-    test_record(stats, create_res == 0 || create_res == -2, "create /AUTOTEST/FDTABLE.TXT");
+    int create_res = fat_create_file(&fs, "/tmp/FDTABLE.TXT", (const uint8_t*)data, (uint32_t)strlen(data));
+    test_record(stats, create_res == 0 || create_res == -2, "create /tmp/FDTABLE.TXT");
 
-    int fd = vfs_open("/AUTOTEST/FDTABLE.TXT", 0);
+    int fd = vfs_open("/tmp/FDTABLE.TXT", 0);
     test_record(stats, fd >= 3, "main task opens test file");
     if (fd < 3) return;
 
@@ -103,6 +103,28 @@ static inline void run_fd_table_tests(Device_t* primary_storage, test_stats_t* s
     test_record(stats, set_res == 0, "task_file_table_set updates target FD");
     if (set_res == 0) {
         test_record(stats, created->file_table[7] != NULL, "target FD updated in task table");
+    }
+
+    // --- Resource Limit Test ---
+    test_print_category(stats, "FD RESOURCE LIMITS");
+    int fds[MAX_FILES_PER_PROCESS + 2];
+    int count = 0;
+    
+    // Fill the table (some FDs are already open like stdin/out/err)
+    for (int i = 0; i < MAX_FILES_PER_PROCESS + 1; i++) {
+        int temp_fd = vfs_open("/dev/tty0", 0);
+        if (temp_fd >= 0) {
+            fds[count++] = temp_fd;
+        } else {
+            break;
+        }
+    }
+    
+    test_record(stats, count <= MAX_FILES_PER_PROCESS, "Respects MAX_FILES_PER_PROCESS limit");
+    
+    // Cleanup
+    for (int i = 0; i < count; i++) {
+        vfs_close(fds[i]);
     }
 
     vfs_close(fd);

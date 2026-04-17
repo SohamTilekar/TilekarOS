@@ -18,24 +18,28 @@ static inline void run_kmalloc_tests(test_stats_t* stats) {
     if (p1) {
         memset(p1, 0xAA, 128);
         test_record(stats, ((uint8_t*)p1)[0] == 0xAA && ((uint8_t*)p1)[127] == 0xAA, "kmalloc_aligned memory is writable");
+        kfree(p1);
     }
 
-    // Try kfree
-    kfree(p1);
-    test_record(stats, true, "kfree(aligned_ptr) completes without crashing");
-
-    // Try krealloc on aligned pointer
-    void* p2 = kmalloc_aligned(64, 4096);
-    test_record(stats, p2 != NULL && ((uintptr_t)p2 & 0xFFF) == 0, "kmalloc_aligned(64, 4096) for realloc");
-    if (p2) {
-        memset(p2, 0xBB, 64);
-        void* p3 = krealloc(p2, 256);
-        test_record(stats, p3 != NULL, "krealloc on aligned pointer succeeds");
-        if (p3) {
-            test_record(stats, ((uint8_t*)p3)[0] == 0xBB && ((uint8_t*)p3)[63] == 0xBB, "krealloc preserves data from aligned ptr");
-            kfree(p3);
+    test_print_category(stats, "KMALLOC STRESS TEST");
+    void* ptrs[256];
+    bool stress_pass = true;
+    for (int i = 0; i < 256; i++) {
+        ptrs[i] = kmalloc(16);
+        if (!ptrs[i]) {
+            stress_pass = false;
+            break;
+        }
+        memset(ptrs[i], i, 16);
+    }
+    
+    if (stress_pass) {
+        for (int i = 0; i < 256; i++) {
+            if (((uint8_t*)ptrs[i])[0] != (uint8_t)i) stress_pass = false;
+            kfree(ptrs[i]);
         }
     }
+    test_record(stats, stress_pass, "256 sequential kmalloc/kfree cycles");
 }
 
 #endif

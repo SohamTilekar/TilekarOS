@@ -6,18 +6,22 @@
 
 # 1. Generic Sources (stdio, stdlib, string, etc.)
 # We explicitly list subdirectories to avoid accidentally including 'arch' via GLOB_RECURSE.
-file(GLOB LIBC_STDIO_SOURCES "stdio/*.c")
+file(GLOB LIBC_STDIO_SOURCES CONFIGURE_DEPENDS "stdio/*.c")
 file(GLOB LIBC_STDLIB_SOURCES CONFIGURE_DEPENDS "stdlib/*.c")
-file(GLOB LIBC_STRING_SOURCES "string/*.c")
+file(GLOB LIBC_STRING_SOURCES CONFIGURE_DEPENDS "string/*.c")
+file(GLOB LIBC_CTYPE_SOURCES CONFIGURE_DEPENDS "ctype/*.c")
+file(GLOB LIBC_ERRNO_SOURCES CONFIGURE_DEPENDS "errno/*.c")
 
 # 2. Architecture Specific Sources
 # Only include the sources for the currently selected OS_ARCH.
-file(GLOB LIBC_ARCH_SOURCES "arch/${OS_ARCH}/*.c")
+file(GLOB LIBC_ARCH_SOURCES CONFIGURE_DEPENDS "arch/${OS_ARCH}/*.c")
 
 set(LIBC_SOURCES
     ${LIBC_STDIO_SOURCES}
     ${LIBC_STDLIB_SOURCES}
     ${LIBC_STRING_SOURCES}
+    ${LIBC_CTYPE_SOURCES}
+    ${LIBC_ERRNO_SOURCES}
     ${LIBC_ARCH_SOURCES}
 )
 

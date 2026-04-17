@@ -465,7 +465,6 @@ task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level) {
 
 int task_file_table_copy(task_t* dst, const task_t* src) {
     if (!dst || !src) return -1;
-    vfs_task_file_table_destroy(dst->file_table);
     return vfs_task_file_table_copy(dst->file_table, src->file_table);
 }
 

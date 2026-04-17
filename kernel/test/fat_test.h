@@ -60,56 +60,86 @@ static inline void run_fat_tests(Device_t* primary_storage, test_stats_t* stats)
     test_record(stats, fat_init(&fs, primary_storage) == 0, "FAT filesystem metadata initialization");
 
     test_print_category(stats, "DIRECTORY OPERATIONS");
-    int mk_root_res = vfs_mkdir("/AUTOTEST");
-    test_record(stats, mk_root_res == 0 || mk_root_res == -2, "Create /AUTOTEST mount point");
+    int mk_root_res = vfs_mkdir("/tmp");
+    test_record(stats, mk_root_res == 0 || mk_root_res == -2, "Create /tmp mount point");
 
-    int mk_persist_res = vfs_mkdir("/AUTOTEST/PERSIST");
-    test_record(stats, mk_persist_res == 0 || mk_persist_res == -2, "Create /AUTOTEST/PERSIST (To stay)");
+    int mk_persist_res = vfs_mkdir("/tmp/PERSIST");
+    test_record(stats, mk_persist_res == 0 || mk_persist_res == -2, "Create /tmp/PERSIST (To stay)");
 
-    int mk_temp_res = vfs_mkdir("/AUTOTEST/TEMP");
-    test_record(stats, mk_temp_res == 0 || mk_temp_res == -2, "Create /AUTOTEST/TEMP (To delete)");
+    int mk_temp_res = vfs_mkdir("/tmp/TEMP");
+    test_record(stats, mk_temp_res == 0 || mk_temp_res == -2, "Create /tmp/TEMP (To delete)");
 
     test_print_category(stats, "VFS CREATE/WRITE/READ");
     const char* p_data = "Persistent write path check via VFS.";
     const char* t_data = "Temporary write path check via VFS.";
 
     // Ensure deterministic content for repeated test runs.
-    vfs_unlink("/AUTOTEST/PERSIST/CHECK.TXT");
-    vfs_unlink("/AUTOTEST/TEMP/UNLINK.TXT");
+    vfs_unlink("/tmp/PERSIST/CHECK.TXT");
+    vfs_unlink("/tmp/TEMP/UNLINK.TXT");
 
-    test_record(stats, fat_test_write_file("/AUTOTEST/PERSIST/CHECK.TXT", p_data), "vfs_open(O_CREAT)+vfs_write persistent file");
-    test_record(stats, fat_test_write_file("/AUTOTEST/TEMP/UNLINK.TXT", t_data), "vfs_open(O_CREAT)+vfs_write temp file");
-    test_record(stats, fat_test_readback_matches("/AUTOTEST/PERSIST/CHECK.TXT", p_data), "vfs_read persistent file payload");
-    test_record(stats, fat_test_readback_matches("/AUTOTEST/TEMP/UNLINK.TXT", t_data), "vfs_read temp file payload");
+    test_record(stats, fat_test_write_file("/tmp/PERSIST/CHECK.TXT", p_data), "vfs_open(O_CREAT)+vfs_write persistent file");
+    test_record(stats, fat_test_write_file("/tmp/TEMP/UNLINK.TXT", t_data), "vfs_open(O_CREAT)+vfs_write temp file");
+    test_record(stats, fat_test_readback_matches("/tmp/PERSIST/CHECK.TXT", p_data), "vfs_read persistent file payload");
+    test_record(stats, fat_test_readback_matches("/tmp/TEMP/UNLINK.TXT", t_data), "vfs_read temp file payload");
 
-    test_record(stats, fat_test_find_entry("/AUTOTEST/TEMP", "UNLINK.TXT"), "vfs_readdir finds UNLINK.TXT");
-    test_record(stats, fat_test_find_entry("/AUTOTEST", "PERSIST"), "vfs_readdir finds PERSIST directory");
+    test_record(stats, fat_test_find_entry("/tmp/TEMP", "UNLINK.TXT"), "vfs_readdir finds UNLINK.TXT");
+    test_record(stats, fat_test_find_entry("/tmp", "PERSIST"), "vfs_readdir finds PERSIST directory");
 
     test_print_category(stats, "UNLINK + RMDIR");
-    int unlink_res = vfs_unlink("/AUTOTEST/TEMP/UNLINK.TXT");
-    test_record(stats, unlink_res == 0, "vfs_unlink /AUTOTEST/TEMP/UNLINK.TXT");
-    test_record(stats, !fat_test_find_entry("/AUTOTEST/TEMP", "UNLINK.TXT"), "Verify UNLINK.TXT was successfully removed");
+    int unlink_res = vfs_unlink("/tmp/TEMP/UNLINK.TXT");
+    test_record(stats, unlink_res == 0, "vfs_unlink /tmp/TEMP/UNLINK.TXT");
+    test_record(stats, !fat_test_find_entry("/tmp/TEMP", "UNLINK.TXT"), "Verify UNLINK.TXT was successfully removed");
 
     // rmdir should reject non-empty directory.
-    vfs_unlink("/AUTOTEST/TEMP/RMDIR_CASE/KEEP.TXT");
-    vfs_rmdir("/AUTOTEST/TEMP/RMDIR_CASE");
+    vfs_unlink("/tmp/TEMP/RMDIR_CASE/KEEP.TXT");
+    vfs_rmdir("/tmp/TEMP/RMDIR_CASE");
 
-    int mk_case = vfs_mkdir("/AUTOTEST/TEMP/RMDIR_CASE");
-    test_record(stats, mk_case == 0 || mk_case == -2, "Create /AUTOTEST/TEMP/RMDIR_CASE");
-    test_record(stats, fat_test_write_file("/AUTOTEST/TEMP/RMDIR_CASE/KEEP.TXT", "rmdir-non-empty-check"), "Create file inside RMDIR_CASE");
+    int mk_case = vfs_mkdir("/tmp/TEMP/RMDIR_CASE");
+    test_record(stats, mk_case == 0 || mk_case == -2, "Create /tmp/TEMP/RMDIR_CASE");
+    test_record(stats, fat_test_write_file("/tmp/TEMP/RMDIR_CASE/KEEP.TXT", "rmdir-non-empty-check"), "Create file inside RMDIR_CASE");
 
-    int non_empty_rmdir = vfs_rmdir("/AUTOTEST/TEMP/RMDIR_CASE");
+    int non_empty_rmdir = vfs_rmdir("/tmp/TEMP/RMDIR_CASE");
     test_record(stats, non_empty_rmdir != 0, "vfs_rmdir rejects non-empty directory");
 
-    int cleanup_file = vfs_unlink("/AUTOTEST/TEMP/RMDIR_CASE/KEEP.TXT");
+    int cleanup_file = vfs_unlink("/tmp/TEMP/RMDIR_CASE/KEEP.TXT");
     test_record(stats, cleanup_file == 0, "Cleanup file inside RMDIR_CASE");
 
-    int empty_rmdir = vfs_rmdir("/AUTOTEST/TEMP/RMDIR_CASE");
+    int empty_rmdir = vfs_rmdir("/tmp/TEMP/RMDIR_CASE");
     test_record(stats, empty_rmdir == 0, "vfs_rmdir removes empty directory");
-    test_record(stats, !fat_test_find_entry("/AUTOTEST/TEMP", "RMDIR_CASE"), "vfs_readdir confirms RMDIR_CASE removal");
+    test_record(stats, !fat_test_find_entry("/tmp/TEMP", "RMDIR_CASE"), "vfs_readdir confirms RMDIR_CASE removal");
+
+    test_print_category(stats, "NESTED DIRECTORIES");
+    test_record(stats, vfs_mkdir("/tmp/A") == 0 || vfs_mkdir("/tmp/A") == -2, "mkdir /tmp/A");
+    test_record(stats, vfs_mkdir("/tmp/A/B") == 0 || vfs_mkdir("/tmp/A/B") == -2, "mkdir /tmp/A/B");
+    test_record(stats, vfs_mkdir("/tmp/A/B/C") == 0 || vfs_mkdir("/tmp/A/B/C") == -2, "mkdir /tmp/A/B/C");
+    test_record(stats, fat_test_write_file("/tmp/A/B/C/DEEP.TXT", "deep"), "write /tmp/A/B/C/DEEP.TXT");
+    test_record(stats, fat_test_readback_matches("/tmp/A/B/C/DEEP.TXT", "deep"), "read /tmp/A/B/C/DEEP.TXT");
+
+    test_print_category(stats, "FAT CLUSTER CHAINING");
+    char large_buffer[1024]; // 2 clusters on standard FAT12
+    for(int i = 0; i < 1024; i++) {
+        char val = (char)(i % 256);
+        if (val == '\0') val = 1;  // or any non-zero value you like
+        large_buffer[i] = val;
+    }
+    large_buffer[1023] = '\0';
+
+    const char* large_path = "/tmp/LARGE.BIN";
+    vfs_unlink(large_path);
+
+    bool write_ok = fat_test_write_file(large_path, large_buffer);
+    test_record(stats, write_ok, "Write 1KB file (multi-cluster)");
+
+    if (write_ok) {
+        uint8_t readback[1024];
+        int fd = vfs_open(large_path, 0);
+        int bytes = vfs_read(fd, readback, 1024);
+        vfs_close(fd);
+        test_record(stats, bytes == 1023 && memcmp(readback, large_buffer, 1023) == 0, "Readback 1KB file matches");
+    }
 
     test_print_category(stats, "PERSISTENCE ARTIFACT");
-    test_record(stats, fat_test_find_entry("/AUTOTEST/PERSIST", "CHECK.TXT"), "Persistent artifact remains for manual inspection");
+    test_record(stats, fat_test_find_entry("/tmp/PERSIST", "CHECK.TXT"), "Persistent artifact remains for manual inspection");
 }
 
 #endif

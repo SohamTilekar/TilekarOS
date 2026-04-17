@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <float.h>
 
+#if defined(__is_libk)
+#include <kernel/tty.h>
+#else
+#include <sys/syscall.h>
+#endif
+
 // Internal configuration for tiny printf
 #ifndef PRINTF_NTOA_BUFFER_SIZE
 #define PRINTF_NTOA_BUFFER_SIZE    32U
@@ -51,6 +57,18 @@ static inline void _out_char(char character, void* buffer, size_t idx, size_t ma
   (void)buffer; (void)idx; (void)maxlen;
   if (character) {
     putchar(character);
+  }
+}
+
+static inline void _out_f(char character, void* buffer, size_t idx, size_t maxlen) {
+  (void)idx; (void)maxlen;
+  if (character && buffer) {
+    FILE* f = (FILE*)buffer;
+#if defined(__is_libk)
+    terminal_write(&character, 1);
+#else
+    __syscall(SYS_WRITE, (uint32_t)f->fd, (uint32_t)&character, 1, 0, 0);
+#endif
   }
 }
 
@@ -573,10 +591,22 @@ int vprintf(const char* format, va_list va) {
   return _vsnprintf_engine(_out_char, NULL, (size_t)-1, format, va);
 }
 
+int vfprintf(FILE* stream, const char* format, va_list va) {
+  return _vsnprintf_engine(_out_f, stream, (size_t)-1, format, va);
+}
+
 int printf(const char* format, ...) {
   va_list va;
   va_start(va, format);
   int ret = vprintf(format, va);
+  va_end(va);
+  return ret;
+}
+
+int fprintf(FILE* stream, const char* format, ...) {
+  va_list va;
+  va_start(va, format);
+  int ret = vfprintf(stream, format, va);
   va_end(va);
   return ret;
 }

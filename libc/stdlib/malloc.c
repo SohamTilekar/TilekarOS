@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <sys/syscall.h>
 #include "malloc_internal.h"
 
@@ -176,3 +177,27 @@ void __libc_free_impl(void* ptr) {
         (void)sbrk(shrink);
     }
 }
+
+void* realloc(void* ptr, size_t size) {
+    if (!ptr) {
+        return malloc(size);
+    }
+    if (size == 0) {
+        free(ptr);
+        return NULL;
+    }
+
+    block_header_t* block = ((block_header_t*)ptr) - 1;
+    if (block->size >= size) {
+        // Optional: split if much larger
+        return ptr;
+    }
+
+    void* new_ptr = malloc(size);
+    if (new_ptr) {
+        memcpy(new_ptr, ptr, block->size);
+        free(ptr);
+    }
+    return new_ptr;
+}
+

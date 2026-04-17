@@ -179,14 +179,20 @@ int vfs_task_file_table_copy(file_t** dst_file_table, file_t* const* src_file_ta
 }
 
 int vfs_task_file_table_set(file_t** file_table, int fd, const file_t* src_file) {
-    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS) return -1;
+    if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS) {
+        printf("[VFS] set failed: invalid args\n");
+        return -1;
+    }
     if (file_table[fd]) {
         kfree(file_table[fd]);
         file_table[fd] = NULL;
     }
     if (!src_file) return 0;
     file_table[fd] = vfs_clone_file_entry(src_file);
-    if (!file_table[fd]) return -2;
+    if (!file_table[fd]) {
+        printf("[VFS] set failed: clone failed\n");
+        return -2;
+    }
     return 0;
 }
 

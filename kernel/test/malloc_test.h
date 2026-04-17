@@ -7,6 +7,7 @@
 #include "../arch/i386/drivers/timer.h"
 #include "../arch/i386/drivers/keyboard.h"
 #include <stdio.h>
+#include <string.h>
 
 /**
  * run_malloc_tests - Launches the usermode malloc test binary (/BIN/MALLOC_TEST)
@@ -22,6 +23,10 @@ static inline void run_malloc_tests(test_stats_t* stats) {
 
     if (exists) {
         const char* path = "/BIN/MALLOC_TEST";
+
+        // Clean up previous results if any
+        vfs_unlink("/tmp/MALLOC.RES");
+
         printf("| [>] Stopping scheduler for userspace malloc test...       |\n");
         task_stop_scheduler();
 
@@ -37,28 +42,33 @@ static inline void run_malloc_tests(test_stats_t* stats) {
             task_switch_to(test_task);
 
             uint32_t start_ticks = get_ticks();
-            while (get_ticks() < start_ticks + 4000) { // wait ~4s for output
+            while (get_ticks() < start_ticks + 1000) { // wait ~1s for output
                 task_yield(NULL);
             }
             test_print_line('-', '-', '-', 62);
 
-            printf("| [?] Does the userspace malloc output look correct? (y/n): ");
-            char choice = 0;
-            // Clear keyboard buffer and wait for input up to 10s
-            keyboard_clear_buffer();
-            uint32_t verify_start = get_ticks();
-            while (choice == 0 && get_ticks() < verify_start + 10000) {
-                choice = keyboard_getchar();
-                if (choice == 0) task_yield(NULL);
-            }
-            printf("\n");
+            // Automated Verification
+            printf("| [>] Verifying results via /tmp/MALLOC.RES...         |\n");
+            int res = test_verify_res_file("/tmp/MALLOC.RES");
+            bool passed = (res == 1);
 
-            bool matched = (choice == 'y' || choice == 'Y');
-            if (choice == 0) {
-                printf("| [!] Verification input timed out. Recording as FAIL.     |\n");
+            if (res == 0) {
+                 printf("| [!] Result file reports FAIL.                             |\n");
+            } else if (res == -1) {
+                printf("| [!] Automated check failed (missing/empty). Falling back. |\n");
+                printf("| [?] Does the userspace malloc output look correct? (y/n): ");
+                char choice = 0;
+                keyboard_clear_buffer();
+                uint32_t verify_start = get_ticks();
+                while (choice == 0 && get_ticks() < verify_start + 10000) {
+                    choice = keyboard_getchar();
+                    if (choice == 0) task_yield(NULL);
+                }
+                printf("\n");
+                passed = (choice == 'y' || choice == 'Y');
             }
-            test_record(stats, matched, "Userspace malloc test manual verification");
 
+            test_record(stats, passed, "Userspace malloc test verification");
             printf("| [>] Resume tests after verification.                      |\n");
         }
     } else {

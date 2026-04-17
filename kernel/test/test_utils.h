@@ -51,4 +51,24 @@ static inline void test_print_divider(int width) {
     test_print_line('-', '-', '-', width);
 }
 
+/**
+ * test_verify_res_file - Helper to check if a result file contains "PASS" or "FAIL"
+ * Returns: 1 if PASS, 0 if FAIL, -1 if file missing/error
+ */
+static inline int test_verify_res_file(const char* path) {
+    int res_fd = vfs_open(path, 0);
+    if (res_fd < 0) return -1;
+
+    char res_buf[8];
+    memset(res_buf, 0, 8);
+    int bytes = vfs_read(res_fd, res_buf, 4);
+    vfs_close(res_fd);
+
+    if (bytes == 4) {
+        if (memcmp(res_buf, "PASS", 4) == 0) return 1;
+        if (memcmp(res_buf, "FAIL", 4) == 0) return 0;
+    }
+    return -1;
+}
+
 #endif
