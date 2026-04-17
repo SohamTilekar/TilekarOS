@@ -91,9 +91,11 @@ task_t* task_fork(InterruptReg_t *regs);
 /**
  * task_execve - Replaces the current process with a new one from an ELF.
  * @path: Path to the ELF file.
+ * @argv: Argument vector.
+ * @envp: Environment vector.
  * @regs: The register state to be modified for the new process.
  */
-int task_execve(const char* path, InterruptReg_t *regs);
+int task_execve(const char* path, char *const argv[], char *const envp[], InterruptReg_t *regs);
 
 /**
  * task_yield - Yields the CPU to the next ready task.

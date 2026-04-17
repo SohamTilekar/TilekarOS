@@ -159,6 +159,8 @@ add_custom_command(
     OUTPUT ${ISO_IMAGE}
     # Create the directory structure: isodir/boot/grub
     COMMAND ${CMAKE_COMMAND} -E make_directory ${ISODIR}/boot/grub
+    # Copy the sysroot content to isodir root
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/sysroot/ ${ISODIR}/
     # Copy the kernel binary
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:myos.kernel> ${ISODIR}/boot/myos.kernel
     # Copy the GRUB configuration
@@ -208,6 +210,10 @@ add_custom_target(prepare_vm
                 mkfs.fat \"\$img\" > /dev/null; \
             fi; \
             if [ \"\$name\" = \"\$boot_drive\" ]; then \
+                if [ -d \"${CMAKE_SOURCE_DIR}/sysroot\" ]; then \
+                    echo \"  Merging sysroot into \$img...\"; \
+                    mcopy -i \"\$img\" -snD o \"${CMAKE_SOURCE_DIR}/sysroot\"/* ::/ 2>/dev/null || true; \
+                fi; \
                 for cfile in \$(find \"${CMAKE_SOURCE_DIR}/${VM_DIR}\" -maxdepth 1 -name \"*.c\"); do \
                     if [ -f \"\$cfile\" ]; then \
                         filename=\$(basename \"\$cfile\" .c); \

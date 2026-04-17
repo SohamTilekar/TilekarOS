@@ -43,7 +43,7 @@ uint32_t syscall_dispatch(InterruptReg_t* r) {
     }
 
     if (num == SYS_EXECVE) {
-        return (uint32_t)task_execve((const char*)r->ebx, r);
+        return (uint32_t)task_execve((const char*)r->ebx, (char *const*)r->ecx, (char *const*)r->edx, r);
     }
 
     if (num == SYS_YIELD) {

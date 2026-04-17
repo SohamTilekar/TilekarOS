@@ -72,6 +72,12 @@ void kernel_main(uint32_t magic, void* boot_info) {
   task_init_scheduler();
   run_all_tests(primary_storage);
 
+  // Launch the shell
+  printf("Launching Shell (/bin/sh)...\n");
+  if (!task_create_elf_from_file("/bin/sh", 3)) {
+      printf("CRITICAL: Failed to launch shell!\n");
+  }
+
   printf("Main task (TID 0) entering infinite yield loop.\n");
   while (true) {
       task_yield(NULL);

@@ -3,6 +3,7 @@
 #include "stdio.h"
 #include <string.h>
 #include <kernel/tty.h>
+#include "task.h"
 
 // State Variables
 static bool is_extended = false;
@@ -36,9 +37,15 @@ static bool kbd_try_pop(char* out) {
     return true;
 }
 
+static task_t* keyboard_waiting_task = NULL;
+
 char keyboard_getchar() {
     char c;
-    return kbd_try_pop(&c) ? c : 0;
+    while (!kbd_try_pop(&c)) {
+        keyboard_waiting_task = current_task;
+        task_block_current();
+    }
+    return c;
 }
 
 void keyboard_clear_buffer() {
@@ -54,10 +61,15 @@ int keyboard_read(struct file* file, void* buffer, uint32_t size) {
     uint32_t count = 0;
     while (count < size) {
         char c;
-        if (!kbd_try_pop(&c)) break;
+        while (!kbd_try_pop(&c)) {
+            keyboard_waiting_task = current_task;
+            task_block_current();
+        }
         if (c == 0) continue;
+
         ptr[count++] = c;
         if (c == '\n') break;
+
     }
     return count;
 }
@@ -222,9 +234,19 @@ void keyboard_handler(InterruptReg_t *r) {
     if (event.pressed && event.character) {
         kbd_push(event.character);
         printf("%c", event.character); // Echo
+
+        if (keyboard_waiting_task) {
+            task_unblock(keyboard_waiting_task);
+            keyboard_waiting_task = NULL;
+        }
     } else if (event.pressed && key == KEY_BACKSPACE) {
         kbd_push('\b');
-        printf("\b");
+        printf("\b \b"); // Proper backspace echo: move back, print space, move back
+
+        if (keyboard_waiting_task) {
+            task_unblock(keyboard_waiting_task);
+            keyboard_waiting_task = NULL;
+        }
     }
 
     if (active_callback) active_callback(event);

@@ -16,5 +16,5 @@ site/**
 **.meta
 docs/.obsidian/**
 **/drives/**
-**/exported_drives/*
+**/exported_drives/**
 !**/exported_drives/boot/*.c

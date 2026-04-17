@@ -80,8 +80,15 @@ static void task_wrapper(void (*entry)(void)) {
     uint32_t status = 0;
     if (current_task && current_task->privilege_level == 3) {
         // Switch to user mode via iret
-        // User stack is mapped at 0xB0000000
+        // User stack is mapped at 0xB0000000 (1 page = 4KB)
         uint32_t user_esp = 0xB0000000 + 4096;
+        
+        // Push argc=0, argv=NULL onto user stack for crt0
+        user_esp -= 8;
+        uint32_t* ustack = (uint32_t*)user_esp;
+        ustack[0] = 0; // argc
+        ustack[1] = 0; // argv
+
         asm volatile(
             "cli \n\t"
             "mov $0x23, %%ax \n\t" // User data segment
@@ -577,7 +584,8 @@ task_t* task_fork(InterruptReg_t *regs) {
     return child;
 }
 
-int task_execve(const char* path, InterruptReg_t *regs) {
+int task_execve(const char* path, char *const argv[], char *const envp[], InterruptReg_t *regs) {
+    (void)envp; // envp not supported yet
     int fd = vfs_open(path, 0);
     if (fd < 0) return -1;
 
@@ -597,11 +605,28 @@ int task_execve(const char* path, InterruptReg_t *regs) {
         return -1;
     }
 
+    // Capture arguments in kernel memory before we switch page directory
+    int argc = 0;
+    char** kargv = NULL;
+    if (argv) {
+        while (argv[argc]) argc++;
+        kargv = kmalloc(sizeof(char*) * (argc + 1));
+        for (int i = 0; i < argc; i++) {
+            kargv[i] = kmalloc(strlen(argv[i]) + 1);
+            strcpy(kargv[i], argv[i]);
+        }
+        kargv[argc] = NULL;
+    }
+
     uint32_t flags = interrupt_save();
 
     // Create a new page directory for the new process image
     uint32_t* new_pd_virt = memory_create_user_pagedir();
     if (!new_pd_virt) {
+        if (kargv) {
+            for (int i = 0; i < argc; i++) kfree(kargv[i]);
+            kfree(kargv);
+        }
         kfree(elf_data);
         interrupt_restore(flags);
         return -1;
@@ -626,9 +651,45 @@ int task_execve(const char* path, InterruptReg_t *regs) {
     if (!entry) {
         // Restore old page directory before returning error
         memory_set_pagedir((uint32_t*)(old_pd_phys + KERNEL_START));
-        // memory_destroy_pagedir(new_pd_virt); // Not implemented yet
+        if (kargv) {
+            for (int i = 0; i < argc; i++) kfree(kargv[i]);
+            kfree(kargv);
+        }
         interrupt_restore(flags);
         return -1;
+    }
+
+    // Copy arguments to the user stack
+    uint32_t user_esp = 0xB0000000 + 4096;
+    uint32_t* uargv_ptrs = NULL;
+
+    if (argc > 0) {
+        // Allocate space for the pointers to strings on the stack
+        // We'll place strings first, then the pointers
+        uint32_t* uargv = kmalloc(sizeof(uint32_t) * (argc + 1));
+        
+        for (int i = argc - 1; i >= 0; i--) {
+            size_t slen = strlen(kargv[i]) + 1;
+            user_esp -= slen;
+            memcpy((void*)user_esp, kargv[i], slen);
+            uargv[i] = user_esp;
+        }
+        uargv[argc] = 0;
+
+        // Align ESP
+        user_esp &= ~3;
+
+        // Push uargv array (the pointers)
+        for (int i = argc; i >= 0; i--) {
+            user_esp -= 4;
+            *(uint32_t*)user_esp = uargv[i];
+        }
+        uargv_ptrs = (uint32_t*)user_esp;
+        kfree(uargv);
+
+        // Free kernel buffers
+        for (int i = 0; i < argc; i++) kfree(kargv[i]);
+        kfree(kargv);
     }
 
     // Update the task's page directory address
@@ -646,6 +707,12 @@ int task_execve(const char* path, InterruptReg_t *regs) {
         current_task->heap_mapped_end = 0;
     }
 
+    // Final stack setup for crt0: argc, argv
+    user_esp -= 4;
+    *(uint32_t*)user_esp = (uint32_t)uargv_ptrs;
+    user_esp -= 4;
+    *(uint32_t*)user_esp = (uint32_t)argc;
+
     // Modify the interrupt frame to return to the new entry point
     regs->eip = (uint32_t)entry;
     regs->ebx = 0;
@@ -654,11 +721,9 @@ int task_execve(const char* path, InterruptReg_t *regs) {
     regs->esi = 0;
     regs->edi = 0;
     regs->ebp = 0;
-    // Keep EAX as 0 (for success) or whatever syscall return value is expected.
-    // Usually execve only returns on failure, so for child it will start at entry.
 
     if (current_task->privilege_level == 3) {
-        regs->useresp = 0xB0000000 + 4096;
+        regs->useresp = user_esp;
     }
 
     interrupt_restore(flags);

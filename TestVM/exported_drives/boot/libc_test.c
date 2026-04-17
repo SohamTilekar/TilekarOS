@@ -61,12 +61,12 @@ void test_string() {
     assert_test(strlen(buf) == 11, "strlen");
     assert_test(strnlen(buf, 5) == 5, "strnlen limit");
     assert_test(strnlen(buf, 20) == 11, "strnlen no limit");
-    
+
     // Safety test: strncpy
     char small_buf[5];
     strncpy(small_buf, "toolong", 5);
     assert_test(memcmp(small_buf, "toolo", 5) == 0, "strncpy truncation");
-    
+
     assert_test(strncmp(buf, "hello", 5) == 0, "strncmp match");
     assert_test(strncmp(buf, "hellx", 5) != 0, "strncmp mismatch");
 
@@ -93,7 +93,7 @@ void test_string() {
     char src[] = "copy me";
     memcpy(buf, src, 8);
     assert_test(memcmp(buf, src, 8) == 0, "memcpy/memcmp");
-    
+
     // memmove overlapping
     char overlap[] = "1234567890";
     memmove(overlap + 2, overlap, 5); // "1212345890" ? No, "12345" copied to +2
