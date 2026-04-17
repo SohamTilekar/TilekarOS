@@ -15,4 +15,5 @@ site/**
 **/__pycache__/**
 **.meta
 **/BIN/**
-/TMP/
+**/TMP/**
+docs/.obsidian/**
