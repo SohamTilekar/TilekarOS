@@ -9,7 +9,7 @@ The GDT defines the memory segments used by the OS. TilekarOS uses a **Flat Memo
 
 ??? example "Code Preview: `gdt.c`"
     ```c
-    --8<-- "kernel/arch/i386/cpu/gdt.c"
+    <--8<-- "kernel/arch/i386/cpu/gdt.c"
     ```
 
 ### Segment Layout
@@ -59,7 +59,7 @@ The IDT tells the CPU which code to run when an interrupt or exception occurs.
 
 ??? example "Code Preview: `idt.c`"
     ```c
-    --8<-- "kernel/arch/i386/cpu/idt.c"
+    <--8<-- "kernel/arch/i386/cpu/idt.c"
     ```
 
 ### Interrupt Dispatch Pipeline
@@ -112,7 +112,7 @@ TilekarOS provides low-level functions for direct hardware interaction:
 
 ??? example "Code Preview: `utils.h`"
     ```c
-    --8<-- "kernel/arch/i386/utils/utils.h"
+    <--8<-- "kernel/arch/i386/utils/utils.h"
     ```
 
 ---

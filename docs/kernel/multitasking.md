@@ -61,7 +61,7 @@ The `context_switch` function saves the current CPU state onto the task's stack 
 
 ??? example "Code Preview: `task.asm`"
     ```nasm
-    --8<-- "kernel/arch/i386/task/task.asm"
+    <--8<-- "kernel/arch/i386/task/task.asm"
     ```
 
 | Stack Level | Saved Data |

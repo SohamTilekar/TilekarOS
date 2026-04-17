@@ -37,7 +37,7 @@ The project root contains a `compile_flags.txt` and `.clangd` file which are aut
 
 ??? example "Code Preview: `.clangd`"
     ```yaml
-    --8<-- ".clangd"
+    <--8<-- ".clangd"
     ```
 
 ---

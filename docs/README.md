@@ -34,7 +34,10 @@ The main entry point for the kernel is [kernel.c](https://github.com/SohamTileka
 - [Driver Reference](./drivers/driver-reference.md): Detailed specs for Keyboard, Timer, and VGA.
 - [System Call Reference](./api/syscall-reference.md): How to use kernel services from user-land.
 - [LibC Internals](./api/libc-internals.md): Implementation details of standard C functions.
+- [LibC Internals (Expanded)](./api/libc-internals-expanded.md): Detailed allocator internals and notes (new).
+
 - [LibC Reference](./api/libc-reference.md): Function signatures and usage.
+- [Complete API Reference](./api/complete-api.md): Consolidated syscall, libc, VFS and driver APIs (new).
 
 ### 👷 Development & Contributions
 - [Coding Style](./development/coding-style.md): Best practices for writing kernel code.

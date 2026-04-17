@@ -13,7 +13,7 @@ GRUB looks for a specific magic number (`0x1BADB002`) within the first 8KB of th
 
 ??? example "Code Preview: `boot.asm` (Header)"
     ```nasm
-    --8<-- "kernel/arch/i386/boot/boot.asm"
+    <--8<-- "kernel/arch/i386/boot/boot.asm"
     ```
 
 !!! info "OSDev Reference"
@@ -93,7 +93,7 @@ The linker script is responsible for the final organization of the binary. It de
 
 ??? example "Code Preview: `linker.ld`"
     ```ld
-    --8<-- "kernel/arch/i386/boot/linker.ld"
+    <--8<-- "kernel/arch/i386/boot/linker.ld"
     ```
 
 !!! tip "Under the Hood: VMA vs LMA"
@@ -108,7 +108,7 @@ Once in the higher half, the `init_kernel` function orchestrates the setup of al
 
 ??? example "Code Preview: `init_kernel.c`"
     ```c
-    --8<-- "kernel/arch/i386/init_kernel.c"
+    <--8<-- "kernel/arch/i386/init_kernel.c"
     ```
 
 ### Initialization Steps:

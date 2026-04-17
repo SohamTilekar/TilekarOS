@@ -14,7 +14,7 @@ TilekarOS uses a **Bitmap** (`physical_memory_bitmap`) to track free frames. Eac
 
 ??? example "Code Preview: `memory.c` (PMM Implementation)"
     ```c
-    --8<-- "kernel/arch/i386/mm/memory.c"
+    <--8<-- "kernel/arch/i386/mm/memory.c"
     ```
 
 !!! tip "Why we use a bitmap"
@@ -117,7 +117,7 @@ The heap provides dynamic allocation for kernel objects using a **First-Fit Link
 
 ??? example "Code Preview: `kmalloc.c`"
     ```c
-    --8<-- "kernel/arch/i386/mm/kmalloc.c"
+    <--8<-- "kernel/arch/i386/mm/kmalloc.c"
     ```
 
 ### Deallocation (`kfree`):
@@ -125,7 +125,114 @@ The heap provides dynamic allocation for kernel objects using a **First-Fit Link
 
 ---
 
-## 4. Test/Example: Stress-Testing the Heap
+## 4. User-Space Heap Management
+
+**Source File**: [malloc.c](https://github.com/SohamTilekar/TilekarOS/blob/main/libc/stdlib/malloc.c){: target="_blank" }
+
+User-space applications manage their own heap using `malloc`, `calloc`, `realloc`, and `free` functions backed by the `SYS_BRK` syscall.
+
+### Process Break (SYS_BRK)
+
+The `brk()` and `sbrk()` syscalls manage the process break—the boundary between the heap and unallocated memory:
+
+```c
+int brk(void* addr);         // Set break to exact address
+void* sbrk(intptr_t inc);    // Increment break by inc bytes
+```
+
+### User-Space Allocator Strategy
+
+TilekarOS uses a **First-Fit Allocator** for user-space:
+
+1. **Allocation (`malloc`)**:
+   - Maintains a linked list of free blocks with headers
+   - Searches for first block large enough for requested size
+   - Splits blocks if remainder is significant
+   - Calls `sbrk()` to extend heap if needed
+
+2. **Deallocation (`free`)**:
+   - Marks block as free
+   - Coalesces adjacent free blocks to reduce fragmentation
+
+3. **Variants**:
+   - `calloc(nmemb, size)`: Allocates and zero-initializes
+   - `realloc(ptr, size)`: Resizes existing allocation
+
+### Memory Layout (User Process)
+
+```
+High Address
++-------------------+
+|                   |
+|   Stack (grows ↓) |
++-------------------+
+|                   |
+|                   |  Unallocated
+|                   |
++-------------------+ <- Process Break (SYS_BRK)
+|                   |
+|   Heap (grows ↑)  |  malloc/free managed
+|                   |
++-------------------+ <- Heap Start
+| .bss Section      |
++-------------------+
+| .data Section     |
++-------------------+
+| .text Section     |
++-------------------+
+Low Address
+```
+
+### Example: User-Space Allocation
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+
+int main() {
+    // Allocate array
+    int* data = (int*)malloc(1000 * sizeof(int));
+    if (data == NULL) {
+        printf("malloc failed!\n");
+        return 1;
+    }
+    
+    // Use array
+    for (int i = 0; i < 1000; i++) {
+        data[i] = i * 2;
+    }
+    printf("Sum: %d\n", data[500]);
+    
+    // Resize
+    int* new_data = (int*)realloc(data, 2000 * sizeof(int));
+    if (new_data) {
+        data = new_data;
+        printf("Resized to 2000 elements\n");
+    }
+    
+    // Cleanup
+    free(data);
+    return 0;
+}
+```
+
+### Allocator Metadata
+
+Each allocation includes a header tracking allocation size:
+
+```c
+typedef struct {
+    size_t size;
+    unsigned char magic;  // Corruption detection
+} malloc_header_t;
+
+// Memory layout:
+// [malloc_header_t] [user data...]
+```
+
+---
+
+## 5. Test/Example: Stress-Testing the Heap
 
 You can verify the heap's correctness by allocating large chunks and then freeing them to ensure coalescing works:
 
@@ -150,6 +257,65 @@ void test_heap() {
     for (int i = 1; i < 100; i += 2) {
         kfree(ptrs[i]);
     }
+}
+```
+
+### User-Space Heap Test
+
+```c
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+int main() {
+    printf("=== User-Space Heap Test ===\n");
+    
+    // Test 1: Basic allocation
+    printf("Test 1: Basic allocation...\n");
+    int* arr1 = (int*)malloc(10 * sizeof(int));
+    if (arr1 == NULL) {
+        printf("  FAILED: malloc returned NULL\n");
+        return 1;
+    }
+    for (int i = 0; i < 10; i++) arr1[i] = i;
+    printf("  PASSED\n");
+    
+    // Test 2: Calloc (zero-init)
+    printf("Test 2: Calloc (zero-init)...\n");
+    int* arr2 = (int*)calloc(10, sizeof(int));
+    if (arr2[5] != 0) {
+        printf("  FAILED: calloc didn't zero-init\n");
+        return 1;
+    }
+    printf("  PASSED\n");
+    
+    // Test 3: Realloc
+    printf("Test 3: Realloc...\n");
+    int* arr3 = (int*)malloc(10 * sizeof(int));
+    arr3 = (int*)realloc(arr3, 20 * sizeof(int));
+    if (arr3 == NULL) {
+        printf("  FAILED: realloc failed\n");
+        return 1;
+    }
+    printf("  PASSED\n");
+    
+    // Test 4: Free and reuse
+    printf("Test 4: Free and reuse...\n");
+    free(arr1);
+    arr1 = (int*)malloc(10 * sizeof(int));
+    if (arr1 == NULL) {
+        printf("  FAILED: reallocation after free failed\n");
+        return 1;
+    }
+    printf("  PASSED\n");
+    
+    // Cleanup
+    free(arr1);
+    free(arr2);
+    free(arr3);
+    
+    printf("=== All Tests Passed ===\n");
+    return 0;
 }
 ```
 

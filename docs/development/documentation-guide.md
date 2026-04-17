@@ -39,7 +39,7 @@ To include code from outside the `docs/` folder, use the `pymdownx.snippets` syn
 
 ### Usage:
 ```markdown
-#--8<-- "path/to/file.c:start_line:end_line"
+#<--8<-- "path/to/file.c:start_line:end_line"
 ```
 
 ---

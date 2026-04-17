@@ -13,7 +13,7 @@ The implementation of `printf` is designed to be **Freestanding**.
 
 ??? example "Code Preview: `printf.c`"
     ```c
-    --8<-- "libc/stdio/printf.c"
+    <--8<-- "libc/stdio/printf.c"
     ```
 
 ### Supported Specifiers:
@@ -39,7 +39,7 @@ TilekarOS prioritizes correctness and simplicity in its string implementation.
 
 ??? example "Code Preview: `memmove.c`"
     ```c
-    --8<-- "libc/string/memmove.c"
+    <--8<-- "libc/string/memmove.c"
     ```
 
 ---
@@ -52,7 +52,7 @@ TilekarOS prioritizes correctness and simplicity in its string implementation.
 
 ??? example "Code Preview: `abort.c`"
     ```c
-    --8<-- "libc/stdlib/abort.c"
+    <--8<-- "libc/stdlib/abort.c"
     ```
 
 ---
