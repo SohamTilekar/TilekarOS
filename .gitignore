@@ -14,6 +14,7 @@ site/**
 **.img
 **/__pycache__/**
 **.meta
-**/BIN/**
-**/TMP/**
 docs/.obsidian/**
+**/drives/**
+**/exported_drives/*
+!**/exported_drives/boot/*.c

@@ -80,6 +80,7 @@ set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-pie\n")
 # Add include paths for the kernel and libc
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Ikernel/include\n")
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Ilibc/include\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Iuserland/shell\n")
 # Add include path for the sysroot (simulating where installed headers live)
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Isysroot/usr/include\n")
 

@@ -4,10 +4,16 @@ global _start
 extern main
 
 _start:
-    ; Call main. main returns in eax.
+    ; The kernel should have pushed argc and argv onto the stack
+    ; [esp] = argc
+    ; [esp+4] = argv
+    
+    push dword [esp+4] ; push argv
+    push dword [esp+4] ; push argc (it was at esp+4 before first push)
+    
     call main
 
-    ; Move main's return value into ebx (second argument for the syscall) which will be the status code
+    ; Main returns in eax, move to ebx as exit status
     mov ebx, eax
     ; Place the syscall number (SYS_EXIT) into eax and invoke int 0x80
     mov eax, 0       ; user's SYS_EXIT value (per request)

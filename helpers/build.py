@@ -155,6 +155,24 @@ def sync_sysroot_headers() -> None:
     run(["cmake", "-E", "copy_directory", str(ROOT / "kernel" / "include"), str(include_dir)])
 
 
+def build_userland(arch: str) -> None:
+    banner("TilekarOS Userland Build")
+    userland_dir = ROOT / "userland"
+    bin_dir = SYSROOT / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    if not userland_dir.exists():
+        warn(f"Userland directory {userland_dir} not found")
+        return
+        
+    for program_dir in userland_dir.iterdir():
+        if program_dir.is_dir():
+            main_c = program_dir / "main.c"
+            if main_c.exists():
+                # Use sh as the output name for the shell directory
+                prog_name = "sh" if program_dir.name == "shell" else program_dir.name
+                out_file = bin_dir / prog_name
+                compile_user_program(arch, str(main_c), str(out_file))
+
 def ensure_sysroot(arch: str, do_configure: bool = True) -> None:
     step("Preparing sysroot")
     if do_configure:
@@ -162,6 +180,7 @@ def ensure_sysroot(arch: str, do_configure: bool = True) -> None:
     build_target("libc")
     build_target("sysroot_extras")
     sync_sysroot_headers()
+    build_userland(arch)
 
 
 def collect_workspace_c_files(vm_dir: Path) -> List[Path]:
@@ -234,10 +253,20 @@ def ensure_vm_workspace(vm: str, drives_cfg: str) -> tuple[Path, List[Drive]]:
 
 
 def inject_boot_payload(vm_dir: Path, boot_img: Path, kernel_binary: Path) -> None:
-    step(f"Injecting kernel and VM C files into drive: {boot_img.name}")
+    step(f"Injecting kernel, sysroot, and VM C files into drive: {boot_img.name}")
     # /boot may already exist in persistent VM images; treat that as non-fatal.
     run_allow_failure(["mmd", "-i", str(boot_img), "-D", "o", "::/boot"])
     run(["mcopy", "-i", str(boot_img), "-D", "o", str(kernel_binary), "::/boot/myos.kernel"])
+
+    # Merge sysroot into the root of the boot drive
+    if SYSROOT.exists():
+        step("Merging sysroot into boot drive")
+        # Use mcopy -s to recursively copy sysroot contents to the root of the image
+        # We use '/*' to get the contents of the sysroot folder
+        items = [str(p) for p in SYSROOT.iterdir()]
+        if items:
+            run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s"] + items + ["::/"])
+
     for cfile in collect_workspace_c_files(vm_dir):
         run(["mcopy", "-i", str(boot_img), "-D", "o", str(cfile), f"::/{cfile.stem}"])
 
@@ -318,17 +347,24 @@ def run_qemu(arch: str, vm: str, drives_cfg: str, mode: str) -> None:
 
     qemu_cmd = [f"qemu-system-{arch}"]
     if mode == "run":
+        inject_boot_payload(vm_dir, boot_img, kernel_binary)
         qemu_cmd += ["-kernel", str(kernel_binary)]
     elif mode == "run_iso":
+        inject_boot_payload(vm_dir, boot_img, kernel_binary)
         build_target("iso")
         qemu_cmd += ["-boot", "d", "-cdrom", str(BUILD_DIR / "myos.iso")]
     elif mode == "run_disk":
-        inject_boot_payload(vm_dir, boot_img, kernel_binary)
         isodir = BUILD_DIR / "disk_isodir"
         shutil.rmtree(isodir, ignore_errors=True)
         run(["cmake", "-E", "make_directory", str(isodir / "boot" / "grub")])
         run(["cmake", "-E", "copy", str(kernel_binary), str(isodir / "boot" / "myos.kernel")])
         run(["cmake", "-E", "copy", str(ROOT / "grub.cfg"), str(isodir / "boot" / "grub" / "grub.cfg")])
+        
+        # Merge sysroot into the disk image staging directory
+        if SYSROOT.exists():
+            step("Merging sysroot into disk image")
+            run(["cmake", "-E", "copy_directory", str(SYSROOT), str(isodir)])
+
         run(["grub-mkrescue", "-o", str(boot_img), str(isodir)])
         qemu_cmd += ["-boot", "c"]
     else:
@@ -354,7 +390,6 @@ def compile_user_program(arch: str, src_file: str, out_file: str | None) -> None
     out = Path(out_file) if out_file else src.with_suffix("")
     out.parent.mkdir(parents=True, exist_ok=True)
     step(f"Compiling userspace program: {src} -> {out}")
-    ensure_sysroot(arch)
     run(
         [
             "clang",
@@ -383,7 +418,7 @@ def compile_user_program(arch: str, src_file: str, out_file: str | None) -> None
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="TilekarOS Python build orchestrator")
-    parser.add_argument("command", choices=["configure", "kernel", "sysroot", "iso", "run", "run_iso", "run_disk", "export_drives", "comp", "clean"])
+    parser.add_argument("command", choices=["configure", "kernel", "sysroot", "userland", "iso", "run", "run_iso", "run_disk", "export_drives", "comp", "clean"])
     parser.add_argument("--arch", default=os.environ.get("ARCH", "i386"))
     parser.add_argument("--vm", default=os.environ.get("VM", "VirtualMachine"))
     parser.add_argument("--drives", default=os.environ.get("DRIVES", "boot:24:ide"))
@@ -405,6 +440,9 @@ def main() -> int:
             banner("TilekarOS Sysroot Build")
             ensure_sysroot(args.arch)
             ok("Sysroot build completed")
+        elif args.command == "userland":
+            ensure_sysroot(args.arch)
+            ok("Userland build completed")
         elif args.command == "iso":
             banner("TilekarOS ISO Build")
             configure(args.arch)

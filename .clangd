@@ -8,4 +8,5 @@ CompileFlags:
     - -fno-pie
     - -Ikernel/include
     - -Ilibc/include
+    - -Iuserland/shell
     - -Isysroot/usr/include
