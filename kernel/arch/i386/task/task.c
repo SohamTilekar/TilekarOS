@@ -82,7 +82,7 @@ static void task_wrapper(void (*entry)(void)) {
         // Switch to user mode via iret
         // User stack is mapped at 0xB0000000 (1 page = 4KB)
         uint32_t user_esp = 0xB0000000 + 4096;
-        
+
         // Push argc=0, argv=NULL onto user stack for crt0
         user_esp -= 8;
         uint32_t* ustack = (uint32_t*)user_esp;
@@ -114,7 +114,7 @@ static void task_wrapper(void (*entry)(void)) {
 
 void task_init_scheduler() {
     task_t* main_task = kmalloc(sizeof(task_t));
-    main_task->id = next_tid++;
+    main_task->id = -1; // -1 cz the Init Task should get PID 0
     main_task->stack_limit = NULL; // Main kernel stack is already allocated
     main_task->state = TASK_RUNNING;
     main_task->preempt_count = 0;
@@ -667,7 +667,7 @@ int task_execve(const char* path, char *const argv[], char *const envp[], Interr
         // Allocate space for the pointers to strings on the stack
         // We'll place strings first, then the pointers
         uint32_t* uargv = kmalloc(sizeof(uint32_t) * (argc + 1));
-        
+
         for (int i = argc - 1; i >= 0; i--) {
             size_t slen = strlen(kargv[i]) + 1;
             user_esp -= slen;
