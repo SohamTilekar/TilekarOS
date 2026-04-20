@@ -69,10 +69,24 @@ extern char _end_user_task;
 void kernel_main(uint32_t magic, void *boot_info) {
   (void)magic;
   (void)boot_info;
+  task_init_scheduler();
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
   init_storage();
-  task_init_scheduler();
+  printf("Run built-in tests? (y/N) ");
+  char choice = 0;
+  keyboard_clear_buffer();
+  uint32_t verify_start = get_ticks();
+  while (choice == 0 && get_ticks() < verify_start + 4000) { // 4s timeout
+    choice = keyboard_getchar();
+  }
+  printf("\n");
+  bool run_tests = (choice == 'y' || choice == 'Y'); // default to no on timeout
+  if (run_tests) {
+    run_all_tests(primary_storage);
+  } else {
+    printf("Skipping tests.\n");
+  }
   printf("Launching Init (/bin/init)...\n");
   task_t* init_task = task_create_elf_from_file("/bin/init", 3);
   if (!init_task) {
