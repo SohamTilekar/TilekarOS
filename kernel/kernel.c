@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 // Global to persist across tasks
 static Device_t *primary_storage = NULL;
@@ -73,15 +72,23 @@ void kernel_main(uint32_t magic, void *boot_info) {
   printf("Hello World!\nPrint On TilekarOS by Soham Tilekar\n");
 
   init_storage();
-  printf("Run built-in tests? (y/N) ");
-  char choice = 0;
-  keyboard_clear_buffer();
-  uint32_t verify_start = get_ticks();
-  while (choice == 0 && get_ticks() < verify_start + 4000) { // 4s timeout
-    choice = keyboard_getchar();
-  }
-  printf("\n");
-  bool run_tests = (choice == 'y' || choice == 'Y'); // default to no on timeout
+
+  bool run_tests = false;
+#if ENABLE_TEST == 1
+  run_tests = true;
+  printf("Running tests (ENABLE_TEST flag is set).\n");
+#else
+  // printf("Run built-in tests? (y/N) ");
+  // char choice = 0;
+  // keyboard_clear_buffer();
+  // uint32_t verify_start = get_ticks();
+  // while (choice == 0 && get_ticks() < verify_start + 4000) { // 4s timeout
+  //   choice = keyboard_getchar();
+  // }
+  // printf("\n");
+  // run_tests = (choice == 'y' || choice == 'Y'); // default to no on timeout
+#endif
+
   if (run_tests) {
     run_all_tests(primary_storage);
   } else {

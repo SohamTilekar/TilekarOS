@@ -1,5 +1,4 @@
 #include "buffer.h"
-#include <string.h>
 #include <stdio.h>
 #include "kmalloc.h"
 

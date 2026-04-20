@@ -1,7 +1,6 @@
 #include "kernel/tty.h"
 #include "gdt.h"
 #include "idt.h"
-#include "task.h"
 #include "timer.h"
 #include "keyboard.h"
 #include "ata.h"
@@ -9,7 +8,6 @@
 #include "pci.h"
 #include "vfs.h"
 #include <stdint.h>
-#include <stdio.h>
 #include "memory.h"
 #include "kmalloc.h"
 

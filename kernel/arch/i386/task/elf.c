@@ -1,7 +1,6 @@
 #include "elf.h"
 #include "memory.h"
 #include <string.h>
-#include <stdio.h>
 
 #define ELF_MAGIC 0x464C457F
 
@@ -45,17 +44,17 @@ void* elf_load_segments(Elf32_Ehdr *hdr, void* elf_data, uint8_t privilege_level
                 uint32_t page_vaddr = start_vaddr + j * PAGE_SIZE;
                 uint32_t phys = pmm_alloc_page_frame();
                 if (!phys) return NULL;
-                
+
                 uint32_t flags = PAGE_FLAG_PRESENT;
                 if (privilege_level == 3) flags |= PAGE_FLAG_USER;
                 if (ph[i].p_flags & PF_W) flags |= PAGE_FLAG_WRITE;
-                
+
                 memory_map_page(page_vaddr, phys, flags);
             }
 
             // Copy data
             memcpy((void *)vaddr, (uint8_t *)elf_data + offset, filesz);
-            
+
             // Zero out remaining memory (BSS)
             if (memsz > filesz) {
                 memset((void *)(vaddr + filesz), 0, memsz - filesz);
