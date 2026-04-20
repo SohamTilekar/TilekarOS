@@ -1,19 +1,46 @@
-#!/usr/bin/env python3
-from __future__ import annotations
+#!/usr/bin/env python
+# Should suport 2.7, 3.0-3.6, 3.7-3.9, 3.10+ version
+# maintain 100% backward compatibility
+from __future__ import print_function, unicode_literals
 
 import argparse
 import os
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+
+try:
+    from typing import List, Optional, Tuple, Union
+except ImportError:
+    # Python 2.7 doesn't have typing, but we can define dummy types
+    List = list
+    Optional = None
+    Tuple = tuple
+    Union = None
 
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD_DIR = ROOT / "build"
 SYSROOT = ROOT / "sysroot"
+
+
+def _read_text(path_obj):
+    """Read file content with Python 2.7 compatibility."""
+    with open(str(path_obj), "rb") as f:
+        content = f.read()
+    if isinstance(content, bytes):
+        return content.decode("utf-8", errors="ignore")
+    return content
+
+
+def _write_text(path_obj, content):
+    """Write file content with Python 2.7 compatibility."""
+    with open(str(path_obj), "wb") as f:
+        if isinstance(content, bytes):
+            f.write(content)
+        else:
+            f.write(content.encode("utf-8"))
 
 
 USE_COLOR = sys.stdout.isatty()
@@ -28,64 +55,72 @@ MAGENTA = "\033[35m"
 CYAN = "\033[36m"
 
 
-def _style(text: str, *codes: str) -> str:
+def _style(text, *codes):
     if not USE_COLOR:
         return text
     return "".join(codes) + text + RESET
 
 
-def banner(title: str) -> None:
+def banner(title):
     line = "═" * 68
-    print(_style(f"\n{line}", CYAN))
-    print(_style(f"🚀 {title}", BOLD, CYAN))
+    print(_style("\n{0}".format(line), CYAN))
+    print(_style("🚀 {0}".format(title), BOLD, CYAN))
     print(_style(line, CYAN))
 
 
-def step(message: str) -> None:
-    print(f"{_style('🔹', BLUE)} {_style(message, BOLD)}")
+def step(message):
+    print("{0} {1}".format(_style("🔹", BLUE), _style(message, BOLD)))
 
 
-def info(message: str) -> None:
-    print(f"{_style('ℹ️ ', CYAN)} {message}")
+def info(message):
+    print("{0} {1}".format(_style("ℹ️ ", CYAN), message))
 
 
-def ok(message: str) -> None:
-    print(f"{_style('✅', GREEN)} {_style(message, GREEN)}")
+def ok(message):
+    print("{0} {1}".format(_style("✅", GREEN), _style(message, GREEN)))
 
 
-def warn(message: str) -> None:
-    print(f"{_style('⚠️ ', YELLOW)} {_style(message, YELLOW)}")
+def warn(message):
+    print("{0} {1}".format(_style("⚠️ ", YELLOW), _style(message, YELLOW)))
 
 
-def fail(message: str) -> None:
-    print(f"{_style('❌', RED)} {_style(message, RED)}")
+def fail(message):
+    print("{0} {1}".format(_style("❌", RED), _style(message, RED)))
 
 
-def run(cmd: List[str], cwd: Path | None = None) -> None:
-    print(_style(f"   $ {' '.join(cmd)}", DIM))
-    subprocess.run(cmd, cwd=cwd or ROOT, check=True)
+def run(cmd, cwd=None):
+    print(_style("   $ {0}".format(" ".join(cmd)), DIM))
+    subprocess.check_call(cmd, cwd=cwd or str(ROOT))
 
 
-def run_allow_failure(cmd: List[str], cwd: Path | None = None) -> int:
-    print(_style(f"   $ {' '.join(cmd)}", DIM))
-    proc = subprocess.run(cmd, cwd=cwd or ROOT, check=False)
+def run_allow_failure(cmd, cwd=None):
+    print(_style("   $ {0}".format(" ".join(cmd)), DIM))
+    proc = subprocess.Popen(
+        cmd, cwd=cwd or str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+    proc.communicate()
     return proc.returncode
 
 
-def first_drive_name(drives: str) -> str:
+def first_drive_name(drives):
     return parse_drives(drives)[0].name
 
 
-@dataclass
-class Drive:
-    name: str
-    size_mb: int
-    interface: str
+class Drive(object):
+    def __init__(self, name, size_mb, interface):
+        self.name = name
+        self.size_mb = size_mb
+        self.interface = interface
+
+    def __repr__(self):
+        return "Drive(name={0!r}, size_mb={1!r}, interface={2!r})".format(
+            self.name, self.size_mb, self.interface
+        )
 
 
-def parse_drives(drives: str) -> List[Drive]:
-    out: List[Drive] = []
-    for raw in (x.strip() for x in drives.split(",") if x.strip()):
+def parse_drives(drives):
+    out = []
+    for raw in [x.strip() for x in drives.split(",") if x.strip()]:
         parts = raw.split(":")
         name = parts[0]
         size_mb = 24
@@ -95,14 +130,16 @@ def parse_drives(drives: str) -> List[Drive]:
         if len(parts) >= 3 and parts[2]:
             interface = parts[2].lower()
         if interface not in {"ide", "ahci"}:
-            raise ValueError(f"Unsupported attach_type '{interface}' for drive '{name}'")
+            raise ValueError(
+                "Unsupported attach_type '{0}' for drive '{1}'".format(interface, name)
+            )
         out.append(Drive(name=name, size_mb=size_mb, interface=interface))
     if not out:
         out.append(Drive(name="boot", size_mb=24, interface="ide"))
     return out
 
 
-def configure(arch: str) -> None:
+def configure(arch):
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     cmake_cache = BUILD_DIR / "CMakeCache.txt"
     cmake_cmd = [
@@ -111,69 +148,94 @@ def configure(arch: str) -> None:
         str(ROOT),
         "-B",
         str(BUILD_DIR),
-        f"-DOS_ARCH={arch}",
+        "-DOS_ARCH={0}".format(arch),
         "-DCMAKE_C_COMPILER=clang",
         "-DCMAKE_ASM_NASM_COMPILER=nasm",
     ]
-    toolchain = ROOT / "cmake" / "toolchains" / f"{arch}.cmake"
+    toolchain = ROOT / "cmake" / "toolchains" / "{0}.cmake".format(arch)
     if cmake_cache.exists():
-        text = cmake_cache.read_text(encoding="utf-8", errors="ignore")
+        text = _read_text(cmake_cache)
         if "CMAKE_C_COMPILER:FILEPATH=/usr/bin/cc" in text:
-            shutil.rmtree(BUILD_DIR, ignore_errors=True)
+            shutil.rmtree(str(BUILD_DIR), ignore_errors=True)
             BUILD_DIR.mkdir(parents=True, exist_ok=True)
             cmake_cache = BUILD_DIR / "CMakeCache.txt"
     if toolchain.exists():
-        cmake_cmd.append(f"-DCMAKE_TOOLCHAIN_FILE={toolchain}")
+        cmake_cmd.append("-DCMAKE_TOOLCHAIN_FILE={0}".format(toolchain))
     elif cmake_cache.exists():
-        text = cmake_cache.read_text(encoding="utf-8", errors="ignore")
+        text = _read_text(cmake_cache)
         if "CMAKE_TOOLCHAIN_FILE" in text:
             cmake_cache.unlink()
 
     if cmake_cache.exists():
-        cache_text = cmake_cache.read_text(encoding="utf-8", errors="ignore")
-        arch_ok = f"OS_ARCH:UNINITIALIZED={arch}" in cache_text or f"OS_ARCH:STRING={arch}" in cache_text
-        cc_ok = "CMAKE_C_COMPILER:UNINITIALIZED=clang" in cache_text or "CMAKE_C_COMPILER:FILEPATH=/usr/bin/clang" in cache_text
-        nasm_ok = "CMAKE_ASM_NASM_COMPILER:UNINITIALIZED=nasm" in cache_text or "CMAKE_ASM_NASM_COMPILER:FILEPATH=/usr/bin/nasm" in cache_text
+        cache_text = _read_text(cmake_cache)
+        arch_ok = (
+            "OS_ARCH:UNINITIALIZED={0}".format(arch) in cache_text
+            or "OS_ARCH:STRING={0}".format(arch) in cache_text
+        )
+        cc_ok = (
+            "CMAKE_C_COMPILER:UNINITIALIZED=clang" in cache_text
+            or "CMAKE_C_COMPILER:FILEPATH=/usr/bin/clang" in cache_text
+        )
+        nasm_ok = (
+            "CMAKE_ASM_NASM_COMPILER:UNINITIALIZED=nasm" in cache_text
+            or "CMAKE_ASM_NASM_COMPILER:FILEPATH=/usr/bin/nasm" in cache_text
+        )
         if arch_ok and cc_ok and nasm_ok:
-            step(f"Using existing CMake configuration (arch={arch})")
+            step("Using existing CMake configuration (arch={0})".format(arch))
             return
 
-    step(f"Configuring CMake (arch={arch})")
+    step("Configuring CMake (arch={0})".format(arch))
     run(cmake_cmd)
 
 
-def build_target(target: str) -> None:
-    step(f"Building target: {target}")
+def build_target(target):
+    step("Building target: {0}".format(target))
     run(["cmake", "--build", str(BUILD_DIR), "--target", target])
 
 
-def sync_sysroot_headers() -> None:
+def sync_sysroot_headers():
     step("Syncing sysroot headers (libc + kernel)")
     include_dir = SYSROOT / "usr" / "include"
     include_dir.mkdir(parents=True, exist_ok=True)
-    run(["cmake", "-E", "copy_directory", str(ROOT / "libc" / "include"), str(include_dir)])
-    run(["cmake", "-E", "copy_directory", str(ROOT / "kernel" / "include"), str(include_dir)])
+    run(
+        [
+            "cmake",
+            "-E",
+            "copy_directory",
+            str(ROOT / "libc" / "include"),
+            str(include_dir),
+        ]
+    )
+    run(
+        [
+            "cmake",
+            "-E",
+            "copy_directory",
+            str(ROOT / "kernel" / "include"),
+            str(include_dir),
+        ]
+    )
 
 
-def build_userland(arch: str) -> None:
+def build_userland(arch):
     banner("TilekarOS Userland Build")
     userland_dir = ROOT / "userland"
     bin_dir = SYSROOT / "bin"
     bin_dir.mkdir(parents=True, exist_ok=True)
     if not userland_dir.exists():
-        warn(f"Userland directory {userland_dir} not found")
+        warn("Userland directory {0} not found".format(userland_dir))
         return
-        
+
     for program_dir in userland_dir.iterdir():
         if program_dir.is_dir():
             main_c = program_dir / "main.c"
             if main_c.exists():
-                # Use sh as the output name for the shell directory
                 prog_name = "sh" if program_dir.name == "shell" else program_dir.name
                 out_file = bin_dir / prog_name
                 compile_user_program(arch, str(main_c), str(out_file))
 
-def ensure_sysroot(arch: str, do_configure: bool = True) -> None:
+
+def ensure_sysroot(arch, do_configure=True):
     step("Preparing sysroot")
     if do_configure:
         configure(arch)
@@ -183,45 +245,53 @@ def ensure_sysroot(arch: str, do_configure: bool = True) -> None:
     build_userland(arch)
 
 
-def collect_workspace_c_files(vm_dir: Path) -> List[Path]:
+def collect_workspace_c_files(vm_dir):
     return sorted(vm_dir.glob("*.c"))
 
 
-def create_empty_fat_image(img: Path, size_mb: int) -> None:
-    step(f"Creating empty FAT image: {img.name} ({size_mb}MB)")
-    run(["dd", "if=/dev/zero", f"of={img}", "bs=1M", f"count={size_mb}", "status=none"])
+def create_empty_fat_image(img, size_mb):
+    step("Creating empty FAT image: {0} ({1}MB)".format(img.name, size_mb))
+    run(
+        [
+            "dd",
+            "if=/dev/zero",
+            "of={0}".format(img),
+            "bs=1M",
+            "count={0}".format(size_mb),
+            "status=none",
+        ]
+    )
     run(["mkfs.fat", str(img)])
 
 
-def create_image_from_export(img: Path, size_mb: int, export_dir: Path) -> None:
-    step(f"Recreating {img.name} from exported content: {export_dir}")
+def create_image_from_export(img, size_mb, export_dir):
+    step("Recreating {0} from exported content: {1}".format(img.name, export_dir))
     create_empty_fat_image(img, size_mb)
     if export_dir.exists():
         items = [str(p) for p in export_dir.iterdir()]
         if items:
-            # Pass items explicitly since subprocess.run doesn't expand globs
             run(["mcopy", "-i", str(img), "-snD", "o", "-s"] + items + ["::/"])
 
 
-def is_fat_image_healthy(img: Path) -> bool:
+def is_fat_image_healthy(img):
     return run_allow_failure(["minfo", "-i", str(img), "::"]) == 0
 
 
-def write_drive_meta(meta_path: Path, size_mb: int) -> None:
-    meta_path.write_text(str(size_mb), encoding="ascii")
+def write_drive_meta(meta_path, size_mb):
+    _write_text(meta_path, str(size_mb))
 
 
-def read_drive_meta(meta_path: Path) -> int | None:
+def read_drive_meta(meta_path):
     if not meta_path.exists():
         return None
     try:
-        return int(meta_path.read_text(encoding="ascii").strip())
+        return int(_read_text(meta_path).strip())
     except ValueError:
         return None
 
 
-def ensure_vm_workspace(vm: str, drives_cfg: str) -> tuple[Path, List[Drive]]:
-    step(f"Preparing VM workspace: {vm}")
+def ensure_vm_workspace(vm, drives_cfg):
+    step("Preparing VM workspace: {0}".format(vm))
     vm_dir = ROOT / vm
     drives_dir = vm_dir / "drives"
     export_root = vm_dir / "exported_drives"
@@ -229,13 +299,12 @@ def ensure_vm_workspace(vm: str, drives_cfg: str) -> tuple[Path, List[Drive]]:
     export_root.mkdir(parents=True, exist_ok=True)
 
     drives = parse_drives(drives_cfg)
-    step(f"Drive configuration: {drives_cfg}")
+    step("Drive configuration: {0}".format(drives_cfg))
     for d in drives:
-        img = drives_dir / f"{d.name}.img"
-        meta = drives_dir / f"{d.name}.meta"
+        img = drives_dir / "{0}.img".format(d.name)
+        meta = drives_dir / "{0}.meta".format(d.name)
         export_dir = export_root / d.name
 
-        # Always recreate from export if it exists to ensure sync
         if export_dir.exists() and any(export_dir.iterdir()):
             create_image_from_export(img, d.size_mb, export_dir)
             write_drive_meta(meta, d.size_mb)
@@ -244,7 +313,7 @@ def ensure_vm_workspace(vm: str, drives_cfg: str) -> tuple[Path, List[Drive]]:
         old_size = read_drive_meta(meta)
         recreate = (not img.exists()) or (old_size != d.size_mb)
         if img.exists() and not recreate and not is_fat_image_healthy(img):
-            warn(f"Detected FAT corruption in {img.name}; recreating image")
+            warn("Detected FAT corruption in {0}; recreating image".format(img.name))
             recreate = True
         if recreate:
             create_empty_fat_image(img, d.size_mb)
@@ -252,127 +321,188 @@ def ensure_vm_workspace(vm: str, drives_cfg: str) -> tuple[Path, List[Drive]]:
     return vm_dir, drives
 
 
-def inject_boot_payload(vm_dir: Path, boot_img: Path, kernel_binary: Path) -> None:
-    step(f"Injecting kernel, sysroot, and VM C files into drive: {boot_img.name}")
-    # /boot may already exist in persistent VM images; treat that as non-fatal.
+def inject_boot_payload(vm_dir, boot_img, kernel_binary):
+    step(
+        "Injecting kernel, sysroot, and VM C files into drive: {0}".format(
+            boot_img.name
+        )
+    )
     run_allow_failure(["mmd", "-i", str(boot_img), "-D", "o", "::/boot"])
-    run(["mcopy", "-i", str(boot_img), "-D", "o", str(kernel_binary), "::/boot/myos.kernel"])
+    run(
+        [
+            "mcopy",
+            "-i",
+            str(boot_img),
+            "-D",
+            "o",
+            str(kernel_binary),
+            "::/boot/myos.kernel",
+        ]
+    )
 
-    # Merge sysroot into the root of the boot drive
     if SYSROOT.exists():
         step("Merging sysroot into boot drive")
-        # Use mcopy -s to recursively copy sysroot contents to the root of the image
-        # We use '/*' to get the contents of the sysroot folder
         items = [str(p) for p in SYSROOT.iterdir()]
         if items:
             run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s"] + items + ["::/"])
 
     for cfile in collect_workspace_c_files(vm_dir):
-        run(["mcopy", "-i", str(boot_img), "-D", "o", str(cfile), f"::/{cfile.stem}"])
+        run(
+            [
+                "mcopy",
+                "-i",
+                str(boot_img),
+                "-D",
+                "o",
+                str(cfile),
+                "::/{0}".format(cfile.stem),
+            ]
+        )
 
 
-def export_drives(vm_dir: Path, drives: List[Drive]) -> None:
+def export_drives(vm_dir, drives):
     step("Exporting drives to exported_drives")
     drives_dir = vm_dir / "drives"
     export_root = vm_dir / "exported_drives"
     export_root.mkdir(parents=True, exist_ok=True)
     for d in drives:
-        img = drives_dir / f"{d.name}.img"
+        img = drives_dir / "{0}.img".format(d.name)
         if not img.exists():
             continue
         export_dir = export_root / d.name
         export_dir.mkdir(parents=True, exist_ok=True)
         attempts = [
-            ["mcopy", "-i", str(img), "-snD", "o", "::/*", f"{export_dir}/"],
-            ["mcopy", "-i", f"{img}@@512", "-snD", "o", "::/*", f"{export_dir}/"],
+            ["mcopy", "-i", str(img), "-snD", "o", "::/*", "{0}/".format(export_dir)],
+            [
+                "mcopy",
+                "-i",
+                "{0}@@512".format(img),
+                "-snD",
+                "o",
+                "::/*",
+                "{0}/".format(export_dir),
+            ],
         ]
         exported = False
         for cmd in attempts:
-            print(_style(f"   $ {' '.join(cmd)}", DIM))
-            proc = subprocess.run(cmd, cwd=ROOT, check=False, capture_output=True, text=True)
+            print(_style("   $ {0}".format(" ".join(cmd)), DIM))
+            proc = subprocess.Popen(
+                cmd, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            proc.communicate()
             if proc.returncode == 0:
                 exported = True
                 break
         if not exported:
-            warn(f"Skipping export for {d.name}.img (FAT not readable)")
+            warn("Skipping export for {0}.img (FAT not readable)".format(d.name))
 
 
-def qemu_drive_flags(vm_dir: Path, drives: List[Drive]) -> List[str]:
-    flags: List[str] = []
+def qemu_drive_flags(vm_dir, drives):
+    flags = []
     has_ahci = False
     ahci_num = 0
     ide_num = 0
     for _, d in enumerate(drives):
         boot_prop = ",bootindex=0" if (ide_num + ahci_num) == 0 else ""
-        img = vm_dir / "drives" / f"{d.name}.img"
+        img = vm_dir / "drives" / "{0}.img".format(d.name)
         if d.interface == "ahci":
             if not has_ahci:
                 flags += ["-device", "ich9-ahci,id=ahci0"]
                 has_ahci = True
-            flags += ["-drive", f"file={img},format=raw,if=none,id=ahci_d{ahci_num}"]
-            flags += ["-device", f"ide-hd,bus=ahci0.{ahci_num},drive=ahci_d{ahci_num}{boot_prop}"]
+            flags += [
+                "-drive",
+                "file={0},format=raw,if=none,id=ahci_d{1}".format(img, ahci_num),
+            ]
+            flags += [
+                "-device",
+                "ide-hd,bus=ahci0.{0},drive=ahci_d{1}{2}".format(
+                    ahci_num, ahci_num, boot_prop
+                ),
+            ]
             ahci_num += 1
             continue
         bus = ide_num // 2
         unit = ide_num % 2
         if ide_num < 4:
-            # Legacy "if=ide" syntax does not accept bootindex on many QEMU versions.
-            flags += ["-drive", f"file={img},format=raw,if=ide,bus={bus},unit={unit}"]
+            flags += [
+                "-drive",
+                "file={0},format=raw,if=ide,bus={1},unit={2}".format(img, bus, unit),
+            ]
         else:
             extra_idx = ((ide_num - 4) // 4) + 1
             extra_drive_idx = (ide_num - 4) % 4
             extra_bus = extra_drive_idx // 2
             extra_unit = extra_drive_idx % 2
             if extra_drive_idx == 0:
-                flags += ["-device", f"piix4-ide,id=extide{extra_idx}"]
-            flags += ["-drive", f"file={img},format=raw,if=none,id=d{ide_num}"]
+                flags += ["-device", "piix4-ide,id=extide{0}".format(extra_idx)]
+            flags += [
+                "-drive",
+                "file={0},format=raw,if=none,id=d{1}".format(img, ide_num),
+            ]
             flags += [
                 "-device",
-                f"ide-hd,bus=extide{extra_idx}.{extra_bus},drive=d{ide_num},unit={extra_unit}{boot_prop}",
+                "ide-hd,bus=extide{0}.{1},drive=d{2},unit={3}{4}".format(
+                    extra_idx, extra_bus, ide_num, extra_unit, boot_prop
+                ),
             ]
         ide_num += 1
     return flags
 
 
-def run_qemu(arch: str, vm: str, drives_cfg: str, mode: str) -> None:
-    banner(f"TilekarOS Run Pipeline ({mode})")
-    step(f"Run mode: {mode}")
+def run_qemu(arch, vm, drives_cfg, mode):
+    banner("TilekarOS Run Pipeline ({0})".format(mode))
+    step("Run mode: {0}".format(mode))
     vm_dir, drives = ensure_vm_workspace(vm, drives_cfg)
     configure(arch)
     build_target("myos.kernel")
     ensure_sysroot(arch, do_configure=False)
 
     kernel_binary = BUILD_DIR / "kernel" / "myos.kernel"
-    boot_img = vm_dir / "drives" / f"{first_drive_name(drives_cfg)}.img"
+    boot_img = vm_dir / "drives" / "{0}.img".format(first_drive_name(drives_cfg))
 
-    qemu_cmd = [f"qemu-system-{arch}"]
+    qemu_cmd = ["qemu-system-{0}".format(arch)]
     if mode == "run":
-        inject_boot_payload(vm_dir, boot_img, kernel_binary)
         qemu_cmd += ["-kernel", str(kernel_binary)]
     elif mode == "run_iso":
-        inject_boot_payload(vm_dir, boot_img, kernel_binary)
         build_target("iso")
         qemu_cmd += ["-boot", "d", "-cdrom", str(BUILD_DIR / "myos.iso")]
     elif mode == "run_disk":
+        inject_boot_payload(vm_dir, boot_img, kernel_binary)
         isodir = BUILD_DIR / "disk_isodir"
-        shutil.rmtree(isodir, ignore_errors=True)
+        grub_iso = BUILD_DIR / "disk_boot.iso"
+        shutil.rmtree(str(isodir), ignore_errors=True)
         run(["cmake", "-E", "make_directory", str(isodir / "boot" / "grub")])
-        run(["cmake", "-E", "copy", str(kernel_binary), str(isodir / "boot" / "myos.kernel")])
-        run(["cmake", "-E", "copy", str(ROOT / "grub.cfg"), str(isodir / "boot" / "grub" / "grub.cfg")])
-        
-        # Merge sysroot into the disk image staging directory
+        run(
+            [
+                "cmake",
+                "-E",
+                "copy",
+                str(kernel_binary),
+                str(isodir / "boot" / "myos.kernel"),
+            ]
+        )
+        run(
+            [
+                "cmake",
+                "-E",
+                "copy",
+                str(ROOT / "grub.cfg"),
+                str(isodir / "boot" / "grub" / "grub.cfg"),
+            ]
+        )
+
         if SYSROOT.exists():
             step("Merging sysroot into disk image")
             run(["cmake", "-E", "copy_directory", str(SYSROOT), str(isodir)])
 
-        run(["grub-mkrescue", "-o", str(boot_img), str(isodir)])
-        qemu_cmd += ["-boot", "c"]
+        run(["grub-mkrescue", "-o", str(grub_iso), str(isodir)])
+        qemu_cmd += ["-boot", "d", "-cdrom", str(grub_iso)]
     else:
-        raise ValueError(f"Unsupported run mode {mode}")
+        raise ValueError("Unsupported run mode {0}".format(mode))
 
     qemu_cmd += qemu_drive_flags(vm_dir, drives)
     qemu_cmd += ["-d", "guest_errors,unimp", "-D", str(vm_dir / "qemu.log")]
-    qemu_cmd += ["-serial", f"file:{vm_dir / 'serial.log'}"]
+    qemu_cmd += ["-serial", "file:{0}".format(vm_dir / "serial.log")]
     qemu_cmd += ["-monitor", "stdio"]
     step("Launching QEMU")
     info("QEMU command:")
@@ -382,19 +512,19 @@ def run_qemu(arch: str, vm: str, drives_cfg: str, mode: str) -> None:
     ok("Run pipeline completed")
 
 
-def compile_user_program(arch: str, src_file: str, out_file: str | None) -> None:
+def compile_user_program(arch, src_file, out_file=None):
     banner("TilekarOS Userspace Compilation")
     if not src_file:
         raise ValueError("comp requires --file <path-to-c-file>")
     src = Path(src_file)
     out = Path(out_file) if out_file else src.with_suffix("")
     out.parent.mkdir(parents=True, exist_ok=True)
-    step(f"Compiling userspace program: {src} -> {out}")
+    step("Compiling userspace program: {0} -> {1}".format(src, out))
     run(
         [
             "clang",
-            f"--target={arch}-elf",
-            f"--sysroot={SYSROOT}",
+            "--target={0}-elf".format(arch),
+            "--sysroot={0}".format(SYSROOT),
             "-nostdlib",
             "-ffreestanding",
             "-fno-pic",
@@ -413,12 +543,27 @@ def compile_user_program(arch: str, src_file: str, out_file: str | None) -> None
             str(out),
         ]
     )
-    ok(f"Built userspace executable: {out}")
+    ok("Built userspace executable: {0}".format(out))
 
 
-def main() -> int:
+def main():
     parser = argparse.ArgumentParser(description="TilekarOS Python build orchestrator")
-    parser.add_argument("command", choices=["configure", "kernel", "sysroot", "userland", "iso", "run", "run_iso", "run_disk", "export_drives", "comp", "clean"])
+    parser.add_argument(
+        "command",
+        choices=[
+            "configure",
+            "kernel",
+            "sysroot",
+            "userland",
+            "iso",
+            "run",
+            "run_iso",
+            "run_disk",
+            "export_drives",
+            "comp",
+            "clean",
+        ],
+    )
     parser.add_argument("--arch", default=os.environ.get("ARCH", "i386"))
     parser.add_argument("--vm", default=os.environ.get("VM", "VirtualMachine"))
     parser.add_argument("--drives", default=os.environ.get("DRIVES", "boot:24:ide"))
@@ -459,13 +604,13 @@ def main() -> int:
             compile_user_program(args.arch, args.file, args.out)
         elif args.command == "clean":
             banner("TilekarOS Clean")
-            shutil.rmtree(BUILD_DIR, ignore_errors=True)
-            shutil.rmtree(SYSROOT, ignore_errors=True)
-            shutil.rmtree(ROOT / args.vm, ignore_errors=True)
+            shutil.rmtree(str(BUILD_DIR), ignore_errors=True)
+            shutil.rmtree(str(SYSROOT), ignore_errors=True)
+            shutil.rmtree(str(ROOT / args.vm), ignore_errors=True)
             ok("Clean completed")
         return 0
     except (subprocess.CalledProcessError, ValueError) as exc:
-        fail(f"build.py error: {exc}")
+        fail("build.py error: {0}".format(exc))
         return 1
 
 
