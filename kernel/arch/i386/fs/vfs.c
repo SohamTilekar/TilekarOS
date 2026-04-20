@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "devfs.h"
 #include "../task/task.h"
+#include "rootfs.h"
 
 static vnode_t* root_vnode = NULL;
 
@@ -133,6 +134,7 @@ vnode_t* vfs_mount(const char* path, Device_t* dev, vnode_t* (*mount_fn)(Device_
 
 void vfs_init() {
     devfs_init();
+    vfs_mount("/", NULL, rootfs_mount);
 }
 
 int vfs_task_file_table_init(file_t** file_table) {
