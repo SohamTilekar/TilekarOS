@@ -755,6 +755,17 @@ void task_yield(InterruptReg_t *regs) {
         interrupt_restore(flags);
         return;
     }
+
+    if (next == last) {
+        current_task->state = TASK_RUNNING;
+        if (regs && regs->intr_num >= 32) {
+            pic_send_eoi(regs->intr_num);
+            regs->intr_num = 0;
+        }
+        interrupt_restore(flags);
+        return;
+    }
+
     current_task = next;
 
     if (scheduler_trigger_index != -1) {
