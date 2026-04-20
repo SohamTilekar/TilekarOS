@@ -1,7 +1,6 @@
 #include "ahci.h"
 #include "kmalloc.h"
 #include "memory.h"
-#include "utils.h"
 #include <stdio.h>
 #include <string.h>
 
