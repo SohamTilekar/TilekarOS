@@ -77,7 +77,7 @@ static void cleanup_zombies() {
  * and ensures task_exit is called when the entry point returns.
  */
 static void task_wrapper(void (*entry)(void)) {
-    uint32_t status = 0;
+    uint32_t __attribute__((unused)) status = 0;
     if (current_task && current_task->privilege_level == 3) {
         // Switch to user mode via iret
         // User stack is mapped at 0xB0000000 (1 page = 4KB)
@@ -562,7 +562,8 @@ task_t* task_fork(InterruptReg_t *regs) {
     *(--stack_ptr) = regs->ecx;
     *(--stack_ptr) = regs->edx;
     *(--stack_ptr) = regs->ebx;
-    *(--stack_ptr) = (uint32_t)stack_ptr; // ESP (dummy)
+    --stack_ptr;
+    *(stack_ptr) = (uint32_t)stack_ptr; // ESP (dummy)
     *(--stack_ptr) = regs->ebp;
     *(--stack_ptr) = regs->esi;
     *(--stack_ptr) = regs->edi;

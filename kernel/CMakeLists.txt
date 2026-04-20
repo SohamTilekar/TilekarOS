@@ -70,9 +70,18 @@ add_executable(myos.kernel ${ALL_SOURCES})
 # Ensure the .inc files are generated BEFORE we try to compile the .asm files.
 add_dependencies(myos.kernel kernel_asm_headers)
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# Test Flag Configuration
+# ==============================================================================
+# ENABLE_TEST: If 1, automatically run tests without user prompt; if 0, skip tests
+if(NOT DEFINED ENABLE_TEST)
+    set(ENABLE_TEST 0)
+endif()
+message(STATUS "ENABLE_TEST: ${ENABLE_TEST}")
+
+# ==============================================================================
 # Compile Options
-# ------------------------------------------------------------------------------
+# ==============================================================================
 set(KERNEL_NASM_FORMAT_FLAG "")
 if(OS_ARCH STREQUAL "i386")
     # Without the toolchain file, NASM may default to 64-bit objects on x86_64 hosts.
@@ -93,6 +102,7 @@ target_compile_options(myos.kernel PRIVATE
         -g                 # Generate debug information
         --target=${CMAKE_C_COMPILER_TARGET} # Target architecture from toolchain
         --sysroot=${CMAKE_SOURCE_DIR}/sysroot # Use our custom sysroot
+        -DENABLE_TEST=${ENABLE_TEST}
     >
     # Assembler Flags (NASM)
     $<$<COMPILE_LANGUAGE:ASM_NASM>:

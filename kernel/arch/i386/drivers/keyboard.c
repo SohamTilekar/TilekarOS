@@ -9,10 +9,6 @@
 static bool is_extended = false;
 static bool shift_l = false;
 static bool shift_r = false;
-static bool ctrl_l = false;
-static bool ctrl_r = false;
-static bool alt_l = false;
-static bool alt_r = false;
 static bool caps_lock = false;
 static bool num_lock = true;
 
@@ -75,7 +71,6 @@ int keyboard_read(struct file* file, void* buffer, uint32_t size) {
 }
 
 // Debug Mode
-static bool debug_mode = false;
 static keyboard_callback_t active_callback = NULL;
 
 const char* keycode_to_string(enum KeyCode code) {

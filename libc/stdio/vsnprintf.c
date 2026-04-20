@@ -49,7 +49,7 @@ static inline void _out_buffer(char character, void* buffer, size_t idx, size_t 
   }
 }
 
-static inline void _out_null(char character, void* buffer, size_t idx, size_t maxlen) {
+static inline __attribute__((unused)) void _out_null(char character, void* buffer, size_t idx, size_t maxlen) {
   (void)character; (void)buffer; (void)idx; (void)maxlen;
 }
 
@@ -592,7 +592,7 @@ int vprintf(const char* format, va_list va) {
 }
 
 int vfprintf(FILE* stream, const char* format, va_list va) {
-  return _vsnprintf_engine(_out_f, stream, (size_t)-1, format, va);
+  return _vsnprintf_engine(_out_f, (char*)stream, (size_t)-1, format, va);
 }
 
 int printf(const char* format, ...) {

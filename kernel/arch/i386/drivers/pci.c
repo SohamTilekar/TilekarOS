@@ -1,5 +1,4 @@
 #include "pci.h"
-#include "devices.h"
 #include "utils.h"
 #include "stdio.h"
 
@@ -65,7 +64,7 @@ void pci_scan(pci_callback_t callback) {
     }
 }
 
-static void pci_debug_callback(pci_device_t* dev) {
+static __attribute__((unused)) void pci_debug_callback(pci_device_t* dev) {
     printf("PCI: %x:%x.%d - Vendor: %x Device: %x Class: %x Sub: %x\n",
            (uint32_t)dev->bus, (uint32_t)dev->slot, (uint32_t)dev->func,
            (uint32_t)dev->vendor_id, (uint32_t)dev->device_id,

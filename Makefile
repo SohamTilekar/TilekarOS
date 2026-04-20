@@ -4,7 +4,7 @@ DRIVES ?= boot:24:ide
 PYTHON ?= python3
 BUILD_PY := helpers/build.py
 
-.PHONY: all configure kernel sysroot userland iso run run_iso run_disk export_drives comp comp_exe clean help
+.PHONY: all configure kernel sysroot userland iso run run_test run_iso run_disk export_drives comp comp_exe clean help
 
 all: kernel sysroot userland
 
@@ -25,6 +25,9 @@ iso:
 
 run:
 	$(PYTHON) $(BUILD_PY) run --arch $(ARCH) --vm "$(VM)" --drives "$(DRIVES)"
+
+run_test:
+	$(PYTHON) $(BUILD_PY) run --arch $(ARCH) --vm "$(VM)" --drives "$(DRIVES)" --enable-test
 
 run_iso:
 	$(PYTHON) $(BUILD_PY) run_iso --arch $(ARCH) --vm "$(VM)" --drives "$(DRIVES)"
@@ -48,7 +51,9 @@ help:
 	@echo "TilekarOS Build (make -> python -> cmake)"
 	@echo "  make|make all               Build kernel + sysroot + userland"
 	@echo "  make kernel|sysroot|userland|iso Build selected artifact"
-	@echo "  make run|run_iso|run_disk   Run QEMU with VM drives"
+	@echo "  make run|run_test|run_iso|run_disk   Run QEMU with VM drives"
+	@echo "    run                       Run without tests (interactive prompt)"
+	@echo "    run_test                  Run with tests enabled (auto-run)"
 	@echo "  make comp FILE=app.c [OUT=app]  Compile userspace app with sysroot+libc"
 	@echo "  make export_drives          Export VM drive contents"
 	@echo "  make clean                  Remove build/sysroot and selected VM directory"

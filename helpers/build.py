@@ -139,7 +139,7 @@ def parse_drives(drives):
     return out
 
 
-def configure(arch):
+def configure(arch, enable_test=False):
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     cmake_cache = BUILD_DIR / "CMakeCache.txt"
     cmake_cmd = [
@@ -152,6 +152,10 @@ def configure(arch):
         "-DCMAKE_C_COMPILER=clang",
         "-DCMAKE_ASM_NASM_COMPILER=nasm",
     ]
+    
+    if enable_test:
+        cmake_cmd.append("-DENABLE_TEST=1")
+    
     toolchain = ROOT / "cmake" / "toolchains" / "{0}.cmake".format(arch)
     if cmake_cache.exists():
         text = _read_text(cmake_cache)
@@ -449,11 +453,11 @@ def qemu_drive_flags(vm_dir, drives):
     return flags
 
 
-def run_qemu(arch, vm, drives_cfg, mode):
+def run_qemu(arch, vm, drives_cfg, mode, enable_test=False):
     banner("TilekarOS Run Pipeline ({0})".format(mode))
     step("Run mode: {0}".format(mode))
     vm_dir, drives = ensure_vm_workspace(vm, drives_cfg)
-    configure(arch)
+    configure(arch, enable_test=enable_test)
     build_target("myos.kernel")
     ensure_sysroot(arch, do_configure=False)
 
@@ -463,9 +467,19 @@ def run_qemu(arch, vm, drives_cfg, mode):
     qemu_cmd = ["qemu-system-{0}".format(arch)]
     if mode == "run":
         qemu_cmd += ["-kernel", str(kernel_binary)]
+        if SYSROOT.exists():
+            step("Merging sysroot into boot drive")
+            items = [str(p) for p in SYSROOT.iterdir()]
+            if items:
+                run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s"] + items + ["::/"])
     elif mode == "run_iso":
         build_target("iso")
         qemu_cmd += ["-boot", "d", "-cdrom", str(BUILD_DIR / "myos.iso")]
+        if SYSROOT.exists():
+            step("Merging sysroot into boot drive")
+            items = [str(p) for p in SYSROOT.iterdir()]
+            if items:
+                run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s"] + items + ["::/"])
     elif mode == "run_disk":
         inject_boot_payload(vm_dir, boot_img, kernel_binary)
         isodir = BUILD_DIR / "disk_isodir"
@@ -569,16 +583,17 @@ def main():
     parser.add_argument("--drives", default=os.environ.get("DRIVES", "boot:24:ide"))
     parser.add_argument("--file", default=os.environ.get("FILE"))
     parser.add_argument("--out", default=os.environ.get("OUT"))
+    parser.add_argument("--enable-test", action="store_true", help="Enable automatic test execution")
     args = parser.parse_args()
 
     try:
         if args.command == "configure":
             banner("TilekarOS Configure")
-            configure(args.arch)
+            configure(args.arch, enable_test=args.enable_test)
             ok("Configure completed")
         elif args.command == "kernel":
             banner("TilekarOS Kernel Build")
-            configure(args.arch)
+            configure(args.arch, enable_test=args.enable_test)
             build_target("myos.kernel")
             ok("Kernel build completed")
         elif args.command == "sysroot":
@@ -590,17 +605,18 @@ def main():
             ok("Userland build completed")
         elif args.command == "iso":
             banner("TilekarOS ISO Build")
-            configure(args.arch)
+            configure(args.arch, enable_test=args.enable_test)
             build_target("iso")
             ok("ISO build completed")
         elif args.command in {"run", "run_iso", "run_disk"}:
-            run_qemu(args.arch, args.vm, args.drives, args.command)
+            run_qemu(args.arch, args.vm, args.drives, args.command, enable_test=args.enable_test)
         elif args.command == "export_drives":
             banner("TilekarOS Drive Export")
             vm_dir, drives = ensure_vm_workspace(args.vm, args.drives)
             export_drives(vm_dir, drives)
             ok("Drive export completed")
         elif args.command == "comp":
+            ensure_sysroot(args.arch)
             compile_user_program(args.arch, args.file, args.out)
         elif args.command == "clean":
             banner("TilekarOS Clean")

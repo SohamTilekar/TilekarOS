@@ -230,9 +230,9 @@ static int controller_count = 0;
 static void ata_pci_callback(pci_device_t* pci_dev) {
     if (pci_dev->class_code == 0x01 && pci_dev->subclass == 0x01) {
         uint32_t bar0 = pci_get_bar(pci_dev, 0);
-        uint32_t bar1 = pci_get_bar(pci_dev, 1);
+        uint32_t __attribute__((unused)) bar1 = pci_get_bar(pci_dev, 1);
         uint32_t bar2 = pci_get_bar(pci_dev, 2);
-        uint32_t bar3 = pci_get_bar(pci_dev, 3);
+        uint32_t __attribute__((unused)) bar3 = pci_get_bar(pci_dev, 3);
         uint32_t bar4 = pci_get_bar(pci_dev, 4);
 
         uint16_t pri_base = (bar0 & 0xFFFFFFFC) ? (bar0 & 0xFFFFFFFC) : 0x1F0;
