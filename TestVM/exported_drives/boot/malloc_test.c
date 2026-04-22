@@ -30,7 +30,7 @@ void test_alignment() {
     void* p1 = malloc(1);
     void* p2 = malloc(13);
     void* p3 = malloc(64);
-    
+
     assert_test(((uintptr_t)p1 % 8) == 0, "malloc(1) alignment");
     assert_test(((uintptr_t)p2 % 8) == 0, "malloc(13) alignment");
     assert_test(((uintptr_t)p3 % 8) == 0, "malloc(64) alignment");
@@ -45,16 +45,16 @@ void test_splitting_and_reuse() {
     void* large = malloc(1024);
     uintptr_t large_addr = (uintptr_t)large;
     assert_test(large != NULL, "Large allocation");
-    
+
     free(large);
-    
+
     void* s1 = malloc(128);
     void* s2 = malloc(128);
-    
+
     assert_test(s1 != NULL && s2 != NULL, "Small allocations after large free");
     assert_test((uintptr_t)s1 == large_addr, "Reuse of freed block start");
     assert_test((uintptr_t)s2 > (uintptr_t)s1, "Second block follows first");
-    
+
     free(s1);
     free(s2);
 }
@@ -64,16 +64,16 @@ void test_coalescing() {
     void* p1 = malloc(128);
     void* p2 = malloc(128);
     void* p3 = malloc(128);
-    
+
     uintptr_t base = (uintptr_t)p1;
     free(p1);
     free(p2);
     free(p3);
-    
+
     void* big = malloc(350);
     assert_test(big != NULL, "Allocation in coalesced space");
     assert_test((uintptr_t)big == base, "Large block reused original base address");
-    
+
     free(big);
 }
 
@@ -81,13 +81,13 @@ void test_edge_cases() {
     print_category("Edge Cases");
     void* p0 = malloc(0);
     assert_test(p0 == NULL, "malloc(0) returns NULL");
-    
+
     void* p_huge = malloc(0xFFFFFFFF);
     assert_test(p_huge == NULL, "malloc(huge) returns NULL");
 
     void* c1 = calloc(0, 10);
     assert_test(c1 == NULL, "calloc(0, 10) returns NULL");
-    
+
     void* c2 = calloc(10, 0);
     assert_test(c2 == NULL, "calloc(10, 0) returns NULL");
 
@@ -101,10 +101,10 @@ void test_realloc_expansion() {
     print_category("Realloc Expansion Test");
     void* p1 = malloc(128);
     memset(p1, 0xAA, 128);
-    
+
     void* p2 = realloc(p1, 256);
     assert_test(p2 != NULL, "realloc success");
-    
+
     int data_ok = 1;
     unsigned char* ptr = (unsigned char*)p2;
     for (int i = 0; i < 128; i++) {
@@ -114,7 +114,7 @@ void test_realloc_expansion() {
         }
     }
     assert_test(data_ok, "realloc preserved data");
-    
+
     free(p2);
 }
 
@@ -122,7 +122,7 @@ void test_stress() {
     print_category("Stress Test");
     void* ptrs[64];
     int success = 1;
-    
+
     for (int i = 0; i < 64; i++) {
         ptrs[i] = malloc(8 * (i + 1));
         if (!ptrs[i]) {
@@ -133,7 +133,7 @@ void test_stress() {
         }
     }
     assert_test(success, "64 sequential allocations");
-    
+
     // Verify data integrity
     success = 1;
     for (int i = 0; i < 64; i++) {
@@ -146,12 +146,12 @@ void test_stress() {
         }
     }
     assert_test(success, "Data integrity check");
-    
+
     // Fragmentation and re-allocation
     for (int i = 0; i < 64; i += 2) {
         free(ptrs[i]);
     }
-    
+
     success = 1;
     for (int i = 0; i < 32; i++) {
         void* p = malloc(4);
@@ -159,15 +159,15 @@ void test_stress() {
         else free(p);
     }
     assert_test(success, "Re-allocation in fragmented heap");
-    
+
     for (int i = 1; i < 64; i += 2) {
         free(ptrs[i]);
     }
 }
 
-void write_result(const char* result) {
+void write_result(const char* __attribute__((unused)) result) {
     mkdir("/tmp");
-    int fd = open("/tmp/MALLOC.RES", 0x42); // O_WRONLY | O_CREAT (assuming 0x42 from other parts of OS)
+    int __attribute__((unused)) fd = open("/tmp/MALLOC.RES", 0x42); // O_WRONLY | O_CREAT (assuming 0x42 from other parts of OS)
 }
 
 int main() {
@@ -182,10 +182,10 @@ int main() {
     test_stress();
 
     printf("\nSummary: %d/%d tests passed\n", tests_run - tests_failed, tests_run);
-    
+
     mkdir("/tmp");
-    int fd = open("/tmp/MALLOC.RES", 1); // 1 = VFS_O_CREAT
-    
+    int fd = open("/tmp/MALLOC.RES", O_WRONLY | O_CREAT); // O_WRONLY | O_CREAT
+
     if (tests_failed == 0) {
         printf("RESULT: malloc_test PASS\n");
         if (fd >= 0) {

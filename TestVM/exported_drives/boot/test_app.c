@@ -7,13 +7,13 @@ int global_var = 100;
 
 void log_checkpoint(const char* id) {
     printf("[CHECKPOINT: %s]\n", id);
-    int fd = open("/tmp/PROCESS.LOG", 1); // VFS_O_CREAT
+    int fd = open("/tmp/PROCESS.LOG", O_WRONLY | O_CREAT); // O_WRONLY | O_CREAT
     if (fd >= 0) {
         // Advance to end of file
         char junk[256];
         int bytes;
         while ((bytes = read(fd, junk, sizeof(junk))) > 0);
-        
+
         write(fd, id, strlen(id));
         write(fd, "\n", 1);
         close(fd);
@@ -57,7 +57,7 @@ void test_nested_fork() {
     log_checkpoint("NESTED_FORK_START");
 
     uint32_t p_pid = getpid();
-    int c_ret = fork();
+    int __attribute__((unused)) c_ret = fork();
 
     if (getpid() != p_pid) {
         // Child

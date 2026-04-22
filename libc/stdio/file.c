@@ -7,11 +7,11 @@ FILE* fopen(const char* __restrict filename, const char* __restrict mode) {
     int flags = 0;
     
     if (strcmp(mode, "r") == 0) {
-        flags = 0; // Read only
+        flags = O_RDONLY;
     } else if (strcmp(mode, "w") == 0) {
-        flags = 1; // O_CREAT (from vfs.h)
+        flags = O_WRONLY | O_CREAT;
     } else if (strcmp(mode, "a") == 0) {
-        flags = 1; // O_CREAT (should ideally be O_APPEND but VFS doesn't show it yet)
+        flags = O_WRONLY | O_CREAT | O_APPEND;
     } else {
         return NULL;
     }

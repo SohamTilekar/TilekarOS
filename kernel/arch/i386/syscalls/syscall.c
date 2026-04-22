@@ -30,6 +30,10 @@ syscall_t syscall_table[] = {
     NULL, // SYS_EXECVE
     NULL, // SYS_YIELD
     sys_brk,
+    sys_kill,
+    sys_sigaction,
+    NULL, // SYS_SIGRETURN (needs InterruptReg_t)
+    sys_sigprocmask,
     NULL  // SYS_MAX
 };
 
@@ -51,13 +55,20 @@ uint32_t syscall_dispatch(InterruptReg_t* r) {
         return 0;
     }
 
+    if (num == SYS_SIGRETURN) {
+        return sys_sigreturn(r);
+    }
+
     if (syscall_table[num] == NULL) return -1;
 
     return syscall_table[num](r->ebx, r->ecx, r->edx, r->esi, r->edi);
 }
 
+extern void check_signals(InterruptReg_t* r);
+
 void syscall_handler(InterruptReg_t* r) {
     task_preempt_disable();
     r->eax = syscall_dispatch(r);
     task_preempt_enable();
+    check_signals(r);
 }

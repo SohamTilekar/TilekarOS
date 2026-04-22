@@ -167,7 +167,10 @@ int vfs_task_file_table_init(file_t** file_table) {
 int vfs_task_file_table_copy(file_t** dst_file_table, file_t* const* src_file_table) {
     if (!dst_file_table || !src_file_table) return -1;
     for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
-        dst_file_table[i] = NULL;
+        if (dst_file_table[i]) {
+            kfree(dst_file_table[i]);
+            dst_file_table[i] = NULL;
+        }
     }
     for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
         if (!src_file_table[i]) continue;
@@ -244,7 +247,7 @@ int vfs_open(const char* path, int flags) {
     file_t* file = kmalloc(sizeof(file_t));
     if (!file) return -2;
     file->node = node;
-    file->position = 0;
+    file->position = (flags & VFS_O_APPEND) ? node->size : 0;
     file->flags = flags;
     file_table[fd] = file;
     return fd;
@@ -268,6 +271,9 @@ int vfs_write(int fd, const void* buffer, uint32_t size) {
     file_t** file_table = vfs_get_active_file_table();
     if (!file_table || fd < 0 || fd >= MAX_FILES_PER_PROCESS || !file_table[fd]) return -1;
     file_t* file = file_table[fd];
+    if (file->flags & VFS_O_APPEND) {
+        file->position = file->node->size;
+    }
     if (!file->node->ops->write) return -2;
     return file->node->ops->write(file, buffer, size);
 }

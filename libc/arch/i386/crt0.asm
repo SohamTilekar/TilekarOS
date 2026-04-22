@@ -1,6 +1,7 @@
 [bits 32]
 section .text
 global _start
+global __sig_restorer
 extern main
 
 _start:
@@ -23,5 +24,9 @@ _start:
 .halt:
     hlt
     jmp .halt
+
+__sig_restorer:
+    mov eax, 16      ; SYS_SIGRETURN = 16
+    int 0x80
 
 section .note.GNU-stack noalloc noexec nowrite progbits

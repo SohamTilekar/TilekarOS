@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "../utils/utils.h"
 #include "../fs/vfs.h"
+#include <signal.h>
 
 typedef enum {
     TASK_READY,
@@ -21,6 +22,11 @@ typedef struct {
     uint32_t useresp, ss; // Only if privilege_level == 3
 } registers_t;
 
+typedef struct sigqueue_item {
+    siginfo_t info;
+    struct sigqueue_item* next;
+} sigqueue_item_t;
+
 typedef struct task {
     uint32_t id;
     uint32_t *kernel_stack;
@@ -33,6 +39,13 @@ typedef struct task {
     uint32_t heap_break;     // current program break
     uint32_t heap_mapped_end;// end (exclusive) of heap pages already mapped
     file_t* file_table[MAX_FILES_PER_PROCESS];
+
+    // Signals
+    sigset_t pending_signals; // Bitmask of signals that are pending
+    sigqueue_item_t* signal_queue; // Queue of actual signal info
+    sigqueue_item_t* signal_queue_tail; // Tail of the signal queue for O(1) enqueue
+    sigset_t blocked_signals;
+    struct sigaction sigactions[64];
 
     // Internal scheduler fields
     struct task* next;      // Next task in the ready queue
@@ -115,7 +128,10 @@ void task_switch_to(task_t* task);
 void task_preempt_disable(void);
 void task_preempt_enable(void);
 
+task_t* task_get_by_pid(uint32_t pid);
 int task_file_table_copy(task_t* dst, const task_t* src);
 int task_file_table_set(task_t* task, int fd, const file_t* src_file);
+
+void task_signal_enqueue(task_t* target, siginfo_t info);
 
 #endif // ARCH_I386_TASK_H

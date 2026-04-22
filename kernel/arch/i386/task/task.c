@@ -11,6 +11,10 @@
 #include <string.h>
 #include "memory.h"
 
+#define SIG_DFL ((void (*)(int))0)
+#define SIG_IGN ((void (*)(int))1)
+
+void check_signals(InterruptReg_t* r);
 extern void context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t next_cr3, uint32_t intr_num);
 
 extern uint32_t get_cr3(void);
@@ -66,8 +70,15 @@ static void cleanup_zombies() {
         if (z->stack_limit) {
             kfree(z->stack_limit);
         }
+
+        sigqueue_item_t* sq = z->signal_queue;
+        while (sq) {
+            sigqueue_item_t* next = sq->next;
+            kfree(sq);
+            sq = next;
+        }
+
         vfs_task_file_table_destroy(z->file_table);
-        // printf("[Scheduler] Cleaning up Task %d\n", z->id);
         kfree(z);
     }
 }
@@ -164,6 +175,11 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
     task->heap_start = 0;
     task->heap_break = 0;
     task->heap_mapped_end = 0;
+    task->pending_signals = 0;
+    task->signal_queue = NULL;
+    task->signal_queue_tail = NULL;
+    task->blocked_signals = 0;
+    memset(task->sigactions, 0, sizeof(task->sigactions));
     if (task_init_file_table(task) < 0) {
         kfree(stack);
         kfree(task);
@@ -242,6 +258,11 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
     task->state = TASK_READY;
     task->preempt_count = 0;
     task->privilege_level = 3;
+    task->pending_signals = 0;
+    task->signal_queue = NULL;
+    task->signal_queue_tail = NULL;
+    task->blocked_signals = 0;
+    memset(task->sigactions, 0, sizeof(task->sigactions));
     if (task_init_file_table(task) < 0) {
         kfree(stack);
         kfree(task);
@@ -346,6 +367,11 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
     task->state = TASK_READY;
     task->preempt_count = 0;
     task->privilege_level = privilege_level;
+    task->pending_signals = 0;
+    task->signal_queue = NULL;
+    task->signal_queue_tail = NULL;
+    task->blocked_signals = 0;
+    memset(task->sigactions, 0, sizeof(task->sigactions));
     if (task_init_file_table(task) < 0) {
         kfree(stack);
         kfree(task);
@@ -470,6 +496,16 @@ task_t* task_create_elf_from_file(const char* path, uint8_t privilege_level) {
     return task;
 }
 
+task_t* task_get_by_pid(uint32_t pid) {
+    if (!current_task) return NULL;
+    task_t* curr = current_task;
+    do {
+        if (curr->id == pid) return curr;
+        curr = curr->next;
+    } while (curr != current_task);
+    return NULL;
+}
+
 int task_file_table_copy(task_t* dst, const task_t* src) {
     if (!dst || !src) return -1;
     return vfs_task_file_table_copy(dst->file_table, src->file_table);
@@ -514,6 +550,11 @@ task_t* task_fork(InterruptReg_t *regs) {
     child->heap_start = parent->heap_start;
     child->heap_break = parent->heap_break;
     child->heap_mapped_end = parent->heap_mapped_end;
+    child->pending_signals = 0;
+    child->signal_queue = NULL;
+    child->signal_queue_tail = NULL;
+    child->blocked_signals = parent->blocked_signals;
+    memcpy(child->sigactions, parent->sigactions, sizeof(child->sigactions));
 
     // Clone the page directory
     uint32_t* child_pd_virt = memory_clone_pagedir();
@@ -735,6 +776,10 @@ void task_yield(InterruptReg_t *regs) {
     uint32_t flags = interrupt_save();
     cleanup_zombies();
 
+    if (regs) {
+        check_signals(regs);
+    }
+
     if (regs && regs->intr_num == 32 && current_task && current_task->preempt_count > 0) {
         pic_send_eoi(regs->intr_num);
         regs->intr_num = 0;
@@ -863,6 +908,126 @@ void task_exit() {
     interrupt_restore(flags);
 }
 
+void check_signals(InterruptReg_t* r) {
+    if (!current_task || current_task->privilege_level != 3) return;
+    if ((r->cs & 3) != 3) return; // Only process signals when returning to user mode
+
+    uint32_t flags = interrupt_save();
+    uint64_t unblocked = current_task->pending_signals & ~(current_task->blocked_signals);
+
+    if (!unblocked) {
+        interrupt_restore(flags);
+        return;
+    }
+
+    sigqueue_item_t* prev = NULL;
+    sigqueue_item_t* curr = current_task->signal_queue;
+    siginfo_t info = {0};
+    bool found = false;
+
+    while (curr) {
+        int sig = curr->info.si_signo;
+        if (unblocked & (1ULL << sig)) {
+            info = curr->info;
+            found = true;
+            
+            if (prev) {
+                prev->next = curr->next;
+                if (!curr->next) {
+                    current_task->signal_queue_tail = prev;
+                }
+            } else {
+                current_task->signal_queue = curr->next;
+                if (!curr->next) {
+                    current_task->signal_queue_tail = NULL;
+                }
+            }
+            kfree(curr);
+
+            bool more_of_type = false;
+            sigqueue_item_t* scan = current_task->signal_queue;
+            while (scan) {
+                if (scan->info.si_signo == sig) {
+                    more_of_type = true;
+                    break;
+                }
+                scan = scan->next;
+            }
+            if (!more_of_type) {
+                current_task->pending_signals &= ~(1ULL << sig);
+            }
+            break;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+
+    if (!found) {
+        interrupt_restore(flags);
+        return;
+    }
+
+    int sig = info.si_signo;
+    struct sigaction* act = &current_task->sigactions[sig];
+
+    if (act->sa_handler == SIG_DFL) {
+        if (sig == SIGCHLD || sig == SIGURG || sig == SIGWINCH) {
+            interrupt_restore(flags);
+            return;
+        } else {
+            printf("Task %d terminated by signal %d\n", current_task->id, sig);
+            interrupt_restore(flags);
+            task_exit();
+            return;
+        }
+    } else if (act->sa_handler == SIG_IGN) {
+        interrupt_restore(flags);
+        return;
+    } else {
+        uint64_t old_blocked = current_task->blocked_signals;
+        if (!(act->sa_flags & SA_NODEFER)) {
+            current_task->blocked_signals |= act->sa_mask | (1ULL << sig);
+        } else {
+            current_task->blocked_signals |= act->sa_mask;
+        }
+
+        uint32_t handler_addr = (act->sa_flags & SA_SIGINFO) ? (uint32_t)act->sa_sigaction : (uint32_t)act->sa_handler;
+        if (act->sa_flags & SA_RESETHAND) {
+            act->sa_handler = SIG_DFL;
+        }
+
+        uint32_t user_esp = r->useresp;
+        
+        uint32_t info_ptr = 0;
+        if (act->sa_flags & SA_SIGINFO) {
+            user_esp -= sizeof(siginfo_t);
+            user_esp &= ~15;
+            siginfo_t* uinfo = (siginfo_t*)user_esp;
+            *uinfo = info;
+            info_ptr = user_esp;
+        }
+
+        user_esp -= sizeof(InterruptReg_t);
+        user_esp &= ~15;
+        InterruptReg_t* saved_regs = (InterruptReg_t*)user_esp;
+        *saved_regs = *r;
+
+        user_esp -= 8;
+        *(uint64_t*)user_esp = old_blocked;
+
+        user_esp -= 4; *(uint32_t*)user_esp = (uint32_t)saved_regs;
+        user_esp -= 4; *(uint32_t*)user_esp = info_ptr;
+        user_esp -= 4; *(uint32_t*)user_esp = sig;
+        user_esp -= 4; *(uint32_t*)user_esp = (uint32_t)act->sa_restorer;
+
+        r->useresp = user_esp;
+        r->eip = handler_addr;
+
+        interrupt_restore(flags);
+        return;
+    }
+}
+
 void task_stop_scheduler() {
     if (scheduler_trigger_index != -1) {
         set_trigger_flags(scheduler_trigger_index, get_trigger_flags(scheduler_trigger_index) & ~TIMER_TRIGGER_ACTIVE);
@@ -900,5 +1065,27 @@ void task_switch_to(task_t* next) {
 
     context_switch(&last->kernel_stack, current_task->kernel_stack, current_task->page_directory, 0);
 
+    interrupt_restore(flags);
+}
+
+void task_signal_enqueue(task_t* target, siginfo_t info) {
+    if (!target) return;
+    uint32_t flags = interrupt_save();
+    
+    sigqueue_item_t* item = kmalloc(sizeof(sigqueue_item_t));
+    if (item) {
+        item->info = info;
+        item->next = NULL;
+        
+        if (!target->signal_queue) {
+            target->signal_queue = item;
+            target->signal_queue_tail = item;
+        } else {
+            target->signal_queue_tail->next = item;
+            target->signal_queue_tail = item;
+        }
+        target->pending_signals |= (1ULL << info.si_signo);
+    }
+    
     interrupt_restore(flags);
 }

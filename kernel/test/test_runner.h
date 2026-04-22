@@ -9,6 +9,7 @@
 #include "malloc_test.h"
 #include "process_test.h"
 #include "libc_test.h"
+#include "signal_test.h"
 
 #include "drivers/timer.h"
 
@@ -26,6 +27,7 @@ static inline bool run_all_tests(Device_t* primary_storage) {
     run_fat_tests(primary_storage, &stats);
     run_fd_table_tests(primary_storage, &stats);
     run_process_tests(&stats);
+    run_signal_tests(&stats);
     run_libc_userspace_tests(&stats);
 
     uint32_t total_duration = get_ticks() - total_start;

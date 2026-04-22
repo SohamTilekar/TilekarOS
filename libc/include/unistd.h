@@ -8,7 +8,8 @@
 #define O_RDONLY 0x00
 #define O_WRONLY 0x01
 #define O_RDWR   0x02
-#define O_CREAT  0x01
+#define O_CREAT  0x04
+#define O_APPEND 0x08
 
 static inline int fork() {
     return (int)__syscall(SYS_FORK, 0, 0, 0, 0, 0);

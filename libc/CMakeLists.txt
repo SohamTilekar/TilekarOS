@@ -11,6 +11,7 @@ file(GLOB LIBC_STDLIB_SOURCES CONFIGURE_DEPENDS "stdlib/*.c")
 file(GLOB LIBC_STRING_SOURCES CONFIGURE_DEPENDS "string/*.c")
 file(GLOB LIBC_CTYPE_SOURCES CONFIGURE_DEPENDS "ctype/*.c")
 file(GLOB LIBC_ERRNO_SOURCES CONFIGURE_DEPENDS "errno/*.c")
+file(GLOB LIBC_SIGNAL_SOURCES CONFIGURE_DEPENDS "signal/*.c")
 
 # 2. Architecture Specific Sources
 # Only include the sources for the currently selected OS_ARCH.
@@ -22,6 +23,7 @@ set(LIBC_SOURCES
     ${LIBC_STRING_SOURCES}
     ${LIBC_CTYPE_SOURCES}
     ${LIBC_ERRNO_SOURCES}
+    ${LIBC_SIGNAL_SOURCES}
     ${LIBC_ARCH_SOURCES}
 )
 

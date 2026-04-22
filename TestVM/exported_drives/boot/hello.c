@@ -5,7 +5,7 @@
 
 void log_checkpoint(const char* id) {
     printf("[CHECKPOINT: %s]\n", id);
-    int fd = open("/tmp/PROCESS.LOG", 1); // VFS_O_CREAT
+    int fd = open("/tmp/PROCESS.LOG", O_WRONLY | O_CREAT); // O_WRONLY | O_CREAT
     if (fd >= 0) {
         char junk[256];
         int bytes;
@@ -22,7 +22,7 @@ int main() {
     log_checkpoint("HELLO_ALIVE");
 
     mkdir("/tmp");
-    int fd = open("/tmp/PROCESS.RES", 1); // 1 = VFS_O_CREAT
+    int fd = open("/tmp/PROCESS.RES", O_WRONLY | O_CREAT); // O_WRONLY | O_CREAT
     if (fd >= 0) {
         write(fd, "PASS", 4);
         close(fd);

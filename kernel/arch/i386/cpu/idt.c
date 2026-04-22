@@ -340,6 +340,8 @@ void pic_send_eoi(uint32_t intr_num) {
     out_port_b(0x20, 0x20); // Always send EOI to Master PIC
 }
 
+extern void check_signals(InterruptReg_t* r);
+
 /*
  * IRQ Handler
  * This is the main handler for Hardware Interrupts (32-47).
@@ -357,4 +359,5 @@ void irq_handler(InterruptReg_t *regs)
     }
 
     pic_send_eoi(regs->intr_num);
+    check_signals(regs);
 }

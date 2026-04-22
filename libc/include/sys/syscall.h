@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-enum  {
+enum {
     SYS_EXIT = 0,
     SYS_WRITE,
     SYS_GET_PID,
@@ -18,6 +18,10 @@ enum  {
     SYS_EXECVE,
     SYS_YIELD,
     SYS_BRK,
+    SYS_KILL,
+    SYS_SIGACTION,
+    SYS_SIGRETURN,
+    SYS_SIGPROCMASK,
     SYS_MAX
 };
 

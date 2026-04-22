@@ -246,7 +246,7 @@ int main() {
     printf("\nSummary: %d/%d tests passed\n", tests_run - tests_failed, tests_run);
 
     mkdir("/tmp");
-    int fd = open("/tmp/LIBC.RES", 1); // 1 = VFS_O_CREAT
+    int fd = open("/tmp/LIBC.RES", O_WRONLY | O_CREAT); // O_WRONLY | O_CREAT
 
     if (tests_failed == 0) {
         printf("RESULT: libc_test PASS\n");
