@@ -54,6 +54,19 @@ add_subdirectory(libc)
 add_subdirectory(kernel)
 
 # ==============================================================================
+# Custom Targets: Report
+# ==============================================================================
+# Add a target to print a detailed report of the build environment and tools.
+# This helps in debugging issues across different machines.
+# ==============================================================================
+add_custom_target(report
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/helpers/build.py report
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Printing detailed system and tool report"
+    VERBATIM
+)
+
+# ==============================================================================
 # IDE Support: .clangd Generation
 # ==============================================================================
 # We generate a .clangd configuration file to help language servers (like clangd)

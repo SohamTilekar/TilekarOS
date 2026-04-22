@@ -4,12 +4,15 @@ DRIVES ?= boot:24:ide
 PYTHON ?= python3
 BUILD_PY := helpers/build.py
 
-.PHONY: all configure kernel sysroot userland iso run run_test run_iso run_disk export_drives comp comp_exe clean help
+.PHONY: all configure kernel sysroot userland iso run run_test run_iso run_disk export_drives comp comp_exe clean help report
 
 all: kernel sysroot
 
 configure:
 	$(PYTHON) $(BUILD_PY) configure --arch $(ARCH)
+
+report:
+	$(PYTHON) $(BUILD_PY) report
 
 kernel:
 	$(PYTHON) $(BUILD_PY) kernel --arch $(ARCH)
@@ -56,6 +59,7 @@ help:
 	@echo "TilekarOS Build (make -> python -> cmake)"
 	@echo "  make|make all               Build kernel + sysroot + userland"
 	@echo "  make kernel|sysroot|userland|iso Build selected artifact"
+	@echo "  make report                 Print detailed system and tool report"
 	@echo "  make run|run_test|run_iso|run_disk   Run QEMU with VM drives"
 	@echo "    run                       Run without tests (interactive prompt)"
 	@echo "    run_test                  Run with tests enabled (auto-run)"

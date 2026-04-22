@@ -1,9 +1,14 @@
+#!/usr/bin/env python
+# Should suport 2.7, 3.0-3.6, 3.7-3.9, 3.10+ version
+# maintain 100% backward compatibility
+from __future__ import print_function
+
+import os
 import re
 import sys
-import os
 
 if len(sys.argv) < 2:
-    print(f"Usage: {sys.argv[0]} <input.h> [output.inc]")
+    print("Usage: {} <input.h> [output.inc]".format(sys.argv[0]))
     sys.exit(1)
 
 input_file = sys.argv[1]
@@ -41,11 +46,11 @@ for line in lines:
         if value.startswith("(") and value.endswith(")"):
             value = value[1:-1].strip()
 
-        output_lines.append(f"%define {name} {value}")
+        output_lines.append("%define {} {}".format(name, value))
 
 with open(output_file, "w") as f:
     f.write("; Auto-generated from C header\n")
-    for l in output_lines:
-        f.write(l + "\n")
+    for out_line in output_lines:
+        f.write(out_line + "\n")
 
-print(f"Wrote: {output_file}")
+print("Wrote: {}".format(output_file))

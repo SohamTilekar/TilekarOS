@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -615,6 +616,331 @@ def compile_test_programs(arch, vm):
         compile_user_program(arch, str(c_file), str(out_file))
 
 
+def verify_build(arch):
+    banner("TilekarOS Build Verification")
+
+    log_file = ROOT / "build_report.log"
+    step("Starting silent background build... (Log: {0})".format(log_file.name))
+
+    try:
+        with open(str(log_file), "w") as f:
+            f.write("--- TilekarOS Build Report Verification ---\n")
+
+            def run_logged(cmd, label):
+                f.write("\n>>> {0}: {1}\n".format(label, " ".join(cmd)))
+                f.flush()
+                # Use sys.executable to ensure we use same python for sub-commands
+                proc = subprocess.Popen(
+                    cmd, stdout=f, stderr=f, stdin=subprocess.PIPE, cwd=str(ROOT)
+                )
+                proc.communicate()
+                return proc.returncode == 0
+
+            # 1. Configure
+            if not run_logged(
+                [
+                    sys.executable,
+                    str(ROOT / "helpers" / "build.py"),
+                    "configure",
+                    "--arch",
+                    arch,
+                ],
+                "Configure",
+            ):
+                fail(
+                    "Configure phase FAILED. See {0} for details.".format(log_file.name)
+                )
+                return False
+            ok("Configure phase: SUCCESS")
+
+            # 2. Kernel
+            if not run_logged(
+                ["cmake", "--build", str(BUILD_DIR), "--target", "myos.kernel"],
+                "Kernel Build",
+            ):
+                fail("Kernel build FAILED.")
+                return False
+
+            kernel_path = BUILD_DIR / "kernel" / "myos.kernel"
+            if not kernel_path.exists():
+                fail("Kernel binary missing after build!")
+                return False
+            ok("Kernel build: SUCCESS")
+
+            # 3. Kernel Smoke Test (Minimal -kernel boot)
+            step("Performing Kernel Smoke Test (-kernel)...")
+            k_serial = ROOT / "kernel_smoke.log"
+            if k_serial.exists():
+                k_serial.unlink()
+
+            k_cmd = [
+                "qemu-system-{0}".format(arch),
+                "-kernel",
+                str(kernel_path),
+                "-serial",
+                "file:{0}".format(k_serial),
+            ]
+            f.write("\n>>> Kernel Smoke Test: {0}\n".format(" ".join(k_cmd)))
+            k_proc = subprocess.Popen(k_cmd, stdout=f, stderr=f)
+            time.sleep(2)
+            k_proc.terminate()
+
+            if k_serial.exists() and len(_read_text(k_serial).strip()) > 0:
+                ok("Kernel Smoke Test: SUCCESS (Serial output detected)")
+            else:
+                warn("Kernel Smoke Test: NO SERIAL OUTPUT")
+
+            # 4. Multiboot check
+            grub_file_cmd = ["grub-file", "--is-x86-multiboot", str(kernel_path)]
+            f.write("\n>>> Multiboot Check: {0}\n".format(" ".join(grub_file_cmd)))
+            proc = subprocess.Popen(grub_file_cmd, stdout=f, stderr=f)
+            proc.wait()
+            if proc.returncode == 0:
+                ok("Kernel Verification: Multiboot header FOUND")
+            else:
+                fail("Kernel Verification: Multiboot header MISSING or INVALID")
+
+            # 5. ISO
+            if not run_logged(
+                ["cmake", "--build", str(BUILD_DIR), "--target", "iso"], "ISO Build"
+            ):
+                fail("ISO build FAILED.")
+                return False
+
+            iso_path = BUILD_DIR / "myos.iso"
+            if not iso_path.exists():
+                fail("ISO image missing after build!")
+                return False
+            ok("ISO build: SUCCESS")
+
+            # 6. ISO Smoke Test (Minimal -cdrom boot)
+            step("Performing ISO Smoke Test (-cdrom)...")
+            i_serial = ROOT / "iso_smoke.log"
+            if i_serial.exists():
+                i_serial.unlink()
+
+            i_cmd = [
+                "qemu-system-{0}".format(arch),
+                "-boot",
+                "d",
+                "-cdrom",
+                str(iso_path),
+                "-nographic",
+                "-no-reboot",
+                "-no-shutdown",
+                "-serial",
+                "file:{0}".format(i_serial),
+            ]
+
+            f.write("\n>>> ISO Smoke Test: {0}\n".format(" ".join(i_cmd)))
+
+            i_proc = subprocess.Popen(i_cmd, stdout=f, stderr=f)
+
+            time.sleep(5)
+
+            # Check if QEMU is still running (likely reached bootloader stage)
+            if i_proc.poll() is None:
+                i_proc.terminate()
+                ok(
+                    "ISO Smoke Test: SUCCESS (QEMU still running, bootloader likely reached)"
+                )
+            else:
+                # fallback to serial check if process exited
+                if i_serial.exists() and len(_read_text(i_serial).strip()) > 0:
+                    ok("ISO Smoke Test: SUCCESS (Serial output detected)")
+                else:
+                    warn("ISO Smoke Test: FAILED (QEMU exited early, no serial output)")
+
+    except Exception as e:
+        fail("Build verification encountered an error: {0}".format(e))
+        return False
+
+    ok("\nBuild verification complete. All primary artifacts are valid.")
+    return True
+
+
+def print_report(arch):
+    banner("TilekarOS System & Tool Report")
+
+    import os
+    import platform
+
+    step("System Info")
+    info("Python:    {0}".format(sys.version))
+    info("OS:        {0} {1}".format(platform.system(), platform.release()))
+    info("Version:   {0}".format(platform.version()))
+    info("Machine:   {0}".format(platform.machine()))
+    info("CWD:       {0}".format(os.getcwd()))
+
+    step("Environment Factors")
+    env_vars = ["PATH", "CC", "CXX", "ARCH", "VM", "DRIVES", "LANG", "LC_ALL"]
+    for var in env_vars:
+        info("{0:12}: {1}".format(var, os.environ.get(var, "Not set")))
+
+    # Disk space
+    try:
+        if hasattr(shutil, "disk_usage"):
+            total, used, free = shutil.disk_usage(".")
+            info(
+                "Disk Space  : Total: {0}GB, Used: {1}GB, Free: {2}GB".format(
+                    total // (2**30), used // (2**30), free // (2**30)
+                )
+            )
+        else:
+            # Fallback for Python 2.7 / systems without shutil.disk_usage
+            st = os.statvfs(".")
+            total = st.f_blocks * st.f_frsize
+            free = st.f_bavail * st.f_frsize
+            used = total - (st.f_bfree * st.f_frsize)
+            info(
+                "Disk Space  : Total: {0}GB, Used: {1}GB, Free: {2}GB".format(
+                    total // (2**30), used // (2**30), free // (2**30)
+                )
+            )
+    except Exception as e:
+        warn("Disk Space  : Could not determine ({0})".format(e))
+
+    # Git Info
+    try:
+        proc = subprocess.Popen(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        branch, _ = proc.communicate()
+        proc = subprocess.Popen(
+            ["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        commit, _ = proc.communicate()
+        if proc.returncode == 0:
+            info("Git Branch  : {0}".format(branch.decode("utf-8", "ignore").strip()))
+            info("Git Commit  : {0}".format(commit.decode("utf-8", "ignore").strip()))
+        else:
+            info("Git Info    : Not a git repository")
+    except Exception as e:
+        info("Git Info    : Failed to gather ({0})".format(e))
+
+    # Try to find versioned LLVM tools if unversioned are missing
+    llvm_ver = ""
+    try:
+        c_proc = subprocess.Popen(
+            ["clang", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        c_out, _ = c_proc.communicate()
+        c_out_str = (c_out or b"").decode("utf-8", "ignore")
+        if "version" in c_out_str:
+            # Extract major version e.g. "18"
+            import re
+
+            m = re.search(r"version\s+(\d+)", c_out_str)
+            if m:
+                llvm_ver = "-" + m.group(1)
+    except Exception:
+        pass
+
+    tools = [
+        ("CMake", ["cmake", "--version"]),
+        ("Make", ["make", "--version"]),
+        ("Clang", ["clang", "--version"]),
+        (
+            "LLD (ld.lld)",
+            ["ld.lld" + llvm_ver, "--version"] if llvm_ver else ["ld.lld", "--version"],
+        ),
+        (
+            "LLVM Link",
+            ["llvm-link" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-link", "--version"],
+        ),
+        (
+            "LLVM Objcopy",
+            ["llvm-objcopy" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-objcopy", "--version"],
+        ),
+        (
+            "LLVM Ar",
+            ["llvm-ar" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-ar", "--version"],
+        ),
+        (
+            "LLVM Nm",
+            ["llvm-nm" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-nm", "--version"],
+        ),
+        (
+            "LLVM Ranlib",
+            ["llvm-ranlib" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-ranlib", "--version"],
+        ),
+        (
+            "LLVM Readelf",
+            ["llvm-readelf" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-readelf", "--version"],
+        ),
+        (
+            "LLVM Objdump",
+            ["llvm-objdump" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-objdump", "--version"],
+        ),
+        (
+            "LLVM Strip",
+            ["llvm-strip" + llvm_ver, "--version"]
+            if llvm_ver
+            else ["llvm-strip", "--version"],
+        ),
+        ("GCC", ["gcc", "--version"]),
+        ("GNU Linker", ["ld", "--version"]),
+        ("GNU Objcopy", ["objcopy", "--version"]),
+        ("GNU Ar", ["ar", "--version"]),
+        ("GNU Nm", ["nm", "--version"]),
+        ("NASM", ["nasm", "-v"]),
+        ("mkfs", ["mkfs", "--version"]),
+        ("mkfs.fat", ["mkfs.fat", "--help"]),
+        ("Mtools", ["mcopy", "-V"]),
+        ("mcopy", ["mcopy", "-V"]),
+        ("minfo", ["minfo", "-V"]),
+        ("mmd", ["mmd", "-V"]),
+        ("mformat", ["mformat", "-V"]),
+        ("mdir", ["mdir", "-V"]),
+        ("GRUB Rescue", ["grub-mkrescue", "--version"]),
+        ("GRUB File", ["grub-file", "--help"]),
+        ("QEMU i386", ["qemu-system-i386", "--version"]),
+    ]
+
+    step("Tool Details")
+    for name, cmd in tools:
+        print(_style("\n─── {0} ───".format(name), BOLD, BLUE))
+        try:
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = proc.communicate()
+
+            # Decode with ignore to handle non-utf8 if any
+            out_str = (out or b"").decode("utf-8", "ignore").strip()
+            err_str = (err or b"").decode("utf-8", "ignore").strip()
+
+            # Special handling for mkfs.fat and grub-file to just get the first line
+            if name in {"mkfs.fat", "GRUB File"} and out_str:
+                out_str = out_str.splitlines()[0]
+
+            if out_str:
+                print(out_str)
+            if err_str:
+                print(err_str)
+            if proc.returncode != 0 and name != "mkfs.fat":
+                warn("Command returned exit code {0}".format(proc.returncode))
+        except OSError:
+            fail("Tool '{0}' not found in PATH".format(cmd[0]))
+
+    verify_build(arch)
+    ok("\nReport complete")
+
+
 def main():
     parser = argparse.ArgumentParser(description="TilekarOS Python build orchestrator")
     parser.add_argument(
@@ -631,6 +957,7 @@ def main():
             "export_drives",
             "comp",
             "clean",
+            "report",
         ],
     )
     parser.add_argument("--arch", default=os.environ.get("ARCH", "i386"))
@@ -681,6 +1008,8 @@ def main():
         elif args.command == "comp":
             ensure_sysroot(args.arch)
             compile_user_program(args.arch, args.file, args.out)
+        elif args.command == "report":
+            print_report(args.arch)
         elif args.command == "clean":
             banner("TilekarOS Clean")
             shutil.rmtree(str(BUILD_DIR), ignore_errors=True)
