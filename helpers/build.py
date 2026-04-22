@@ -152,10 +152,10 @@ def configure(arch, enable_test=False):
         "-DCMAKE_C_COMPILER=clang",
         "-DCMAKE_ASM_NASM_COMPILER=nasm",
     ]
-    
+
     if enable_test:
         cmake_cmd.append("-DENABLE_TEST=1")
-    
+
     toolchain = ROOT / "cmake" / "toolchains" / "{0}.cmake".format(arch)
     if cmake_cache.exists():
         text = _read_text(cmake_cache)
@@ -363,6 +363,11 @@ def inject_boot_payload(vm_dir, boot_img, kernel_binary):
             ]
         )
 
+    test_bin_dir = ROOT / vm_dir.name / "exported_drives" / "boot" / "BIN"
+    if test_bin_dir.exists():
+        step("Merging test binaries into boot drive")
+        run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s", str(test_bin_dir), "::/"])
+
 
 def export_drives(vm_dir, drives):
     step("Exporting drives to exported_drives")
@@ -461,6 +466,9 @@ def run_qemu(arch, vm, drives_cfg, mode, enable_test=False):
     build_target("myos.kernel")
     ensure_sysroot(arch, do_configure=False)
 
+    if enable_test:
+        compile_test_programs(arch, vm)
+
     kernel_binary = BUILD_DIR / "kernel" / "myos.kernel"
     boot_img = vm_dir / "drives" / "{0}.img".format(first_drive_name(drives_cfg))
 
@@ -472,6 +480,22 @@ def run_qemu(arch, vm, drives_cfg, mode, enable_test=False):
             items = [str(p) for p in SYSROOT.iterdir()]
             if items:
                 run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s"] + items + ["::/"])
+
+        test_bin_dir = ROOT / vm / "exported_drives" / "boot" / "BIN"
+        if enable_test and test_bin_dir.exists():
+            step("Merging test binaries into boot drive")
+            run(
+                [
+                    "mcopy",
+                    "-i",
+                    str(boot_img),
+                    "-snD",
+                    "o",
+                    "-s",
+                    str(test_bin_dir),
+                    "::/",
+                ]
+            )
     elif mode == "run_iso":
         build_target("iso")
         qemu_cmd += ["-boot", "d", "-cdrom", str(BUILD_DIR / "myos.iso")]
@@ -480,6 +504,22 @@ def run_qemu(arch, vm, drives_cfg, mode, enable_test=False):
             items = [str(p) for p in SYSROOT.iterdir()]
             if items:
                 run(["mcopy", "-i", str(boot_img), "-snD", "o", "-s"] + items + ["::/"])
+
+        test_bin_dir = ROOT / vm / "exported_drives" / "boot" / "BIN"
+        if enable_test and test_bin_dir.exists():
+            step("Merging test binaries into boot drive")
+            run(
+                [
+                    "mcopy",
+                    "-i",
+                    str(boot_img),
+                    "-snD",
+                    "o",
+                    "-s",
+                    str(test_bin_dir),
+                    "::/",
+                ]
+            )
     elif mode == "run_disk":
         inject_boot_payload(vm_dir, boot_img, kernel_binary)
         isodir = BUILD_DIR / "disk_isodir"
@@ -527,7 +567,6 @@ def run_qemu(arch, vm, drives_cfg, mode, enable_test=False):
 
 
 def compile_user_program(arch, src_file, out_file=None):
-    banner("TilekarOS Userspace Compilation")
     if not src_file:
         raise ValueError("comp requires --file <path-to-c-file>")
     src = Path(src_file)
@@ -560,6 +599,22 @@ def compile_user_program(arch, src_file, out_file=None):
     ok("Built userspace executable: {0}".format(out))
 
 
+def compile_test_programs(arch, vm):
+    banner("TilekarOS Test Programs Compilation")
+    boot_dir = ROOT / vm / "exported_drives" / "boot"
+    if not boot_dir.exists():
+        warn("Boot directory {0} not found, skipping test programs".format(boot_dir))
+        return
+
+    bin_dir = boot_dir / "BIN"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+
+    for c_file in boot_dir.glob("*.c"):
+        out_name = c_file.stem.upper()
+        out_file = bin_dir / out_name
+        compile_user_program(arch, str(c_file), str(out_file))
+
+
 def main():
     parser = argparse.ArgumentParser(description="TilekarOS Python build orchestrator")
     parser.add_argument(
@@ -583,7 +638,9 @@ def main():
     parser.add_argument("--drives", default=os.environ.get("DRIVES", "boot:24:ide"))
     parser.add_argument("--file", default=os.environ.get("FILE"))
     parser.add_argument("--out", default=os.environ.get("OUT"))
-    parser.add_argument("--enable-test", action="store_true", help="Enable automatic test execution")
+    parser.add_argument(
+        "--enable-test", action="store_true", help="Enable automatic test execution"
+    )
     args = parser.parse_args()
 
     try:
@@ -609,7 +666,13 @@ def main():
             build_target("iso")
             ok("ISO build completed")
         elif args.command in {"run", "run_iso", "run_disk"}:
-            run_qemu(args.arch, args.vm, args.drives, args.command, enable_test=args.enable_test)
+            run_qemu(
+                args.arch,
+                args.vm,
+                args.drives,
+                args.command,
+                enable_test=args.enable_test,
+            )
         elif args.command == "export_drives":
             banner("TilekarOS Drive Export")
             vm_dir, drives = ensure_vm_workspace(args.vm, args.drives)
@@ -622,7 +685,37 @@ def main():
             banner("TilekarOS Clean")
             shutil.rmtree(str(BUILD_DIR), ignore_errors=True)
             shutil.rmtree(str(SYSROOT), ignore_errors=True)
-            shutil.rmtree(str(ROOT / args.vm), ignore_errors=True)
+            vm_root = ROOT / args.vm
+            preserve_dir = vm_root / "exported_drives" / "boot"
+
+            # Collect names of files to preserve
+            preserve_names = set()
+            if preserve_dir.exists():
+                preserve_names = {
+                    p.name for p in preserve_dir.glob("*.c") if p.is_file()
+                }
+
+            # Walk and delete everything except preserved files
+            for root, dirs, files in os.walk(str(vm_root), topdown=False):
+                root_path = ROOT.__class__(root)  # keep Path compatibility
+
+                # Delete files
+                for name in files:
+                    if root_path == preserve_dir and name in preserve_names:
+                        continue
+                    try:
+                        os.remove(os.path.join(root, name))
+                    except OSError:
+                        pass
+
+                # Delete directories if empty
+                for name in dirs:
+                    dirpath = os.path.join(root, name)
+                    try:
+                        os.rmdir(dirpath)
+                    except OSError:
+                        pass
+
             ok("Clean completed")
         return 0
     except (subprocess.CalledProcessError, ValueError) as exc:

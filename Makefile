@@ -1,12 +1,12 @@
 ARCH ?= i386
-VM ?= VirtualMachine
+VM ?= TestVM
 DRIVES ?= boot:24:ide
 PYTHON ?= python3
 BUILD_PY := helpers/build.py
 
 .PHONY: all configure kernel sysroot userland iso run run_test run_iso run_disk export_drives comp comp_exe clean help
 
-all: kernel sysroot userland
+all: kernel sysroot
 
 configure:
 	$(PYTHON) $(BUILD_PY) configure --arch $(ARCH)
@@ -43,6 +43,11 @@ comp:
 	$(PYTHON) $(BUILD_PY) comp --arch $(ARCH) --file "$(FILE)" --out "$(OUT)"
 
 comp_exe: comp
+
+comp_tests:
+	$(PYTHON) $(BUILD_PY) comp_tests --arch $(ARCH) --vm "$(VM)"
+
+comp_tests_exe: comp_tests
 
 clean:
 	$(PYTHON) $(BUILD_PY) clean --vm "$(VM)"
