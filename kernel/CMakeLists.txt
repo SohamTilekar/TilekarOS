@@ -142,6 +142,8 @@ target_link_options(myos.kernel PRIVATE
     -nostdlib               # No standard startup files
     -static                 # Static linking only
     -ffreestanding
+    -no-pie                 # Prevent Position Independent Executable linking
+    -Wl,-z,max-page-size=0x1000 # Fix section alignment for newer binutils
     -Wl,--build-id=none     # Disable build-id generation to keep binary clean
     --target=${CMAKE_C_COMPILER_TARGET}
     --sysroot=${CMAKE_SOURCE_DIR}/sysroot
