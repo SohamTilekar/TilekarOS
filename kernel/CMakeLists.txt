@@ -96,6 +96,11 @@ target_compile_options(myos.kernel PRIVATE
         -ffreestanding     # Target is freestanding (no OS support assumed)
         -fno-pic           # No Position Independent Code (Kernel relies on absolute addresses)
         -fno-pie           # No Position Independent Executable
+        -fno-stack-protector # Disable stack canaries
+        -fno-builtin       # Prevent replacing loops with implicitly assumed stdlib functions
+        -mno-sse           # Disable vector instructions
+        -mno-mmx           # Disable MMX instructions
+        -mno-sse2          # Disable SSE2 instructions
         -O0                # Optimization level 0 (easier debugging)
         -Wall              # Enable all warnings
         -Wextra            # Enable extra warnings
@@ -103,8 +108,7 @@ target_compile_options(myos.kernel PRIVATE
         --target=${CMAKE_C_COMPILER_TARGET} # Target architecture from toolchain
         --sysroot=${CMAKE_SOURCE_DIR}/sysroot # Use our custom sysroot
         -DENABLE_TEST=${ENABLE_TEST}
-    >
-    # Assembler Flags (NASM)
+    >    # Assembler Flags (NASM)
     $<$<COMPILE_LANGUAGE:ASM_NASM>:
         ${KERNEL_NASM_FORMAT_FLAG}
         ${CMAKE_ASM_NASM_FLAGS}

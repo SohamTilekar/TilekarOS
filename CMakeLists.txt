@@ -89,6 +89,10 @@ set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -nostdlib\n")
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-builtin\n")
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-pic\n")
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-pie\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -fno-stack-protector\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -mno-sse\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -mno-mmx\n")
+set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -mno-sse2\n")
 
 # Add include paths for the kernel and libc
 set(CLANGD_CONTENT "${CLANGD_CONTENT}    - -Ikernel/include\n")
