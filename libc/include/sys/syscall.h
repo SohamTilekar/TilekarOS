@@ -22,6 +22,7 @@ enum {
     SYS_SIGACTION,
     SYS_SIGRETURN,
     SYS_SIGPROCMASK,
+    SYS_WAITPID,
     SYS_MAX
 };
 

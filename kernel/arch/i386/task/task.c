@@ -19,9 +19,15 @@ extern void context_switch(uint32_t** current_esp, uint32_t* next_esp, uint32_t 
 
 extern uint32_t get_cr3(void);
 
-
-
 static uint32_t next_tid = 0;
+
+void set_next_tid(uint32_t id) {
+    next_tid = id;
+};
+uint32_t get_next_tid() {
+    return next_tid;
+};
+
 task_t* current_task = NULL;
 static task_t* zombie_list = NULL;
 static int32_t scheduler_trigger_index = -1;
@@ -63,23 +69,51 @@ static int task_init_file_table(task_t* task) {
  * cleanup_zombies - Frees memory of tasks that have exited.
  */
 static void cleanup_zombies() {
-    while (zombie_list) {
-        task_t* z = zombie_list;
-        zombie_list = z->next;
+    task_t** prev_ptr = &zombie_list;
+    task_t* z = zombie_list;
 
-        if (z->stack_limit) {
-            kfree(z->stack_limit);
+    while (z) {
+        task_t* parent = z->parent;
+        bool should_reap = false;
+
+        if (!parent) {
+            should_reap = true;
+        } else {
+            // Check if parent is waiting for this child
+            if (parent->state == TASK_BLOCKED_WAIT && (parent->wait_pid == -1 || parent->wait_pid == (int)z->id)) {
+                parent->wait_status = z->exit_status;
+                parent->wait_ret_pid = z->id;
+                parent->state = TASK_READY;
+                should_reap = true;
+            }
+            // Check if parent explicitly ignored SIGCHLD
+            else if (parent->sigactions[SIGCHLD].sa_handler == SIG_IGN) {
+                should_reap = true;
+            }
         }
 
-        sigqueue_item_t* sq = z->signal_queue;
-        while (sq) {
-            sigqueue_item_t* next = sq->next;
-            kfree(sq);
-            sq = next;
-        }
+        if (should_reap) {
+            task_t* next = z->next;
+            *prev_ptr = next;
 
-        vfs_task_file_table_destroy(z->file_table);
-        kfree(z);
+            if (z->stack_limit) {
+                kfree(z->stack_limit);
+            }
+
+            sigqueue_item_t* sq = z->signal_queue;
+            while (sq) {
+                sigqueue_item_t* next_sq = sq->next;
+                kfree(sq);
+                sq = next_sq;
+            }
+
+            vfs_task_file_table_destroy(z->file_table);
+            kfree(z);
+            z = next;
+        } else {
+            prev_ptr = &z->next;
+            z = z->next;
+        }
     }
 }
 
@@ -120,12 +154,16 @@ static void task_wrapper(void (*entry)(void)) {
     } else {
         entry();
     }
-    task_exit();
+    task_exit(0);
 }
 
 void task_init_scheduler() {
     task_t* main_task = kmalloc(sizeof(task_t));
     main_task->id = -1; // -1 cz the Init Task should get PID 0
+    main_task->parent = NULL;
+    main_task->wait_pid = 0;
+    main_task->wait_status = 0;
+    main_task->wait_ret_pid = 0;
     main_task->stack_limit = NULL; // Main kernel stack is already allocated
     main_task->state = TASK_RUNNING;
     main_task->preempt_count = 0;
@@ -168,6 +206,10 @@ task_t* task_create(void (*entry)(void), uint8_t privilege_level) {
 
     task->stack_limit = stack;
     task->id = next_tid++;
+    task->parent = current_task;
+    task->wait_pid = 0;
+    task->wait_status = 0;
+    task->wait_ret_pid = 0;
     task->state = TASK_READY;
     task->preempt_count = 0;
     task->privilege_level = privilege_level;
@@ -255,6 +297,10 @@ task_t* task_create_user(void* start_addr, void* end_addr) {
 
     task->stack_limit = stack;
     task->id = next_tid++;
+    task->parent = current_task;
+    task->wait_pid = 0;
+    task->wait_status = 0;
+    task->wait_ret_pid = 0;
     task->state = TASK_READY;
     task->preempt_count = 0;
     task->privilege_level = 3;
@@ -364,6 +410,10 @@ task_t* task_create_elf(void* elf_data, uint8_t privilege_level) {
 
     task->stack_limit = stack;
     task->id = next_tid++;
+    task->parent = current_task;
+    task->wait_pid = 0;
+    task->wait_status = 0;
+    task->wait_ret_pid = 0;
     task->state = TASK_READY;
     task->preempt_count = 0;
     task->privilege_level = privilege_level;
@@ -544,6 +594,10 @@ task_t* task_fork(InterruptReg_t *regs) {
     }
 
     child->id = next_tid++;
+    child->parent = current_task;
+    child->wait_pid = 0;
+    child->wait_status = 0;
+    child->wait_ret_pid = 0;
     child->state = TASK_READY;
     child->preempt_count = 0;
     child->privilege_level = parent->privilege_level;
@@ -859,16 +913,35 @@ void task_unblock(task_t* task) {
     interrupt_restore(flags);
 }
 
-void task_exit() {
+void task_exit(int status) {
     uint32_t flags = interrupt_save();
-    // printf("Task %d exiting...\n", current_task->id);
+    current_task->exit_status = status;
+
+    // Reparent children to grandfather (or NULL)
+    task_t* it = current_task->next;
+    while (it != current_task) {
+        if (it->parent == current_task) {
+            it->parent = current_task->parent;
+        }
+        it = it->next;
+    }
+
+    // Notify parent
+    if (current_task->parent) {
+        siginfo_t info;
+        memset(&info, 0, sizeof(info));
+        info.si_signo = SIGCHLD;
+        info.si_pid = current_task->id;
+        info.si_status = status;
+        task_signal_enqueue(current_task->parent, info);
+    }
 
     // Remove current_task from the circular list
     task_t* prev = current_task;
     uint32_t guard = 0;
     while (prev->next != current_task) {
         prev = prev->next;
-        if (++guard > next_tid) {
+        if (++guard > next_tid + 100) { // Safety buffer
             printf("Task list corruption detected during exit of PID %d.\n", current_task ? current_task->id : 0);
             interrupt_restore(flags);
             for (;;) {
@@ -890,7 +963,8 @@ void task_exit() {
     task_t* exiting_task = current_task;
     current_task = current_task->next;
 
-    // Add to zombie list to be cleaned up by the next task that runs
+    // Transition to zombie
+    exiting_task->state = TASK_ZOMBIE;
     exiting_task->next = zombie_list;
     zombie_list = exiting_task;
 
@@ -904,8 +978,72 @@ void task_exit() {
 
     context_switch(&dummy_esp, current_task->kernel_stack, current_task->page_directory, 0);
 
-    // We should never reach here, but in case we do somehow
+    // We should never reach here
     interrupt_restore(flags);
+}
+
+int task_waitpid(int pid, int* status, int options) {
+    (void)options; // WNOHANG not fully implemented
+
+    while (1) {
+        uint32_t flags = interrupt_save();
+
+        // Check if any children exist (active or zombie)
+        bool has_children = false;
+
+        // Check active tasks
+        task_t* it = current_task->next;
+        while (it != current_task) {
+            if (it->parent == current_task) {
+                if (pid == -1 || (int)it->id == pid) {
+                    has_children = true;
+                    break;
+                }
+            }
+            it = it->next;
+        }
+
+        if (!has_children) {
+            // Check zombie list
+            task_t* z = zombie_list;
+            while (z) {
+                if (z->parent == current_task) {
+                    if (pid == -1 || (int)z->id == pid) {
+                        has_children = true;
+                        break;
+                    }
+                }
+                z = z->next;
+            }
+        }
+
+        if (!has_children) {
+            interrupt_restore(flags);
+            return -1; // ECHILD
+        }
+
+        // Set wait parameters and block
+        current_task->wait_pid = pid;
+        current_task->wait_ret_pid = 0;
+        current_task->state = TASK_BLOCKED_WAIT;
+
+        // Yield and wait for cleanup_zombies to wake us up
+        task_yield(NULL);
+
+        // Woke up! The scheduler filled these for us if a child was reaped.
+        if (current_task->wait_ret_pid > 0) {
+            if (status) {
+                *status = current_task->wait_status;
+            }
+            int ret_pid = current_task->wait_ret_pid;
+            interrupt_restore(flags);
+            return ret_pid;
+        }
+
+        // If we woke up but no child reaped (e.g. signal), loop or return
+        interrupt_restore(flags);
+        // For now, loop. In real POSIX, signals might interrupt wait.
+    }
 }
 
 void check_signals(InterruptReg_t* r) {
@@ -930,7 +1068,7 @@ void check_signals(InterruptReg_t* r) {
         if (unblocked & (1ULL << sig)) {
             info = curr->info;
             found = true;
-            
+
             if (prev) {
                 prev->next = curr->next;
                 if (!curr->next) {
@@ -977,7 +1115,7 @@ void check_signals(InterruptReg_t* r) {
         } else {
             printf("Task %d terminated by signal %d\n", current_task->id, sig);
             interrupt_restore(flags);
-            task_exit();
+            task_exit(sig);
             return;
         }
     } else if (act->sa_handler == SIG_IGN) {
@@ -997,7 +1135,7 @@ void check_signals(InterruptReg_t* r) {
         }
 
         uint32_t user_esp = r->useresp;
-        
+
         uint32_t info_ptr = 0;
         if (act->sa_flags & SA_SIGINFO) {
             user_esp -= sizeof(siginfo_t);
@@ -1071,12 +1209,12 @@ void task_switch_to(task_t* next) {
 void task_signal_enqueue(task_t* target, siginfo_t info) {
     if (!target) return;
     uint32_t flags = interrupt_save();
-    
+
     sigqueue_item_t* item = kmalloc(sizeof(sigqueue_item_t));
     if (item) {
         item->info = info;
         item->next = NULL;
-        
+
         if (!target->signal_queue) {
             target->signal_queue = item;
             target->signal_queue_tail = item;
@@ -1086,6 +1224,6 @@ void task_signal_enqueue(task_t* target, siginfo_t info) {
         }
         target->pending_signals |= (1ULL << info.si_signo);
     }
-    
+
     interrupt_restore(flags);
 }

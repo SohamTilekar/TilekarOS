@@ -23,6 +23,7 @@ enum  {
     SYS_SIGACTION,
     SYS_SIGRETURN,
     SYS_SIGPROCMASK,
+    SYS_WAITPID,
     SYS_MAX
 };
 
@@ -43,6 +44,7 @@ uint32_t sys_kill(uint32_t pid, uint32_t sig, uint32_t c, uint32_t d, uint32_t e
 uint32_t sys_sigaction(uint32_t sig, uint32_t act, uint32_t oldact, uint32_t d, uint32_t e);
 uint32_t sys_sigreturn(InterruptReg_t* r);
 uint32_t sys_sigprocmask(uint32_t how, uint32_t set, uint32_t oldset, uint32_t d, uint32_t e);
+uint32_t sys_waitpid(uint32_t pid, uint32_t status_ptr, uint32_t options, uint32_t d, uint32_t e);
 
 uint32_t syscall_dispatch(InterruptReg_t* r);
 void syscall_handler(InterruptReg_t* r);

@@ -34,6 +34,7 @@ syscall_t syscall_table[] = {
     sys_sigaction,
     NULL, // SYS_SIGRETURN (needs InterruptReg_t)
     sys_sigprocmask,
+    sys_waitpid,
     NULL  // SYS_MAX
 };
 
@@ -42,8 +43,18 @@ uint32_t syscall_dispatch(InterruptReg_t* r) {
     if (num >= SYS_MAX) return -1;
 
     if (num == SYS_FORK) {
+        uint32_t parent_pid = current_task->id;
         task_t* child = task_fork(r);
-        return child ? child->id : -1;
+        if (!child) return -1;
+
+        /* If task_fork() returned a task whose pid matches the parent's pid,
+         * we're running in the child, so return 0. Otherwise we're in the
+         * parent and should return the child's pid. */
+        if (child->id == parent_pid) {
+            return 0;
+        }
+
+        return child->id;
     }
 
     if (num == SYS_EXECVE) {

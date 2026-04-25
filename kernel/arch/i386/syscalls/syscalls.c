@@ -16,9 +16,9 @@ uint32_t sys_write(uint32_t fd, uint32_t buf, uint32_t len, uint32_t a, uint32_t
     return (uint32_t)vfs_write((int)fd, (const void*)buf, len);
 }
 
-uint32_t sys_exit(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e) {
-    (void)a; (void)b; (void)c; (void)d; (void)e;
-    task_exit();
+uint32_t sys_exit(uint32_t status, uint32_t b, uint32_t c, uint32_t d, uint32_t e) {
+    (void)b; (void)c; (void)d; (void)e;
+    task_exit((int)status);
     return 0;
 }
 
@@ -172,7 +172,7 @@ uint32_t sys_sigreturn(InterruptReg_t* r) {
     // Security check: validate the context pointer
     if ((uint32_t)saved_regs >= KERNEL_START) {
         // Attempt to restore from kernel space, terminate task to prevent privilege escalation
-        task_exit();
+        task_exit(-1);
         return -1;
     }
 
@@ -194,4 +194,9 @@ uint32_t sys_sigreturn(InterruptReg_t* r) {
     
     interrupt_restore(flags);
     return r->eax; // The restored EAX
+}
+
+uint32_t sys_waitpid(uint32_t pid, uint32_t status_ptr, uint32_t options, uint32_t d, uint32_t e) {
+    (void)d; (void)e;
+    return (uint32_t)task_waitpid((int)pid, (int*)status_ptr, (int)options);
 }

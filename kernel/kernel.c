@@ -73,31 +73,18 @@ void kernel_main(uint32_t magic, void *boot_info) {
 
   init_storage();
 
-  bool run_tests = false;
 #if ENABLE_TEST == 1
-  run_tests = true;
   printf("Running tests (ENABLE_TEST flag is set).\n");
+  run_all_tests(primary_storage);
 #else
-  // printf("Run built-in tests? (y/N) ");
-  // char choice = 0;
-  // keyboard_clear_buffer();
-  // uint32_t verify_start = get_ticks();
-  // while (choice == 0 && get_ticks() < verify_start + 4000) { // 4s timeout
-  //   choice = keyboard_getchar();
-  // }
-  // printf("\n");
-  // run_tests = (choice == 'y' || choice == 'Y'); // default to no on timeout
+  printf("Skipping tests.\n");
 #endif
 
-  if (run_tests) {
-    run_all_tests(primary_storage);
-  } else {
-    printf("Skipping tests.\n");
-  }
   printf("Launching Init (/bin/init)...\n");
-  task_t* init_task = task_create_elf_from_file("/bin/init", 3);
+  set_next_tid(0);
+  task_t *init_task = task_create_elf_from_file("/bin/init", 3);
   if (!init_task) {
     printf("CRITICAL: Failed to launch init!\n");
   }
-  task_exit(); // exiting Main as its work as tmp process for switching is done
+  task_exit(0); // exiting Main as its work as tmp process for switching is done
 }

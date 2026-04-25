@@ -5,10 +5,37 @@
 #include "../arch/i386/drivers/keyboard.h"
 #include <stdio.h>
 
+static void test_child_exit_logic() {
+    task_exit(123);
+}
+
+static inline void run_wait_kernel_test(test_stats_t* stats) {
+    test_print_category(stats, "WAIT SEMANTICS (KERNEL)");
+    
+    printf("| [>] Creating child for wait test...                        |\n");
+    task_stop_scheduler();
+    task_t* child = task_create(test_child_exit_logic, 0);
+    if (!child) {
+        test_record(stats, false, "Failed to create test child");
+        task_start_scheduler();
+        return;
+    }
+    uint32_t cid = child->id;
+    task_start_scheduler();
+
+    printf("| [>] Waiting for child PID %d...                             |\n", cid);
+    int status = 0;
+    int reaped_pid = task_waitpid(cid, &status, 0);
+    
+    test_record(stats, reaped_pid == (int)cid, "task_waitpid reaped correct PID");
+    test_record(stats, status == 123, "task_waitpid retrieved correct status (123)");
+}
+
 /**
  * run_process_tests - Validates process lifecycle components.
  */
 static inline void run_process_tests(test_stats_t* stats) {
+    run_wait_kernel_test(stats);
     test_print_category(stats, "PROCESS LIFECYCLE (FORK/EXEC)");
 
     // 1. Verify existence of the userspace test binaries
@@ -54,11 +81,16 @@ static inline void run_process_tests(test_stats_t* stats) {
             // Automated Verification via Checkpoints
             const char* expected_checkpoints[] = {
                 "MEM_ISO_START", "CHILD_MOD_VARS", "PARENT_CHECK_VARS", "MEM_ISO_PASS",
+                "WAITPID_START", "WAITPID_PASS",
+                "SIGCHLD_START", "SIGCHLD_PASS",
+                "MULTI_CHILD_START", "MULTI_CHILD_PASS",
+                "ORPHAN_START", "GC_WAIT_REPARENT", "GC_STILL_ALIVE", "ORPHAN_PASS",
+                "STRESS_PASS",
                 "NESTED_FORK_START", "GRANDCHILD_ALIVE", "CHILD_CREATED_GC",
                 "EXEC_START", "HELLO_ALIVE"
             };
-            int num_checkpoints = 9;
-            bool checkpoints_found[9] = {false};
+            int num_checkpoints = 20;
+            bool checkpoints_found[20] = {false};
 
             printf("| [>] Verifying checkpoints via /tmp/PROCESS.LOG...    |\n");
             int log_fd = vfs_open("/tmp/PROCESS.LOG", 0);

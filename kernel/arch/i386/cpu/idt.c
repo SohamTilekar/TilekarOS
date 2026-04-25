@@ -299,10 +299,10 @@ void isr_handler(InterruptReg_t *regs)
         // or if it's a kernel task other than PID 0
         if ((regs->cs & 0x3) == 3) {
             printf("TERMINATING USER PROCESS (PID %d) due to exception.\n", pid);
-            task_exit();
+            task_exit(-1);
         } else if (pid != 0) {
             printf("TERMINATING KERNEL TASK (PID %d) due to exception.\n", pid);
-            task_exit();
+            task_exit(-1);
         } else {
             printf("CRITICAL EXCEPTION IN KERNEL MAIN (PID 0). SYSTEM HALTED.\n");
             // Hang the system to prevent further damage

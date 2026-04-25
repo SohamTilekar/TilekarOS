@@ -6,13 +6,14 @@
 #include <stdbool.h>
 #include "../utils/utils.h"
 #include "../fs/vfs.h"
-#include <signal.h>
-
+#include "signal.h"
 typedef enum {
     TASK_READY,
     TASK_RUNNING,
     TASK_BLOCKED,
-    TASK_SLEEPING
+    TASK_SLEEPING,
+    TASK_ZOMBIE,
+    TASK_BLOCKED_WAIT
 } task_state_t;
 
 typedef struct {
@@ -29,6 +30,14 @@ typedef struct sigqueue_item {
 
 typedef struct task {
     uint32_t id;
+    struct task* parent;
+    int exit_status;
+
+    // Waitpid states
+    int wait_pid;
+    int wait_status;
+    int wait_ret_pid;
+
     uint32_t *kernel_stack;
     registers_t *regs;      // saved context
     task_state_t state;
@@ -120,8 +129,11 @@ void task_unblock(task_t* task);
 /**
  * task_exit - Terminates the current task.
  */
-void task_exit();
+void task_exit(int status);
 
+int task_waitpid(int pid, int* status, int options);
+void set_next_tid(uint32_t id);
+uint32_t get_next_tid();
 void task_stop_scheduler();
 void task_start_scheduler();
 void task_switch_to(task_t* task);
