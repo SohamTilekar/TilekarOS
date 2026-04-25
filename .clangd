@@ -6,6 +6,10 @@ CompileFlags:
     - -fno-builtin
     - -fno-pic
     - -fno-pie
+    - -fno-stack-protector
+    - -mno-sse
+    - -mno-mmx
+    - -mno-sse2
     - -Ikernel/include
     - -Ilibc/include
     - -Iuserland/shell

@@ -1,7 +1,55 @@
 cmake_minimum_required(VERSION 3.15)
 
+# Set the default architecture to i386 if not specified.
+if(NOT DEFINED OS_ARCH)
+    set(OS_ARCH "i386" CACHE STRING "Target architecture" FORCE)
+endif()
+
 # Build NASM objects as 32-bit by default for TilekarOS (i386).
-set(CMAKE_ASM_NASM_OBJECT_FORMAT elf32)
+if(OS_ARCH STREQUAL "i386")
+    set(CMAKE_ASM_NASM_OBJECT_FORMAT elf32)
+endif()
+
+# Keep toolchain behavior deterministic across distros.
+if(NOT CMAKE_C_COMPILER_TARGET)
+    set(CMAKE_C_COMPILER_TARGET "${OS_ARCH}-elf")
+endif()
+
+if(NOT CMAKE_TRY_COMPILE_TARGET_TYPE)
+    set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+endif()
+
+find_program(TILEKAR_LD NAMES ld.bfd ld)
+find_program(TILEKAR_AR NAMES ar)
+find_program(TILEKAR_NM NAMES nm)
+find_program(TILEKAR_RANLIB NAMES ranlib)
+find_program(TILEKAR_OBJCOPY NAMES objcopy)
+find_program(TILEKAR_READELF NAMES readelf)
+find_program(TILEKAR_STRIP NAMES strip)
+
+if(TILEKAR_LD)
+    set(CMAKE_LINKER "${TILEKAR_LD}" CACHE FILEPATH "GNU linker" FORCE)
+endif()
+if(TILEKAR_AR)
+    set(CMAKE_AR "${TILEKAR_AR}" CACHE FILEPATH "Archive tool" FORCE)
+    set(CMAKE_C_COMPILER_AR "${TILEKAR_AR}" CACHE FILEPATH "C compiler archive tool" FORCE)
+endif()
+if(TILEKAR_NM)
+    set(CMAKE_NM "${TILEKAR_NM}" CACHE FILEPATH "Symbol tool" FORCE)
+endif()
+if(TILEKAR_RANLIB)
+    set(CMAKE_RANLIB "${TILEKAR_RANLIB}" CACHE FILEPATH "Index archive tool" FORCE)
+    set(CMAKE_C_COMPILER_RANLIB "${TILEKAR_RANLIB}" CACHE FILEPATH "C compiler ranlib tool" FORCE)
+endif()
+if(TILEKAR_OBJCOPY)
+    set(CMAKE_OBJCOPY "${TILEKAR_OBJCOPY}" CACHE FILEPATH "Binary copy tool" FORCE)
+endif()
+if(TILEKAR_READELF)
+    set(CMAKE_READELF "${TILEKAR_READELF}" CACHE FILEPATH "ELF inspection tool" FORCE)
+endif()
+if(TILEKAR_STRIP)
+    set(CMAKE_STRIP "${TILEKAR_STRIP}" CACHE FILEPATH "Binary strip tool" FORCE)
+endif()
 
 # ==============================================================================
 # Project: TilekarOS
@@ -15,15 +63,6 @@ project(TilekarOS C ASM_NASM)
 # ==============================================================================
 # Architecture Configuration
 # ==============================================================================
-# Set the default architecture to i386 if not specified.
-if(NOT DEFINED OS_ARCH)
-    set(OS_ARCH "i386" CACHE STRING "Target architecture" FORCE)
-endif()
-
-if(NOT CMAKE_C_COMPILER_TARGET)
-    set(CMAKE_C_COMPILER_TARGET "${OS_ARCH}-elf")
-endif()
-
 # Generate compile_commands.json for clangd and other tools
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

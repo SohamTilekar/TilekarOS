@@ -143,6 +143,7 @@ def parse_drives(drives):
 def configure(arch, enable_test=False):
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     cmake_cache = BUILD_DIR / "CMakeCache.txt"
+    nasm_obj_fmt = "elf32" if arch == "i386" else ""
     cmake_cmd = [
         "cmake",
         "-S",
@@ -151,8 +152,21 @@ def configure(arch, enable_test=False):
         str(BUILD_DIR),
         "-DOS_ARCH={0}".format(arch),
         "-DCMAKE_C_COMPILER=clang",
+        "-DCMAKE_C_COMPILER_TARGET={0}-elf".format(arch),
         "-DCMAKE_ASM_NASM_COMPILER=nasm",
+        "-DCMAKE_LINKER=ld",
+        "-DCMAKE_AR=ar",
+        "-DCMAKE_NM=nm",
+        "-DCMAKE_RANLIB=ranlib",
+        "-DCMAKE_OBJCOPY=objcopy",
+        "-DCMAKE_READELF=readelf",
+        "-DCMAKE_STRIP=strip",
+        "-DCMAKE_C_COMPILER_AR=ar",
+        "-DCMAKE_C_COMPILER_RANLIB=ranlib",
+        "-DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY",
     ]
+    if nasm_obj_fmt:
+        cmake_cmd.append("-DCMAKE_ASM_NASM_OBJECT_FORMAT={0}".format(nasm_obj_fmt))
 
     if enable_test:
         cmake_cmd.append("-DENABLE_TEST=1")
@@ -177,6 +191,10 @@ def configure(arch, enable_test=False):
             "OS_ARCH:UNINITIALIZED={0}".format(arch) in cache_text
             or "OS_ARCH:STRING={0}".format(arch) in cache_text
         )
+        target_ok = (
+            "CMAKE_C_COMPILER_TARGET:UNINITIALIZED={0}-elf".format(arch) in cache_text
+            or "CMAKE_C_COMPILER_TARGET:STRING={0}-elf".format(arch) in cache_text
+        )
         cc_ok = (
             "CMAKE_C_COMPILER:UNINITIALIZED=clang" in cache_text
             or "CMAKE_C_COMPILER:FILEPATH=/usr/bin/clang" in cache_text
@@ -185,7 +203,12 @@ def configure(arch, enable_test=False):
             "CMAKE_ASM_NASM_COMPILER:UNINITIALIZED=nasm" in cache_text
             or "CMAKE_ASM_NASM_COMPILER:FILEPATH=/usr/bin/nasm" in cache_text
         )
-        if arch_ok and cc_ok and nasm_ok:
+        linker_ok = "CMAKE_LINKER:FILEPATH=" in cache_text
+        nasm_fmt_ok = (
+            (arch != "i386")
+            or "CMAKE_ASM_NASM_OBJECT_FORMAT:STRING=elf32" in cache_text
+        )
+        if arch_ok and target_ok and cc_ok and nasm_ok and linker_ok and nasm_fmt_ok:
             step("Using existing CMake configuration (arch={0})".format(arch))
             return
 
@@ -473,7 +496,7 @@ def run_qemu(arch, vm, drives_cfg, mode, enable_test=False):
     kernel_binary = BUILD_DIR / "kernel" / "myos.kernel"
     boot_img = vm_dir / "drives" / "{0}.img".format(first_drive_name(drives_cfg))
 
-    qemu_cmd = ["qemu-system-{0}".format(arch)]
+    qemu_cmd = ["qemu-system-{0}".format(arch), "-no-reboot", "-no-shutdown"]
     if mode == "run":
         qemu_cmd += ["-kernel", str(kernel_binary)]
         if SYSROOT.exists():
@@ -677,6 +700,10 @@ def verify_build(arch):
                 "qemu-system-{0}".format(arch),
                 "-kernel",
                 str(kernel_path),
+                "-display",
+                "none",
+                "-no-reboot",
+                "-no-shutdown",
                 "-serial",
                 "file:{0}".format(k_serial),
             ]
@@ -820,7 +847,22 @@ def print_report(arch):
     except Exception as e:
         info("Git Info    : Failed to gather ({0})".format(e))
 
-    # Try to find versioned LLVM tools if unversioned are missing
+    def _has_tool(cmd):
+        if hasattr(shutil, "which"):
+            return shutil.which(cmd) is not None
+        for p in os.environ.get("PATH", "").split(os.pathsep):
+            candidate = os.path.join(p, cmd)
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                return True
+        return False
+
+    def _pick_llvm_tool(base):
+        versioned = "{0}{1}".format(base, llvm_ver) if llvm_ver else ""
+        if versioned and _has_tool(versioned):
+            return versioned
+        return base
+
+    # Try to find versioned LLVM tools if available, otherwise use unversioned.
     llvm_ver = ""
     try:
         c_proc = subprocess.Popen(
@@ -842,58 +884,15 @@ def print_report(arch):
         ("CMake", ["cmake", "--version"]),
         ("Make", ["make", "--version"]),
         ("Clang", ["clang", "--version"]),
-        (
-            "LLD (ld.lld)",
-            ["ld.lld" + llvm_ver, "--version"] if llvm_ver else ["ld.lld", "--version"],
-        ),
-        (
-            "LLVM Link",
-            ["llvm-link" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-link", "--version"],
-        ),
-        (
-            "LLVM Objcopy",
-            ["llvm-objcopy" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-objcopy", "--version"],
-        ),
-        (
-            "LLVM Ar",
-            ["llvm-ar" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-ar", "--version"],
-        ),
-        (
-            "LLVM Nm",
-            ["llvm-nm" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-nm", "--version"],
-        ),
-        (
-            "LLVM Ranlib",
-            ["llvm-ranlib" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-ranlib", "--version"],
-        ),
-        (
-            "LLVM Readelf",
-            ["llvm-readelf" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-readelf", "--version"],
-        ),
-        (
-            "LLVM Objdump",
-            ["llvm-objdump" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-objdump", "--version"],
-        ),
-        (
-            "LLVM Strip",
-            ["llvm-strip" + llvm_ver, "--version"]
-            if llvm_ver
-            else ["llvm-strip", "--version"],
-        ),
+        ("LLD (ld.lld)", [_pick_llvm_tool("ld.lld"), "--version"]),
+        ("LLVM Link", [_pick_llvm_tool("llvm-link"), "--version"]),
+        ("LLVM Objcopy", [_pick_llvm_tool("llvm-objcopy"), "--version"]),
+        ("LLVM Ar", [_pick_llvm_tool("llvm-ar"), "--version"]),
+        ("LLVM Nm", [_pick_llvm_tool("llvm-nm"), "--version"]),
+        ("LLVM Ranlib", [_pick_llvm_tool("llvm-ranlib"), "--version"]),
+        ("LLVM Readelf", [_pick_llvm_tool("llvm-readelf"), "--version"]),
+        ("LLVM Objdump", [_pick_llvm_tool("llvm-objdump"), "--version"]),
+        ("LLVM Strip", [_pick_llvm_tool("llvm-strip"), "--version"]),
         ("GCC", ["gcc", "--version"]),
         ("GNU Linker", ["ld", "--version"]),
         ("GNU Objcopy", ["objcopy", "--version"]),
