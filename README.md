@@ -5,6 +5,19 @@ TilekarOS is a hobbyist, 32-bit monolithic operating system built from scratch f
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://sohamtilekar.github.io/TilekarOS/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![TilekarOS on QEMU](docs/asserts/TilekarOS%20on%20QEMU.png)
+
+---
+
+## 🖥️ Userland
+
+TilekarOS includes a suite of essential user-space programs:
+
+- **🐚 Shell**: Interactive command-line interface.
+- **📁 ls**: List directory contents.
+- **📄 cat**: Concatenate and display files.
+- **🚀 init**: The first process that bootstraps the user-space environment.
+
 ---
 
 ## ✨ Key Features
